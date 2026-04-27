@@ -1560,7 +1560,7 @@ export default function StarFamilyApp() {
                 <div style={{ flex:1, minWidth:250, position:"relative" }}>
                   <input
                     type="text"
-                    placeholder="🔍 Buscar productos..."
+                    placeholder="Buscar productos..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     style={{
