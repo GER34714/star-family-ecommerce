@@ -1526,7 +1526,6 @@ export default function StarFamilyApp() {
             onPreviewBulkPriceChanges={previewBulkPriceChanges}
             priceHistory={priceHistory}
             onMigrateImages={migrateExistingImagesToSupabase}
-            onSyncProducts={syncProductsWithSupabase}
             restorePoints={restorePoints}
             onCreateRestorePoint={createRestorePoint}
             onRestoreFromPoint={restoreFromPoint}
