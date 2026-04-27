@@ -168,6 +168,104 @@ SELECT id, name, image_url FROM products WHERE image_url IS NOT NULL;
 
 ---
 
+## 🔄 **Últimas Actualizaciones - 27 de abril de 2026 (v1.1.0)**
+
+### ✅ **Fix de Persistencia de Imágenes**
+- **Problema**: Las imágenes de productos se eliminaban al recargar la página
+- **Solución**: Implementada persistencia de vistas previas en almacenamiento local
+- **Cambios**:
+  - Añadida función `saveImagePreview()` para guardar en `window.storage`
+  - Actualizada `handleImageSelect()` para usar persistencia
+  - Actualizada `clearImagePreview()` para limpiar almacenamiento
+  - Actualizada `startEdit()` para persistir imágenes al editar
+- **Resultado**: Las imágenes ahora permanecen visibles después de recargar
+
+### ✅ **Backup en GitHub**
+- **Commit**: 3066a17 - "Fix: Implementar persistencia de imágenes de productos"
+- **Tag**: v1.1.0-image-persistence-fix
+- **Repositorio**: https://github.com/GER34714/star-family-ecommerce
+
+---
+
+## 🔄 **Últimas Actualizaciones - 27 de abril de 2026 (v1.2.0)**
+
+### ✅ **Fix de Sincronización Automática del Carrito**
+- **Problema**: Los cambios en productos no se reflejaban inmediatamente en toda la web
+- **Solución**: Implementada sincronización automática del carrito con cambios de productos
+- **Cambios**:
+  - Añadida función `syncCartWithProducts()` para sincronización automática
+  - Actualizada `saveProducts()` para sincronizar carrito cuando cambian productos
+  - Eliminación automática de productos del carrito si son eliminados del catálogo
+  - Actualización automática de precios, nombres e imágenes en el carrito
+  - Sincronización del carrito al cargar la aplicación
+- **Resultado**: Todos los cambios (eliminar, modificar precio/imagen) se reflejan inmediatamente en toda la web
+
+### ✅ **Backup en GitHub**
+- **Commit**: 9a311ea - "Fix: Implementar sincronización automática del carrito con cambios de productos"
+- **Tag**: v1.2.0-cart-sync-fix
+- **Repositorio**: https://github.com/GER34714/star-family-ecommerce
+
+---
+
+## 🔄 **Últimas Actualizaciones - 27 de abril de 2026 (v1.3.0)**
+
+### ✅ **Fix de Sincronización Bidireccional Completa con Supabase**
+- **Problema**: Los cambios del frontend no se sincronizaban con Supabase
+- **Solución**: Implementada sincronización bidireccional completa en todas las operaciones CRUD
+- **Cambios**:
+  - `saveProducts()` ahora sincroniza automáticamente con Supabase
+  - `handleFormSubmit()` sincroniza individualmente cada producto con Supabase
+  - `deleteProduct()` elimina productos de Supabase (active: false)
+  - `updateSinglePrice()` sincroniza cambios de precios individuales
+  - `updateBulkPrices()` sincroniza cambios masivos de precios
+  - `onReset()` sincroniza productos restaurados con Supabase
+- **Resultado**: Todos los cambios del frontend se guardan inmediatamente en Supabase
+
+### ✅ **Backup en GitHub**
+- **Commit**: c5d9810 - "Fix: Implementar sincronización bidireccional completa con Supabase"
+- **Tag**: v1.3.0-supabase-sync
+- **Repositorio**: https://github.com/GER34714/star-family-ecommerce
+
+---
+
+## 🔄 **Últimas Actualizaciones - 27 de abril de 2026 (v1.4.0)**
+
+### ✅ **Fix de Carga Prioritaria desde Supabase**
+- **Problema**: Los cambios desaparecían al recargar la web
+- **Solución**: Implementar carga prioritaria desde Supabase sobre almacenamiento local
+- **Cambios**:
+  - Nueva función `loadProductsFromSupabase()` para cargar productos al inicio
+  - Modificado `useEffect` para priorizar carga desde Supabase
+  - Actualizado `saveProducts()` con opción `skipSupabaseSync` para evitar sincronización redundante
+  - Implementado fallback a almacenamiento local si Supabase no está disponible
+- **Resultado**: Los datos de Supabase prevalecen y los cambios persisten al recargar
+
+### ✅ **Backup en GitHub**
+- **Commit**: 2f8eb96 - "Fix: Implementar carga prioritaria desde Supabase al iniciar aplicación"
+- **Tag**: v1.4.0-supabase-priority-load
+- **Repositorio**: https://github.com/GER34714/star-family-ecommerce
+
+---
+
+## 🔄 **Últimas Actualizaciones - 27 de abril de 2026 (v1.5.0)**
+
+### ✅ **Fix de Carga Inicial de Productos**
+- **Problema**: Solo se mostraban los productos originales del código, no los nuevos productos creados
+- **Solución**: Eliminar carga inicial de SEED_PRODUCTS para priorizar datos de Supabase
+- **Cambios**:
+  - Cambiada inicialización de `products` de `SEED_PRODUCTS` a array vacío
+  - Modificado `useEffect` para implementar jerarquía de carga
+  - Prioridad: Supabase > almacenamiento local > SEED_PRODUCTS
+  - SEED_PRODUCTS solo se carga como último recurso
+- **Resultado**: Los nuevos productos creados ahora se muestran correctamente al recargar
+
+### ✅ **Backup en GitHub**
+- **Commit**: 67511f0 - "Fix: Eliminar carga inicial de SEED_PRODUCTS para priorizar Supabase"
+- **Tag**: v1.5.0-seed-products-fix
+- **Repositorio**: https://github.com/GER34714/star-family-ecommerce
+
+---
+
 **Estado: ✅ PRODUCCIÓN LISTA**  
 **Última actualización**: 27 de abril de 2026  
-**Versión**: 1.0.0
+**Versión**: 1.5.0

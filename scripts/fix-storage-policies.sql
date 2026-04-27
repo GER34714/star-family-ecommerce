@@ -4,9 +4,13 @@
 
 -- Eliminar políticas existentes si las hay
 DROP POLICY IF EXISTS "Allow public read access" ON storage.objects;
+DROP POLICY IF EXISTS "Allow public read access to product images" ON storage.objects;
 DROP POLICY IF EXISTS "Allow public upload" ON storage.objects;
+DROP POLICY IF EXISTS "Allow public upload to product images" ON storage.objects;
 DROP POLICY IF EXISTS "Allow public update" ON storage.objects;
+DROP POLICY IF EXISTS "Allow public update to product images" ON storage.objects;
 DROP POLICY IF EXISTS "Allow public delete" ON storage.objects;
+DROP POLICY IF EXISTS "Allow public delete to product images" ON storage.objects;
 
 -- Habilitar acceso público a las imágenes del bucket products
 CREATE POLICY "Allow public read access to product images" ON storage.objects

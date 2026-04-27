@@ -11,35 +11,35 @@ const CAT_COLOR = { "Frescos":"#E53E3E","Completos":"#DD6B20","Panchos Armados":
 
 const SEED_PRODUCTS = [
   // FRESCOS
-  { id:"f1", category:"Frescos", name:"Salchichas Cortas x6", description:"Salchichas cocidas y ahumadas sin piel. La clásica de siempre.", price:19725, bulkInfo:"Bulto x 24 paquetes", image:"" },
-  { id:"f2", category:"Frescos", name:"Salchichas Largas x6", description:"Salchichas largas cocidas y ahumadas sin piel.", price:19050, bulkInfo:"Bulto x 12 paquetes", image:"" },
-  { id:"f3", category:"Frescos", name:"Salchichas Largas x18", description:"Salchichas largas cocidas y ahumadas sin piel.", price:19050, bulkInfo:"Bulto x 4 paquetes", image:"" },
-  { id:"f4", category:"Frescos", name:"Salchichita 500g", description:"Salchichitas ideales para kioscos y eventos.", price:3437, bulkInfo:"Bulto x 6 paquetes de 500gr", image:"" },
-  { id:"f5", category:"Frescos", name:"Premium Alemana x12", description:"Línea premium tipo alemana. Sabor superior.", price:35000, bulkInfo:"Bulto x 4 paquetes", image:"" },
+  { id:"f1", category:"Frescos", name:"Salchichas Cortas x6", description:"Salchichas cocidas y ahumadas sin piel. La clásica de siempre.", price:19725, bulkInfo:"Bulto x 24 paquetes", image_url:"" },
+  { id:"f2", category:"Frescos", name:"Salchichas Largas x6", description:"Salchichas largas cocidas y ahumadas sin piel.", price:19050, bulkInfo:"Bulto x 12 paquetes", image_url:"" },
+  { id:"f3", category:"Frescos", name:"Salchichas Largas x18", description:"Salchichas largas cocidas y ahumadas sin piel.", price:19050, bulkInfo:"Bulto x 4 paquetes", image_url:"" },
+  { id:"f4", category:"Frescos", name:"Salchichita 500g", description:"Salchichitas ideales para kioscos y eventos.", price:3437, bulkInfo:"Bulto x 6 paquetes de 500gr", image_url:"" },
+  { id:"f5", category:"Frescos", name:"Premium Alemana x12", description:"Línea premium tipo alemana. Sabor superior.", price:35000, bulkInfo:"Bulto x 4 paquetes", image_url:"" },
   // COMPLETOS
-  { id:"c1", category:"Completos", name:"Completo Cortas", description:"Kit completo con pan incluido. Listo para vender.", price:19725, bulkInfo:"144 Salchichas + 144 Panes", image:"" },
-  { id:"c2", category:"Completos", name:"Completo Largas (x18)", description:"Salchichas largas con pan. Ideal para eventos y locales.", price:34800, bulkInfo:"72 Salchichas + 72 Panes", image:"" },
-  { id:"c3", category:"Completos", name:"Completo Largas (x6)", description:"Formato alternativo con salchichas largas y pan.", price:34800, bulkInfo:"72 Salchichas (12paq x6) + 72 Panes", image:"" },
+  { id:"c1", category:"Completos", name:"Completo Cortas", description:"Kit completo con pan incluido. Listo para vender.", price:19725, bulkInfo:"144 Salchichas + 144 Panes", image_url:"" },
+  { id:"c2", category:"Completos", name:"Completo Largas (x18)", description:"Salchichas largas con pan. Ideal para eventos y locales.", price:34800, bulkInfo:"72 Salchichas + 72 Panes", image_url:"" },
+  { id:"c3", category:"Completos", name:"Completo Largas (x6)", description:"Formato alternativo con salchichas largas y pan.", price:34800, bulkInfo:"72 Salchichas (12paq x6) + 72 Panes", image_url:"" },
   // PANCHOS ARMADOS
-  { id:"p1", category:"Panchos Armados", name:"30 Panchos Cortos", description:"Kit completo listo para armar. Panes + salchichas + aderezo.", price:11700, bulkInfo:"30 Panes + 30 Salchichas + 1 Aderezo", image:"" },
-  { id:"p2", category:"Panchos Armados", name:"60 Panchos Cortos", description:"Kit completo listo para armar. Panes + salchichas + aderezo.", price:22200, bulkInfo:"60 Panes + 60 Salchichas + 1 Aderezo", image:"" },
-  { id:"p3", category:"Panchos Armados", name:"36 Panchos Largos", description:"Kit completo listo para armar. Panes + salchichas + aderezo.", price:21600, bulkInfo:"36 Panes + 36 Salchichas + 1 Aderezo", image:"" },
-  { id:"p4", category:"Panchos Armados", name:"72 Panchos Largos", description:"Kit completo listo para armar. Panes + salchichas + aderezo.", price:42000, bulkInfo:"72 Panes + 72 Salchichas + 1 Aderezo", image:"" },
+  { id:"p1", category:"Panchos Armados", name:"30 Panchos Cortos", description:"Kit completo listo para armar. Panes + salchichas + aderezo.", price:11700, bulkInfo:"30 Panes + 30 Salchichas + 1 Aderezo", image_url:"" },
+  { id:"p2", category:"Panchos Armados", name:"60 Panchos Cortos", description:"Kit completo listo para armar. Panes + salchichas + aderezo.", price:22200, bulkInfo:"60 Panes + 60 Salchichas + 1 Aderezo", image_url:"" },
+  { id:"p3", category:"Panchos Armados", name:"36 Panchos Largos", description:"Kit completo listo para armar. Panes + salchichas + aderezo.", price:21600, bulkInfo:"36 Panes + 36 Salchichas + 1 Aderezo", image_url:"" },
+  { id:"p4", category:"Panchos Armados", name:"72 Panchos Largos", description:"Kit completo listo para armar. Panes + salchichas + aderezo.", price:42000, bulkInfo:"72 Panes + 72 Salchichas + 1 Aderezo", image_url:"" },
   // HAMBURGUESAS
-  { id:"h1", category:"Hamburguesas", name:"24 Hamburguesas Clásicas 69g", description:"24 panes + 24 medallones de carne + 1 aderezo.", price:22900, bulkInfo:"24 Panes + 24 Medallones + 1 Aderezo", image:"" },
-  { id:"h2", category:"Hamburguesas", name:"60 Hamburguesas Clásicas 69g", description:"60 panes + 60 medallones de carne + 1 aderezo.", price:55400, bulkInfo:"60 Panes + 60 Medallones + 1 Aderezo", image:"" },
-  { id:"h3", category:"Hamburguesas", name:"20 Hamburguesas Gigantes 110g", description:"20 panes + 20 medallones gigantes + 1 aderezo.", price:26800, bulkInfo:"20 Panes + 20 Medallones + 1 Aderezo", image:"" },
-  { id:"h4", category:"Hamburguesas", name:"40 Hamburguesas Gigantes 110g", description:"40 panes + 40 medallones gigantes + 1 aderezo.", price:52400, bulkInfo:"40 Panes + 40 Medallones + 1 Aderezo", image:"" },
+  { id:"h1", category:"Hamburguesas", name:"24 Hamburguesas Clásicas 69g", description:"24 panes + 24 medallones de carne + 1 aderezo.", price:22900, bulkInfo:"24 Panes + 24 Medallones + 1 Aderezo", image_url:"" },
+  { id:"h2", category:"Hamburguesas", name:"60 Hamburguesas Clásicas 69g", description:"60 panes + 60 medallones de carne + 1 aderezo.", price:55400, bulkInfo:"60 Panes + 60 Medallones + 1 Aderezo", image_url:"" },
+  { id:"h3", category:"Hamburguesas", name:"20 Hamburguesas Gigantes 110g", description:"20 panes + 20 medallones gigantes + 1 aderezo.", price:26800, bulkInfo:"20 Panes + 20 Medallones + 1 Aderezo", image_url:"" },
+  { id:"h4", category:"Hamburguesas", name:"40 Hamburguesas Gigantes 110g", description:"40 panes + 40 medallones gigantes + 1 aderezo.", price:52400, bulkInfo:"40 Panes + 40 Medallones + 1 Aderezo", image_url:"" },
   // PIZZAS Y EMPANADAS
-  { id:"pe1", category:"Pizzas y Empanadas", name:"Pizzas Mozzarella x11", description:"Pizza congelada con salsa de tomate y mozzarella. Lista para hornear.", price:48125, bulkInfo:"Caja x 11 unidades · $4.375 c/u", image:"" },
-  { id:"pe2", category:"Pizzas y Empanadas", name:"Empanadas Premium x42", description:"Carne, pollo, jamón y queso, y verduras. Premium.", price:36540, bulkInfo:"Caja x 42 unidades · $870 c/u", image:"" },
+  { id:"pe1", category:"Pizzas y Empanadas", name:"Pizzas Mozzarella x11", description:"Pizza congelada con salsa de tomate y mozzarella. Lista para hornear.", price:48125, bulkInfo:"Caja x 11 unidades · $4.375 c/u", image_url:"" },
+  { id:"pe2", category:"Pizzas y Empanadas", name:"Empanadas Premium x42", description:"Carne, pollo, jamón y queso, y verduras. Premium.", price:36540, bulkInfo:"Caja x 42 unidades · $870 c/u", image_url:"" },
   // MEDIALUNAS Y CHIPAS
-  { id:"m1", category:"Medialunas y Chipas", name:"Chipa x4.5kg", description:"Chipas artesanales premium.", price:46875, bulkInfo:"Caja x 4.5 kg", image:"" },
-  { id:"m2", category:"Medialunas y Chipas", name:"Medialunas Crudas x96", description:"Medialunas de manteca premium 55g c/u.", price:40800, bulkInfo:"Caja x 96 unidades (55g c/u)", image:"" },
+  { id:"m1", category:"Medialunas y Chipas", name:"Chipa x4.5kg", description:"Chipas artesanales premium.", price:46875, bulkInfo:"Caja x 4.5 kg", image_url:"" },
+  { id:"m2", category:"Medialunas y Chipas", name:"Medialunas Crudas x96", description:"Medialunas de manteca premium 55g c/u.", price:40800, bulkInfo:"Caja x 96 unidades (55g c/u)", image_url:"" },
   // COMBOS
-  { id:"k1", category:"Combos", name:"Combo Pancho Largo", description:"1 salchicha larga + 1 pan + aderezos. El más vendido.", price:3200, bulkInfo:"Caja x 12 combos de 6 (72 panchos)", image:"" },
-  { id:"k2", category:"Combos", name:"Combo Hamburguesa 69g", description:"1 medallón clásico + 1 pan + aderezos.", price:3500, bulkInfo:"Caja x 15 combos de 4", image:"" },
-  { id:"k3", category:"Combos", name:"Combo Hamburguesa 110g", description:"1 medallón gigante + 1 pan + aderezos.", price:4950, bulkInfo:"Caja x 10 combos de 4", image:"" },
+  { id:"k1", category:"Combos", name:"Combo Pancho Largo", description:"1 salchicha larga + 1 pan + aderezos. El más vendido.", price:3200, bulkInfo:"Caja x 12 combos de 6 (72 panchos)", image_url:"" },
+  { id:"k2", category:"Combos", name:"Combo Hamburguesa 69g", description:"1 medallón clásico + 1 pan + aderezos.", price:3500, bulkInfo:"Caja x 15 combos de 4", image_url:"" },
+  { id:"k3", category:"Combos", name:"Combo Hamburguesa 110g", description:"1 medallón gigante + 1 pan + aderezos.", price:4950, bulkInfo:"Caja x 10 combos de 4", image_url:"" },
 ];
 
 const fmt = (p) => `$${Number(p).toLocaleString("es-AR")}`;
@@ -117,7 +117,7 @@ export default function StarFamilyApp() {
   const [modal, setModal] = useState(null);
   const [qty, setQty] = useState(1);
   const [adminTab, setAdminTab] = useState("list");
-  const [form, setForm] = useState({ id:"", category:"Frescos", name:"", description:"", price:"", bulkInfo:"", image:"" });
+  const [form, setForm] = useState({ id:"", category:"Frescos", name:"", description:"", price:"", bulkInfo:"", image_url:"" });
   const [editing, setEditing] = useState(false);
   const [supaUrl, setSupaUrl] = useState("");
   const [supaKey, setSupaKey] = useState("");
@@ -313,7 +313,7 @@ export default function StarFamilyApp() {
   const clearImagePreview = () => {
     saveImagePreview(null);
     setSelectedFile(null);
-    setForm(prev => ({...prev, image: ''})); // Limpiar URL del formulario también
+    setForm(prev => ({...prev, image_url: ''})); // Limpiar URL del formulario también
     if (fileRef.current) {
       fileRef.current.value = '';
     }
@@ -678,7 +678,7 @@ export default function StarFamilyApp() {
           price: product.price,
           category: product.category,
           bulkInfo: product.bulkInfo,
-          image: product.image
+          image_url: product.image_url
         };
       })
       .filter(Boolean); // Eliminar items nulos (productos eliminados)
@@ -770,7 +770,7 @@ export default function StarFamilyApp() {
         description: r.description || "",
         price: Number(r.price) || 0,
         bulkInfo: r.bulto || r.bulk_info || "",
-        image: r.imagen || r.image_url || ""
+        image_url: r.imagen || r.image_url || ""
       })).filter(r => r.name);
         
       if (mapped.length > 0) {
@@ -779,56 +779,6 @@ export default function StarFamilyApp() {
       } else {
         showToast("⚠️ No se encontraron productos válidos en Supabase", "warning");
       }
-    } catch(e) {
-      console.error("Error en syncSupabase:", e);
-      showToast("❌ Error al conectar con Supabase: " + e.message, "error");
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const migrateProductsToSupabase = async () => {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      showToast('⚠️ Configuración de Supabase requerida', 'error');
-      return;
-    }
-
-    try {
-      setSyncing(true);
-      showToast('🔄 Migrando productos a Supabase...');
-      
-      // Preparar productos para migrar
-      const productsToMigrate = products.map(p => ({
-        id: p.id,
-        category: p.category,
-        name: p.name,
-        description: p.description || '',
-        price: p.price,
-        bulk_info: p.bulkInfo || '',
-        image_url: p.image || '',
-        active: true
-      }));
-      
-      // Insertar en batches de 10 para evitar límites
-      const batchSize = 10;
-      for (let i = 0; i < productsToMigrate.length; i += batchSize) {
-        const batch = productsToMigrate.slice(i, i + batchSize);
-        
-        const { data, error } = await supabase
-          .from('products')
-          .upsert(batch, {
-            onConflict: 'id',
-            ignoreDuplicates: false
-          });
-          
-        if (error) {
-          console.error(`Error en batch ${i/batchSize + 1}:`, error);
-          throw error;
-        }
-      }
-      
-      showToast(`✅ ${productsToMigrate.length} productos migrados a Supabase`, 'success');
       
     } catch (error) {
       console.error('Error migrando productos:', error);
@@ -895,7 +845,7 @@ export default function StarFamilyApp() {
             updatedCount++;
             
             // Solo actualizar la imagen si el Excel tiene una nueva URL de imagen
-            const shouldUpdateImage = newImageData && newImageData !== existingProduct.image;
+            const shouldUpdateImage = newImageData && newImageData !== existingProduct.image_url;
             if (shouldUpdateImage) imageUpdatedCount++;
             
             processedProducts.push({
@@ -905,7 +855,7 @@ export default function StarFamilyApp() {
               description: r.descripcion || r.description || existingProduct.description,
               price: parseFloat(r.precio || r.price || existingProduct.price),
               bulkInfo: r.bulto || r.bulk_info || existingProduct.bulkInfo,
-              image: shouldUpdateImage ? finalImageUrl : existingProduct.image
+              image_url: shouldUpdateImage ? finalImageUrl : existingProduct.image_url
             });
           } else {
             // Producto nuevo - crearlo
@@ -917,7 +867,7 @@ export default function StarFamilyApp() {
               description: r.descripcion || r.description || "",
               price: parseFloat(r.precio || r.price || 0),
               bulkInfo: r.bulto || r.bulk_info || "",
-              image: finalImageUrl
+              image_url: finalImageUrl
             });
           }
         }
@@ -1128,17 +1078,17 @@ export default function StarFamilyApp() {
 
       for (const product of products) {
         // Si no tiene imagen o ya es de Supabase, saltar
-        if (!product.image || product.image.includes('supabase')) {
+        if (!product.image_url || product.image_url.includes('supabase')) {
           updatedProducts.push(product);
           continue;
         }
 
         try {
           showToast(`⬆️ Migrando imagen de: ${product.name}`, 'success');
-          const uploadedUrl = await uploadImageFromUrlToSupabase(product.image, product.name);
+          const uploadedUrl = await uploadImageFromUrlToSupabase(product.image_url, product.name);
           
-          if (uploadedUrl && uploadedUrl !== product.image) {
-            updatedProducts.push({ ...product, image: uploadedUrl });
+          if (uploadedUrl && uploadedUrl !== product.image_url) {
+            updatedProducts.push({ ...product, image_url: uploadedUrl });
             migratedCount++;
           } else {
             updatedProducts.push(product);
@@ -1172,12 +1122,12 @@ export default function StarFamilyApp() {
     
     console.log('🔍 handleFormSubmit - Inicio:', {
       editing,
-      formImage: form.image,
+      formImage: form.image_url,
       selectedFile: selectedFile?.name,
       imagePreview
     });
     
-    let imageUrl = form.image;
+    let imageUrl = form.image_url;
     
     // Si hay una imagen seleccionada (archivo local), subirla a Supabase
     if (selectedFile) {
@@ -1187,6 +1137,30 @@ export default function StarFamilyApp() {
         imageUrl = uploadedUrl;
         console.log('✅ Archivo subido exitosamente:', uploadedUrl);
         showToast("✅ Imagen subida a Supabase", "success");
+        // Actualizar vista previa con la URL real de Supabase
+        saveImagePreview(uploadedUrl);
+        
+        // PERSISTENCIA EXPLÍCITA: Actualizar image_url en la base de datos inmediatamente
+        if (editing) {
+          const supabase = getSupabaseClient();
+          if (supabase) {
+            try {
+              const { error } = await supabase
+                .from('products')
+                .update({ image_url: uploadedUrl })
+                .eq('id', form.id);
+              
+              if (error) {
+                console.error('Error actualizando image_url en DB:', error);
+                showToast('⚠️ Error guardando URL en base de datos', 'error');
+              } else {
+                console.log('✅ image_url persistido en base de datos:', uploadedUrl);
+              }
+            } catch (error) {
+              console.error('Error en persistencia de image_url:', error);
+            }
+          }
+        }
       } else {
         // Si falla la subida, continuar con la URL existente o vacía
         console.log('⚠️ Falló la subida del archivo');
@@ -1194,25 +1168,47 @@ export default function StarFamilyApp() {
       }
     } 
     // Si es edición y hay una URL en el formulario que no es de Supabase, subirla
-    else if (editing && form.image && !form.image.includes('supabase')) {
-      console.log('🌐 Subiendo imagen desde URL externa:', form.image);
+    else if (editing && form.image_url && !form.image_url.includes('supabase')) {
+      console.log('🌐 Subiendo imagen desde URL externa:', form.image_url);
       showToast("⬆️ Subiendo imagen desde URL a Supabase...", "success");
-      const uploadedUrl = await uploadImageFromUrlToSupabase(form.image, form.name);
-      if (uploadedUrl && uploadedUrl !== form.image) {
+      const uploadedUrl = await uploadImageFromUrlToSupabase(form.image_url, form.name);
+      if (uploadedUrl && uploadedUrl !== form.image_url) {
         imageUrl = uploadedUrl;
         console.log('✅ Imagen externa subida exitosamente:', uploadedUrl);
         showToast("✅ Imagen externa subida a Supabase", "success");
+        // Actualizar vista previa con la URL real de Supabase
+        saveImagePreview(uploadedUrl);
+        
+        // PERSISTENCIA EXPLÍCITA: Actualizar image_url en la base de datos inmediatamente
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          try {
+            const { error } = await supabase
+              .from('products')
+              .update({ image_url: uploadedUrl })
+              .eq('id', form.id);
+            
+            if (error) {
+              console.error('Error actualizando image_url en DB:', error);
+              showToast('⚠️ Error guardando URL en base de datos', 'error');
+            } else {
+              console.log('✅ image_url persistido en base de datos:', uploadedUrl);
+            }
+          } catch (error) {
+            console.error('Error en persistencia de image_url:', error);
+          }
+        }
       } else {
         console.log('ℹ️ La imagen externa no se pudo subir o ya es de Supabase');
       }
     }
     
-    const p = { ...form, image: imageUrl, id: editing ? form.id : `prod_${Date.now()}`, price: parseFloat(form.price) };
+    const p = { ...form, image_url: imageUrl, id: editing ? form.id : `prod_${Date.now()}`, price: parseFloat(form.price) };
     
     console.log('📦 Producto a guardar:', {
       id: p.id,
       name: p.name,
-      image: p.image,
+      image_url: p.image_url,
       isEditing: editing
     });
     
@@ -1236,7 +1232,7 @@ export default function StarFamilyApp() {
     
     // Limpiar estado de imagen
     clearImagePreview();
-    setForm({ id:"", category:"Frescos", name:"", description:"", price:"", bulkInfo:"", image:"" });
+    setForm({ id:"", category:"Frescos", name:"", description:"", price:"", bulkInfo:"", image_url:"" });
     setEditing(false);
     setAdminTab("list");
     
@@ -1248,8 +1244,8 @@ export default function StarFamilyApp() {
     setEditing(true); 
     setAdminTab("add");
     // Si el producto tiene una imagen, mostrarla como vista previa
-    if (p.image) {
-      saveImagePreview(p.image);
+    if (p.image_url) {
+      saveImagePreview(p.image_url);
     } else {
       saveImagePreview(null);
     }
@@ -1474,7 +1470,7 @@ export default function StarFamilyApp() {
             onClearImage={clearImagePreview}
             imagePreview={imagePreview}
             uploadingImage={uploadingImage}
-            onMigrate={migrateProductsToSupabase}
+            onMigrate={migrateExistingImagesToSupabase}
             onUpdateSinglePrice={updateSinglePrice}
             onUpdateBulkPrices={updateBulkPrices}
             onPreviewBulkPriceChanges={previewBulkPriceChanges}
@@ -1718,7 +1714,7 @@ function ProductCard({ p, onOpen, onAdd }) {
     <div className="product-card" onClick={onOpen}>
       {/* Image */}
       <div style={{ position:"relative", aspectRatio:"4/3", overflow:"hidden", background:`linear-gradient(135deg,${color}22,${color}44)` }}>
-        {image_url
+        {image_url && image_url.trim() !== ''
           ? <img src={image_url} alt={name || "Producto"} style={{ width:"100%", height:"100%", objectFit:"cover", transition:"transform 0.3s" }} onError={e => { e.target.src = "https://via.placeholder.com/300x300/f5a623/ffffff?text=Star+Family"; }} />
           : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:42 }}>{emoji}</div>
         }
@@ -2612,6 +2608,20 @@ function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, se
             </div>
             <div style={{ gridColumn:"1/-1" }}>
               <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>IMAGEN DEL PRODUCTO</label>
+              <input 
+                type="url" 
+                value={form.image_url} 
+                onChange={e => {
+                  setForm({...form, image_url: e.target.value});
+                  if (e.target.value.trim()) {
+                    saveImagePreview(e.target.value);
+                  } else {
+                    saveImagePreview(null);
+                  }
+                }} 
+                style={{...input, marginBottom:10}} 
+                placeholder="https://ejemplo.com/imagen.jpg (opcional)" 
+              />
               <div style={{ marginTop:5 }}>
                 <input
                   ref={fileRef}
