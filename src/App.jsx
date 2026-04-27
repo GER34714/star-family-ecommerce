@@ -89,10 +89,6 @@ export default function StarFamilyApp() {
   const [scrollThreshold, setScrollThreshold] = useState(150);
   const [isScrolling, setIsScrolling] = useState(false);
   const [showTimer, setShowTimer] = useState(null);
-  
-  // Estados para el carrusel de categorías
-  const [isVerticalScrolling, setIsVerticalScrolling] = useState(false);
-  const [isCategoryHovered, setIsCategoryHovered] = useState(false);
   const [priceHistory, setPriceHistory] = useState([]);
   const [restorePoints, setRestorePoints] = useState([]);
 
@@ -230,31 +226,6 @@ export default function StarFamilyApp() {
       }
     };
   }, [cartOpen, modal, scrollDirection, scrollThreshold, lastScrollY, showTimer]);
-
-  // Efecto para detectar scroll vertical y controlar el carrusel de categorías
-  useEffect(() => {
-    let scrollTimer;
-    
-    const handleVerticalScroll = () => {
-      const currentScrollY = window.scrollY;
-      setIsVerticalScrolling(currentScrollY > 100);
-      
-      // Debounce para detectar fin del scroll
-      clearTimeout(scrollTimer);
-      scrollTimer = setTimeout(() => {
-        setIsVerticalScrolling(false);
-      }, 150);
-    };
-
-    window.addEventListener('scroll', handleVerticalScroll);
-    
-    return () => {
-      window.removeEventListener('scroll', handleVerticalScroll);
-      if (scrollTimer) {
-        clearTimeout(scrollTimer);
-      }
-    };
-  }, []);
 
   // Funciones para manejo de imágenes
   const handleImageSelect = (e) => {
@@ -1535,7 +1506,7 @@ export default function StarFamilyApp() {
             </div>
           </div>
 
-          {/* CATEGORY BAR - ORIGINAL */}
+          {/* CATEGORY BAR */}
           <div style={{ background:"white", borderBottom:"1px solid #E5E7EB", position:"sticky", top:62, zIndex:100 }}>
             <div className="cat-scroll">
               {CATS.map(c => (
@@ -1545,173 +1516,6 @@ export default function StarFamilyApp() {
               ))}
             </div>
           </div>
-
-          {/* INFINITE PRODUCT MARQUEE - CYBERPUNK PREMIUM */}
-          {cat !== "Todos" && (
-            <div 
-              style={{ 
-                background:"rgba(15, 23, 42, 0.95)", 
-                backdropFilter:"blur(20px)", 
-                borderBottom:"1px solid rgba(196, 30, 58, 0.3)", 
-                position:"sticky", 
-                top:106, 
-                zIndex:95,
-                overflow:"hidden",
-                position:"relative"
-              }}
-              onMouseEnter={() => setIsCategoryHovered(true)}
-              onMouseLeave={() => setIsCategoryHovered(false)}
-            >
-              {/* FADING EDGES */}
-              <div 
-                style={{
-                  position:"absolute",
-                  left:0,
-                  top:0,
-                  bottom:0,
-                  width:80,
-                  background:"linear-gradient(to right, rgba(15, 23, 42, 1) 0%, rgba(15, 23, 42, 0.8) 50%, transparent 100%)",
-                  zIndex:10,
-                  pointerEvents:"none"
-                }}
-              />
-              <div 
-                style={{
-                  position:"absolute",
-                  right:0,
-                  top:0,
-                  bottom:0,
-                  width:80,
-                  background:"linear-gradient(to left, rgba(15, 23, 42, 1) 0%, rgba(15, 23, 42, 0.8) 50%, transparent 100%)",
-                  zIndex:10,
-                  pointerEvents:"none"
-                }}
-              />
-              
-              {/* INFINITE PRODUCT MARQUEE CONTAINER */}
-              <div 
-                style={{
-                  display:"flex",
-                  alignItems:"center",
-                  padding:"20px 0",
-                  animationPlayState: (isCategoryHovered || isVerticalScrolling) ? "paused" : "running"
-                }}
-                className="product-marquee"
-              >
-                {/* DUPLICATE PRODUCTS FOR INFINITE LOOP */}
-                {[...(filtered || []), ...(filtered || [])].map((product, index) => (
-                  <motion.div
-                    key={`${product.id}-${index}`}
-                    whileHover={{ 
-                      scale: 1.02,
-                      boxShadow: "0 8px 25px rgba(196, 30, 58, 0.4)"
-                    }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setModal(product)}
-                    style={{
-                      background:"rgba(30, 41, 59, 0.8)",
-                      backdropFilter:"blur(10px)",
-                      border:"1px solid rgba(255, 255, 255, 0.1)",
-                      borderRadius:16,
-                      padding:"16px",
-                      cursor:"pointer",
-                      flexShrink:0,
-                      width:200,
-                      height:280,
-                      display:"flex",
-                      flexDirection:"column",
-                      margin:"0 16px",
-                      transition:"all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                      boxShadow:"0 4px 15px rgba(0, 0, 0, 0.2)"
-                    }}
-                  >
-                    {/* Product Image */}
-                    <div style={{ 
-                      width:"100%", 
-                      height:140, 
-                      borderRadius:12, 
-                      overflow:"hidden", 
-                      marginBottom:12,
-                      background:"rgba(255, 255, 255, 0.05)",
-                      display:"flex",
-                      alignItems:"center",
-                      justifyContent:"center"
-                    }}>
-                      {product.image_url ? (
-                        <img 
-                          src={product.image_url} 
-                          alt={product.name}
-                          style={{ 
-                            width:"100%", 
-                            height:"100%", 
-                            objectFit:"cover" 
-                          }}
-                        />
-                      ) : (
-                        <div style={{ fontSize:48, opacity:0.3 }}>📦</div>
-                      )}
-                    </div>
-                    
-                    {/* Product Info */}
-                    <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
-                      <div>
-                        <div style={{ 
-                          color:"white", 
-                          fontSize:14, 
-                          fontWeight:600, 
-                          marginBottom:4,
-                          fontFamily:"'Poppins',sans-serif",
-                          lineHeight:1.2
-                        }}>
-                          {product.name}
-                        </div>
-                        {product.description && (
-                          <div style={{ 
-                            color:"rgba(255, 255, 255, 0.6)", 
-                            fontSize:12, 
-                            marginBottom:8,
-                            fontFamily:"'Poppins',sans-serif",
-                            overflow:"hidden",
-                            textOverflow:"ellipsis",
-                            whiteSpace:"nowrap"
-                          }}>
-                            {product.description}
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div style={{ 
-                        color:CAT_COLOR[product.category] || "#C41E3A", 
-                        fontSize:18, 
-                        fontWeight:700,
-                        fontFamily:"'Poppins',sans-serif"
-                      }}>
-                        ${product.price}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {/* CSS ANIMATION FOR PRODUCT MARQUEE */}
-          <style jsx>{`
-            @keyframes productMarquee {
-              0% { transform: translateX(0); }
-              100% { transform: translateX(-50%); }
-            }
-            
-            .product-marquee {
-              display: flex;
-              animation: productMarquee 40s linear infinite;
-              width: fit-content;
-            }
-            
-            .product-marquee:hover {
-              animation-play-state: paused;
-            }
-          `}</style>
 
           {/* PRODUCT GRID */}
           <div style={{ maxWidth:1200, margin:"0 auto", padding:"20px 12px 48px" }}>
