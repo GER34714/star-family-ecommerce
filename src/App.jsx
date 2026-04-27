@@ -86,6 +86,7 @@ export default function StarFamilyApp() {
   const [imagePreview, setImagePreview] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [priceHistory, setPriceHistory] = useState([]);
+  const [restorePoints, setRestorePoints] = useState([]);
 
   // Jerarquía de roles con inicialización segura
   const [user, setUser] = useState(null);
@@ -148,7 +149,7 @@ export default function StarFamilyApp() {
       // Crear vista previa
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result);
+        saveImagePreview(reader.result);
       };
       reader.readAsDataURL(file);
     }
@@ -196,8 +197,77 @@ export default function StarFamilyApp() {
     }
   };
 
+  const uploadImageFromUrlToSupabase = async (imageUrl, productName) => {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      console.warn('Configuración de Supabase no disponible, usando URL original');
+      return imageUrl;
+    }
+
+    try {
+      // Si ya es una URL de Supabase, no hacer nada
+      if (imageUrl && imageUrl.includes('supabase')) {
+        return imageUrl;
+      }
+
+      // Si no hay URL o es vacía, retornar null
+      if (!imageUrl || imageUrl.trim() === '') {
+        return null;
+      }
+
+      // Descargar la imagen desde la URL
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error(`No se pudo descargar la imagen: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      
+      // Determinar la extensión del archivo
+      const contentType = blob.type;
+      let fileExt = 'jpg'; // default
+      if (contentType.includes('png')) fileExt = 'png';
+      else if (contentType.includes('gif')) fileExt = 'gif';
+      else if (contentType.includes('webp')) fileExt = 'webp';
+      else if (contentType.includes('jpeg')) fileExt = 'jpg';
+
+      // Generar nombre de archivo basado en el producto
+      const sanitizedName = productName.toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .slice(0, 50);
+      
+      const fileName = `${sanitizedName}-${Date.now()}.${fileExt}`;
+      const filePath = `product-images/${fileName}`;
+
+      // Subir a Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('products')
+        .upload(filePath, blob, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: contentType
+        });
+
+      if (error) throw error;
+
+      // Obtener URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('products')
+        .getPublicUrl(filePath);
+
+      console.log(`✅ Imagen de "${productName}" subida a Supabase: ${publicUrl}`);
+      return publicUrl;
+      
+    } catch (error) {
+      console.error(`Error subiendo imagen desde URL para "${productName}":`, error);
+      // En caso de error, retornar la URL original
+      return imageUrl;
+    }
+  };
+
   const clearImagePreview = () => {
-    setImagePreview(null);
+    saveImagePreview(null);
     setSelectedFile(null);
     setForm(prev => ({...prev, image: ''})); // Limpiar URL del formulario también
     if (fileRef.current) {
@@ -242,6 +312,16 @@ export default function StarFamilyApp() {
       try { const r = await window.storage.get("roxy_cart"); if (r?.value) setCart(JSON.parse(r.value)); } catch {}
       try { const r = await window.storage.get("roxy_supa"); if (r?.value) { const d = JSON.parse(r.value); setSupaUrl(d.url||""); setSupaKey(d.key||""); } } catch {}
       try { const r = await window.storage.get("roxy_price_history"); if (r?.value) setPriceHistory(JSON.parse(r.value)); } catch {}
+      try { const r = await window.storage.get("roxy_restore_points"); if (r?.value) setRestorePoints(JSON.parse(r.value)); } catch {}
+      try { const r = await window.storage.get("roxy_image_preview"); if (r?.value) setImagePreview(r.value); } catch {}
+      
+      // Cargar historial desde Supabase si hay configuración
+      try {
+        await loadPriceHistoryFromSupabase();
+      } catch (error) {
+        console.error('Error cargando historial desde Supabase:', error);
+      }
+      
       finally {
         setLoading(false);
       }
@@ -251,6 +331,223 @@ export default function StarFamilyApp() {
   const saveProducts = async (p) => { setProducts(p); try { await window.storage.set("roxy_products", JSON.stringify(p)); } catch {} };
   const saveCart = async (c) => { setCart(c); try { await window.storage.set("roxy_cart", JSON.stringify(c)); } catch {} };
   const savePriceHistory = async (h) => { setPriceHistory(h); try { await window.storage.set("roxy_price_history", JSON.stringify(h)); } catch {} };
+  const saveRestorePoints = async (rp) => { setRestorePoints(rp); try { await window.storage.set("roxy_restore_points", JSON.stringify(rp)); } catch {} };
+  const saveImagePreview = async (preview) => { setImagePreview(preview); try { await window.storage.set("roxy_image_preview", preview); } catch {} };
+
+  // Funciones para persistir en Supabase
+  const saveProductToSupabase = async (product) => {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      console.warn('Configuración de Supabase no disponible');
+      return false;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .upsert({
+          id: product.id,
+          category: product.category,
+          name: product.name,
+          description: product.description || '',
+          price: product.price,
+          bulk_info: product.bulkInfo || '',
+          image_url: product.image || '',
+          active: true
+        }, {
+          onConflict: 'id'
+        });
+
+      if (error) throw error;
+      console.log('✅ Producto guardado en Supabase:', product.name);
+      return true;
+    } catch (error) {
+      console.error('Error guardando producto en Supabase:', error);
+      return false;
+    }
+  };
+
+  const savePriceHistoryToSupabase = async (historyEntry) => {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      console.warn('Configuración de Supabase no disponible');
+      return false;
+    }
+
+    try {
+      const entryData = {
+        id: historyEntry.id,
+        product_id: historyEntry.productId,
+        product_name: historyEntry.productName,
+        category: historyEntry.category,
+        type: historyEntry.type,
+        old_price: historyEntry.oldPrice,
+        new_price: historyEntry.newPrice,
+        difference: historyEntry.difference,
+        percentage_change: historyEntry.percentageChange,
+        user_email: historyEntry.user,
+        timestamp: historyEntry.timestamp
+      };
+
+      // Agregar campos específicos para cambios masivos
+      if (historyEntry.type === 'bulk') {
+        entryData.adjustment_type = historyEntry.adjustmentType;
+        entryData.adjustment_value = historyEntry.adjustmentValue;
+        entryData.affected_categories = historyEntry.affectedCategories;
+        entryData.changes_count = historyEntry.changesCount;
+      }
+
+      const { data, error } = await supabase
+        .from('price_history')
+        .insert(entryData);
+
+      if (error) throw error;
+      console.log('✅ Historial guardado en Supabase:', historyEntry.productName);
+      return true;
+    } catch (error) {
+      console.error('Error guardando historial en Supabase:', error);
+      return false;
+    }
+  };
+
+  const syncProductsWithSupabase = async () => {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      console.warn('Configuración de Supabase no disponible');
+      return;
+    }
+
+    try {
+      // Sincronizar todos los productos locales con Supabase
+      const syncPromises = products.map(product => saveProductToSupabase(product));
+      const results = await Promise.allSettled(syncPromises);
+      
+      const successful = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected').length;
+      
+      console.log(`📊 Sincronización de productos: ${successful} exitosos, ${failed} fallidos`);
+      
+      if (failed > 0) {
+        showToast(`⚠️ ${failed} productos no se sincronizaron con Supabase`, 'warning');
+      } else {
+        showToast('✅ Todos los productos sincronizados con Supabase', 'success');
+      }
+    } catch (error) {
+      console.error('Error en sincronización masiva:', error);
+      showToast('❌ Error en sincronización con Supabase', 'error');
+    }
+  };
+
+  const loadPriceHistoryFromSupabase = async () => {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      console.warn('Configuración de Supabase no disponible, usando historial local');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('price_history')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        // Convertir datos al formato local
+        const localHistory = data.map(entry => ({
+          id: entry.id,
+          timestamp: entry.timestamp,
+          type: entry.type,
+          productId: entry.product_id,
+          productName: entry.product_name,
+          category: entry.category,
+          oldPrice: entry.old_price,
+          newPrice: entry.new_price,
+          difference: entry.difference,
+          percentageChange: entry.percentage_change,
+          user: entry.user_email,
+          // Campos para cambios masivos
+          adjustmentType: entry.adjustment_type,
+          adjustmentValue: entry.adjustment_value,
+          affectedCategories: entry.affected_categories,
+          changesCount: entry.changes_count,
+          changes: [] // Los cambios individuales no se guardan en Supabase por simplicidad
+        }));
+
+        // Actualizar historial local
+        const mergedHistory = [...localHistory, ...priceHistory.filter(local => 
+          !localHistory.some(supabase => supabase.id === local.id)
+        )].slice(0, 100);
+
+        await savePriceHistory(mergedHistory);
+        console.log(`📊 Historial cargado desde Supabase: ${data.length} cambios`);
+      }
+    } catch (error) {
+      console.error('Error cargando historial desde Supabase:', error);
+    }
+  };
+
+  // Sistema de Backup y Restauración
+  const createRestorePoint = async (reason = "Backup automático") => {
+    const restorePoint = {
+      id: `restore_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      reason: reason,
+      products: JSON.parse(JSON.stringify(products)), // Deep copy
+      priceHistory: JSON.parse(JSON.stringify(priceHistory)), // Deep copy
+      user: user?.email || 'unknown'
+    };
+
+    const newRestorePoints = [restorePoint, ...restorePoints].slice(0, 10); // Mantener últimos 10 puntos
+    saveRestorePoints(newRestorePoints);
+    console.log('📍 Punto de restauración creado:', reason);
+  };
+
+  const restoreFromPoint = async (restorePointId) => {
+    const restorePoint = restorePoints.find(rp => rp.id === restorePointId);
+    if (!restorePoint) {
+      showToast('❌ Punto de restauración no encontrado', 'error');
+      return;
+    }
+
+    try {
+      // Confirmación del usuario
+      const confirmed = window.confirm(
+        `¿Estás seguro que querés restaurar al estado anterior?\n\n` +
+        `📅 Fecha: ${new Date(restorePoint.timestamp).toLocaleString('es-AR')}\n` +
+        `📝 Razón: ${restorePoint.reason}\n` +
+        `👤 Usuario: ${restorePoint.user}\n\n` +
+        `⚠️ Esta acción reemplazará todos los datos actuales.`
+      );
+
+      if (!confirmed) return;
+
+      // Restaurar productos
+      await saveProducts(restorePoint.products);
+      setProducts(restorePoint.products);
+
+      // Restaurar historial de precios
+      await savePriceHistory(restorePoint.priceHistory);
+      setPriceHistory(restorePoint.priceHistory);
+
+      // Crear punto de restauración antes del cambio
+      await createRestorePoint("Restauración desde punto anterior");
+
+      showToast(`✅ Estado restaurado exitosamente (${restorePoint.reason})`, 'success');
+      console.log('🔄 Estado restaurado desde:', restorePointId);
+
+    } catch (error) {
+      console.error('Error restaurando estado:', error);
+      showToast('❌ Error al restaurar estado', 'error');
+    }
+  };
+
+  const autoBackup = async () => {
+    // Crear backup automático antes de cambios importantes
+    await createRestorePoint("Backup antes de cambios importantes");
+  };
 
   const addToCart = (product, q = 1) => {
     const ex = cart.find(i => i.id === product.id);
@@ -373,6 +670,9 @@ export default function StarFamilyApp() {
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(ws);
         
+        // Mostrar mensaje de procesamiento
+        showToast("🔄 Procesando Excel y subiendo imágenes a Supabase...", "success");
+        
         // Crear mapa de productos existentes por nombre para búsqueda rápida
         const existingProductsMap = new Map();
         products.forEach(p => {
@@ -384,14 +684,32 @@ export default function StarFamilyApp() {
         let updatedCount = 0;
         let newCount = 0;
         let imageUpdatedCount = 0;
+        let imageUploadedCount = 0;
         
-        const processedProducts = rows.map((r, i) => {
+        const processedProducts = [];
+        
+        // Procesar cada producto
+        for (let i = 0; i < rows.length; i++) {
+          const r = rows[i];
           const productName = (r.nombre || r.name || "").trim();
-          if (!productName) return null;
+          if (!productName) continue;
           
           const existingProduct = existingProductsMap.get(productName.toLowerCase());
-          
           const newImageData = r.imagen || r.image_url || "";
+          
+          let finalImageUrl = newImageData;
+          
+          // Subir imagen a Supabase si existe y no es de Supabase
+          if (newImageData && !newImageData.includes('supabase')) {
+            showToast(`⬆️ Subiendo imagen de: ${productName}`, "success");
+            const uploadedUrl = await uploadImageFromUrlToSupabase(newImageData, productName);
+            
+            // Si la subida fue exitosa (URL diferente), actualizar contador
+            if (uploadedUrl && uploadedUrl !== newImageData) {
+              finalImageUrl = uploadedUrl;
+              imageUploadedCount++;
+            }
+          }
           
           if (existingProduct) {
             // Producto existe - actualizarlo
@@ -401,29 +719,29 @@ export default function StarFamilyApp() {
             const shouldUpdateImage = newImageData && newImageData !== existingProduct.image;
             if (shouldUpdateImage) imageUpdatedCount++;
             
-            return {
+            processedProducts.push({
               ...existingProduct,
               category: r.categoria || r.category || existingProduct.category,
               name: productName,
               description: r.descripcion || r.description || existingProduct.description,
               price: parseFloat(r.precio || r.price || existingProduct.price),
               bulkInfo: r.bulto || r.bulk_info || existingProduct.bulkInfo,
-              image: shouldUpdateImage ? newImageData : existingProduct.image
-            };
+              image: shouldUpdateImage ? finalImageUrl : existingProduct.image
+            });
           } else {
             // Producto nuevo - crearlo
             newCount++;
-            return {
+            processedProducts.push({
               id: `xl_${Date.now()}_${i}`,
               category: r.categoria || r.category || "Frescos",
               name: productName,
               description: r.descripcion || r.description || "",
               price: parseFloat(r.precio || r.price || 0),
               bulkInfo: r.bulto || r.bulk_info || "",
-              image: newImageData
-            };
+              image: finalImageUrl
+            });
           }
-        }).filter(p => p !== null);
+        }
         
         if (processedProducts.length > 0) {
           // Combinar productos actualizados y nuevos
@@ -442,7 +760,7 @@ export default function StarFamilyApp() {
           let message = `✅ Procesados ${processedProducts.length} productos:`;
           if (updatedCount > 0) message += ` ${updatedCount} actualizados`;
           if (newCount > 0) message += ` ${newCount} nuevos`;
-          if (imageUpdatedCount > 0) message += ` (${imageUpdatedCount} con imágenes actualizadas)`;
+          if (imageUploadedCount > 0) message += ` (${imageUploadedCount} imágenes subidas a Supabase)`;
           
           showToast(message);
         } else {
@@ -457,7 +775,10 @@ export default function StarFamilyApp() {
   };
 
   // Funciones de administración de precios
-  const updateSinglePrice = (productId, newPrice) => {
+  const updateSinglePrice = async (productId, newPrice) => {
+    // Crear punto de restauración antes del cambio
+    await createRestorePoint("Antes de actualizar precio individual");
+    
     const product = products.find(p => p.id === productId);
     const oldPrice = product.price;
     const updatedProducts = products.map(p => 
@@ -480,12 +801,25 @@ export default function StarFamilyApp() {
     };
     
     const newHistory = [historyEntry, ...priceHistory].slice(0, 100); // Mantener últimos 100 cambios
+    
+    // Guardar localmente
     savePriceHistory(newHistory);
     saveProducts(updatedProducts);
-    showToast("✅ Precio actualizado", "success");
+    
+    // Guardar historial en Supabase
+    try {
+      await savePriceHistoryToSupabase(historyEntry);
+      showToast("✅ Precio actualizado e historial guardado", "success");
+    } catch (error) {
+      console.error('Error guardando historial en Supabase:', error);
+      showToast("✅ Precio actualizado localmente", "success");
+    }
   };
 
-  const updateBulkPrices = (adjustmentType, value, selectedCategories = []) => {
+  const updateBulkPrices = async (adjustmentType, value, selectedCategories = []) => {
+    // Crear punto de restauración antes del cambio masivo
+    await createRestorePoint(`Antes de ajuste masivo (${adjustmentType} ${value})`);
+    
     let updatedCount = 0;
     const changes = [];
     
@@ -536,9 +870,20 @@ export default function StarFamilyApp() {
     };
     
     const newHistory = [historyEntry, ...priceHistory].slice(0, 100); // Mantener últimos 100 cambios
+    
+    // Guardar localmente
     savePriceHistory(newHistory);
     saveProducts(updatedProducts);
-    showToast(`✅ ${updatedCount} precios actualizados`, "success");
+    
+    // Guardar historial en Supabase
+    try {
+      await savePriceHistoryToSupabase(historyEntry);
+      showToast(`✅ ${updatedCount} precios actualizados e historial guardado`, "success");
+    } catch (error) {
+      console.error('Error guardando historial en Supabase:', error);
+      showToast(`✅ ${updatedCount} precios actualizados localmente`, "success");
+    }
+    
     return updatedCount;
   };
 
@@ -570,31 +915,130 @@ export default function StarFamilyApp() {
     });
   };
 
+  const migrateExistingImagesToSupabase = async () => {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      showToast('⚠️ Configuración de Supabase requerida', 'error');
+      return;
+    }
+
+    try {
+      showToast('🔄 Migrando imágenes existentes a Supabase...', 'success');
+      
+      let migratedCount = 0;
+      let errorCount = 0;
+      const updatedProducts = [];
+
+      for (const product of products) {
+        // Si no tiene imagen o ya es de Supabase, saltar
+        if (!product.image || product.image.includes('supabase')) {
+          updatedProducts.push(product);
+          continue;
+        }
+
+        try {
+          showToast(`⬆️ Migrando imagen de: ${product.name}`, 'success');
+          const uploadedUrl = await uploadImageFromUrlToSupabase(product.image, product.name);
+          
+          if (uploadedUrl && uploadedUrl !== product.image) {
+            updatedProducts.push({ ...product, image: uploadedUrl });
+            migratedCount++;
+          } else {
+            updatedProducts.push(product);
+          }
+        } catch (error) {
+          console.error(`Error migrando imagen de ${product.name}:`, error);
+          updatedProducts.push(product);
+          errorCount++;
+        }
+      }
+
+      // Guardar productos actualizados
+      saveProducts(updatedProducts);
+      
+      // Mensaje de resultados
+      let message = `✅ Migración completada:`;
+      if (migratedCount > 0) message += ` ${migratedCount} imágenes migradas`;
+      if (errorCount > 0) message += ` ${errorCount} errores`;
+      if (migratedCount === 0 && errorCount === 0) message += ` No se encontraron imágenes para migrar`;
+      
+      showToast(message);
+      
+    } catch (error) {
+      console.error('Error en migración de imágenes:', error);
+      showToast('❌ Error en migración: ' + error.message, 'error');
+    }
+  };
+
   const handleFormSubmit = async () => {
     if (!form.name.trim() || !form.price) return showToast("⚠️ Nombre y precio son requeridos", "error");
     
+    console.log('🔍 handleFormSubmit - Inicio:', {
+      editing,
+      formImage: form.image,
+      selectedFile: selectedFile?.name,
+      imagePreview
+    });
+    
     let imageUrl = form.image;
     
-    // Si hay una imagen seleccionada, subirla a Supabase
+    // Si hay una imagen seleccionada (archivo local), subirla a Supabase
     if (selectedFile) {
+      console.log('📤 Subiendo archivo local a Supabase...');
       const uploadedUrl = await uploadImageToSupabase(selectedFile);
       if (uploadedUrl) {
         imageUrl = uploadedUrl;
+        console.log('✅ Archivo subido exitosamente:', uploadedUrl);
+        showToast("✅ Imagen subida a Supabase", "success");
       } else {
         // Si falla la subida, continuar con la URL existente o vacía
+        console.log('⚠️ Falló la subida del archivo');
         showToast("⚠️ Continuando sin subir la imagen", "warning");
+      }
+    } 
+    // Si es edición y hay una URL en el formulario que no es de Supabase, subirla
+    else if (editing && form.image && !form.image.includes('supabase')) {
+      console.log('🌐 Subiendo imagen desde URL externa:', form.image);
+      showToast("⬆️ Subiendo imagen desde URL a Supabase...", "success");
+      const uploadedUrl = await uploadImageFromUrlToSupabase(form.image, form.name);
+      if (uploadedUrl && uploadedUrl !== form.image) {
+        imageUrl = uploadedUrl;
+        console.log('✅ Imagen externa subida exitosamente:', uploadedUrl);
+        showToast("✅ Imagen externa subida a Supabase", "success");
+      } else {
+        console.log('ℹ️ La imagen externa no se pudo subir o ya es de Supabase');
       }
     }
     
     const p = { ...form, image: imageUrl, id: editing ? form.id : `prod_${Date.now()}`, price: parseFloat(form.price) };
-    saveProducts(editing ? products.map(x => x.id === p.id ? p : x) : [...products, p]);
+    
+    console.log('📦 Producto a guardar:', {
+      id: p.id,
+      name: p.name,
+      image: p.image,
+      isEditing: editing
+    });
+    
+    if (editing) {
+      // Actualizar producto existente
+      const updatedProducts = products.map(x => x.id === p.id ? p : x);
+      saveProducts(updatedProducts);
+      console.log('✏️ Producto actualizado en la lista');
+      showToast("✏️ Producto actualizado", "success");
+    } else {
+      // Agregar nuevo producto
+      saveProducts([...products, p]);
+      console.log('➕ Producto agregado a la lista');
+      showToast("➕ Producto agregado", "success");
+    }
     
     // Limpiar estado de imagen
     clearImagePreview();
     setForm({ id:"", category:"Frescos", name:"", description:"", price:"", bulkInfo:"", image:"" });
     setEditing(false);
     setAdminTab("list");
-    showToast(editing ? "✏️ Producto actualizado" : "➕ Producto agregado");
+    
+    console.log('🧹 handleFormSubmit - Limpieza completada');
   };
 
   const startEdit = (p) => { 
@@ -603,9 +1047,9 @@ export default function StarFamilyApp() {
     setAdminTab("add");
     // Si el producto tiene una imagen, mostrarla como vista previa
     if (p.image) {
-      setImagePreview(p.image);
+      saveImagePreview(p.image);
     } else {
-      setImagePreview(null);
+      saveImagePreview(null);
     }
     // Limpiar solo el archivo seleccionado, no la vista previa
     setSelectedFile(null);
@@ -761,6 +1205,11 @@ export default function StarFamilyApp() {
             onUpdateBulkPrices={updateBulkPrices}
             onPreviewBulkPriceChanges={previewBulkPriceChanges}
             priceHistory={priceHistory}
+            onMigrateImages={migrateExistingImagesToSupabase}
+            onSyncProducts={syncProductsWithSupabase}
+            restorePoints={restorePoints}
+            onCreateRestorePoint={createRestorePoint}
+            onRestoreFromPoint={restoreFromPoint}
           />
       )}
 
@@ -1619,7 +2068,7 @@ function PriceHistory({ priceHistory }) {
       {priceHistory.length > 0 && (
         <div style={{ marginTop:16, padding:12, background:"#FEF3C7", borderRadius:8, border:"1px solid #FDE68A" }}>
           <div style={{ fontSize:12, color:"#92400E", textAlign:"center" }}>
-            📊 Mostrando los últimos {priceHistory.length} cambios · El historial se mantiene en tu navegador
+            📊 Mostrando los últimos {priceHistory.length} cambios · El historial se guarda permanentemente en Supabase
           </div>
         </div>
       )}
@@ -1628,10 +2077,178 @@ function PriceHistory({ priceHistory }) {
 }
 
 // ═══════════════════════════════════════════════════════
+// RESTORE POINTS COMPONENT
+// ═══════════════════════════════════════════════════════
+
+function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint }) {
+  const formatDate = (timestamp) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+  };
+
+  const handleCreateRestorePoint = async () => {
+    const reason = prompt("¿Por qué querés crear este punto de restauración?", "Backup manual");
+    if (reason) {
+      await onCreateRestorePoint(reason);
+      showToast("✅ Punto de restauración creado", "success");
+    }
+  };
+
+  return (
+    <div style={{ background:"white", borderRadius:16, padding:24 }}>
+      <h3 style={{ margin:"0 0 6px", fontWeight:800 }}>🔄 Puntos de Restauración</h3>
+      <p style={{ color:"#6B7280", fontSize:14, marginBottom:20 }}>
+        Sistema de backup automático y manual para recuperar estados anteriores.
+      </p>
+
+      {/* Botón para crear punto de restauración manual */}
+      <div style={{ marginBottom:24 }}>
+        <button
+          onClick={handleCreateRestorePoint}
+          style={{
+            width:"100%",
+            padding:12,
+            borderRadius:8,
+            border:"1px solid #059669",
+            background:"#059669",
+            color:"white",
+            fontWeight:600,
+            cursor:"pointer",
+            fontSize:14,
+            transition:"background 0.2s"
+          }}
+          onMouseOver={(e) => e.target.style.background = "#047857"}
+          onMouseOut={(e) => e.target.style.background = "#059669"}
+        >
+          📍 Crear punto de restauración manual
+        </button>
+        <div style={{ fontSize:11, color:"#059669", marginTop:8, textAlign:"center" }}>
+          Crea un backup instantáneo del estado actual
+        </div>
+      </div>
+
+      {/* Lista de puntos de restauración */}
+      {restorePoints.length === 0 ? (
+        <div style={{ textAlign:"center", padding:40, color:"#9CA3AF" }}>
+          <div style={{ fontSize:48, marginBottom:12 }}>📋</div>
+          <div style={{ fontSize:16, fontWeight:600, marginBottom:4 }}>No hay puntos de restauración</div>
+          <div style={{ fontSize:13 }}>Los puntos de restauración se crearán automáticamente cuando hagas cambios importantes</div>
+        </div>
+      ) : (
+        <div style={{ display:"flex", flexDirection:"column", gap:12, maxHeight:500, overflowY:"auto" }}>
+          {restorePoints.map((point, index) => (
+            <div key={point.id} style={{ 
+              background:"#FAFAFA", 
+              borderRadius:12, 
+              padding:16, 
+              border:"1px solid #E5E7EB",
+              position:"relative"
+            }}>
+              {/* Header */}
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                <div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+                    {index === 0 && (
+                      <span style={{ 
+                        background:"#DCFCE7", 
+                        color:"#166534",
+                        padding:"4px 8px", 
+                        borderRadius:6, 
+                        fontSize:11, 
+                        fontWeight:600 
+                      }}>
+                        📍 Más reciente
+                      </span>
+                    )}
+                    <span style={{ fontSize:13, color:"#6B7280", fontWeight:500 }}>
+                      {point.user}
+                    </span>
+                  </div>
+                  <div style={{ fontSize:12, color:"#9CA3AF", fontFamily:"monospace" }}>
+                    {formatDate(point.timestamp)}
+                  </div>
+                </div>
+                <button
+                  onClick={() => onRestoreFromPoint(point.id)}
+                  style={{
+                    padding:"6px 12px",
+                    borderRadius:6,
+                    border:"1px solid #DC2626",
+                    background:"#DC2626",
+                    color:"white",
+                    fontWeight:600,
+                    cursor:"pointer",
+                    fontSize:12,
+                    transition:"background 0.2s"
+                  }}
+                  onMouseOver={(e) => e.target.style.background = "#B91C1C"}
+                  onMouseOut={(e) => e.target.style.background = "#DC2626"}
+                >
+                  🔄 Restaurar
+                </button>
+              </div>
+
+              {/* Content */}
+              <div>
+                <div style={{ fontWeight:600, fontSize:14, marginBottom:8, color:"#374151" }}>
+                  {point.reason}
+                </div>
+                <div style={{ fontSize:12, color:"#6B7280", lineHeight:1.6 }}>
+                  <div>📦 Productos: {point.products?.length || 0}</div>
+                  <div>📊 Historial: {point.priceHistory?.length || 0} cambios</div>
+                </div>
+              </div>
+
+              {/* Indicador visual */}
+              {index === 0 && (
+                <div style={{
+                  position:"absolute",
+                  top:8,
+                  right:8,
+                  width:8,
+                  height:8,
+                  borderRadius:"50%",
+                  background:"#059669",
+                  animation: "pulse 2s infinite"
+                }} />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {restorePoints.length > 0 && (
+        <div style={{ marginTop:16, padding:12, background:"#FEF3C7", borderRadius:8, border:"1px solid #FDE68A" }}>
+          <div style={{ fontSize:12, color:"#92400E", textAlign:"center" }}>
+            📊 {restorePoints.length} puntos de restauración disponibles · Los backups automáticos se crean antes de cambios importantes
+          </div>
+        </div>
+      )}
+
+      {/* Estilos para animación */}
+      <style jsx>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
 // ADMIN PANEL
 // ═══════════════════════════════════════════════════════
 
-function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory }) {
+function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint }) {
   const input = { width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" };
   const ADMIN_CATS = CATS.filter(c => c !== "Todos");
 
@@ -1644,7 +2261,7 @@ function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, se
 
       {/* TABS */}
       <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
-        {[["list","📋 Productos"],["add", editing?"✏️ Editar":"➕ Agregar"],["prices","💰 Precios"],["history","📜 Historial"],["excel","📊 Excel"]].map(([t,label]) => (
+        {[["list","📋 Productos"],["add", editing?"✏️ Editar":"➕ Agregar"],["prices","💰 Precios"],["history","📜 Historial"],["restore","🔄 Restauración"],["excel","📊 Excel"]].map(([t,label]) => (
           <button key={t} onClick={() => setAdminTab(t)} style={{ background:adminTab===t?"#C41E3A":"white", color:adminTab===t?"white":"#374151", border:adminTab===t?"none":"1px solid #E5E7EB", borderRadius:10, padding:"8px 16px", cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Poppins',sans-serif" }}>
             {label}
           </button>
@@ -1859,6 +2476,15 @@ function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, se
         <PriceHistory priceHistory={priceHistory} />
       )}
 
+      {/* TAB: RESTORE */}
+      {adminTab === "restore" && (
+        <RestorePoints 
+          restorePoints={restorePoints}
+          onCreateRestorePoint={onCreateRestorePoint}
+          onRestoreFromPoint={onRestoreFromPoint}
+        />
+      )}
+
       {/* TAB: EXCEL */}
       {adminTab === "excel" && (
         <div style={{ background:"white", borderRadius:16, padding:24 }}>
@@ -1873,6 +2499,17 @@ function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, se
             <div style={{ fontSize:13, color:"#9CA3AF", marginTop:4 }}>Formatos: .xlsx · .xls</div>
           </div>
           <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{ display:"none" }} onChange={onExcel} />
+
+          <div style={{ marginTop:20, background:"#F0FDF4", borderRadius:12, padding:16, border:"1px solid #BBF7D0" }}>
+            <div style={{ fontWeight:700, color:"#166534", marginBottom:8, fontSize:14 }}>📋 Columnas requeridas</div>
+            <div style={{ fontFamily:"monospace", fontSize:12, color:"#166534", lineHeight:1.9, background:"white", borderRadius:8, padding:"10px 14px", border:"1px solid #BBF7D0" }}>
+              nombre | categoria | precio | bulto | descripcion | imagen<br/>
+              <span style={{ color:"#9CA3AF" }}>
+                Salchichas x6 | Frescos | 19050 | Bulto x12 | Desc... | https://...<br/>
+                30 Panchos | Panchos Armados | 11700 | 30+30+1 | ... |
+              </span>
+            </div>
+          </div>
 
           <div style={{ marginTop:20, background:"#F0FDF4", borderRadius:12, padding:16, border:"1px solid #BBF7D0" }}>
             <div style={{ fontWeight:700, color:"#166534", marginBottom:8, fontSize:14 }}>📋 Columnas requeridas</div>
