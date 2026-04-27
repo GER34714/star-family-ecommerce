@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createClient } from '@supabase/supabase-js';
 
 // ═══════════════════════════════════════════════════════
 // DATA & CONSTANTS
@@ -44,6 +45,21 @@ const SEED_PRODUCTS = [
 const fmt = (p) => `$${Number(p).toLocaleString("es-AR")}`;
 
 // ═══════════════════════════════════════════════════════
+// SUPABASE CONFIGURATION
+// ═══════════════════════════════════════════════════════
+
+const getSupabaseClient = () => {
+  const url = process.env.REACT_APP_SUPABASE_URL || localStorage.getItem('supa_url') || '';
+  const key = process.env.REACT_APP_SUPABASE_ANON_KEY || localStorage.getItem('supa_key') || '';
+  
+  console.log('Configuración Supabase:', { url, key: key ? '***CONFIGURADO***' : 'NO CONFIGURADO' });
+  
+  if (!url || !key) return null;
+  
+  return createClient(url, key);
+};
+
+// ═══════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════
 
@@ -66,6 +82,9 @@ export default function StarFamilyApp() {
   const [toast, setToast] = useState(null);
   const fileRef = useRef();
   const [hideFloatingButtons, setHideFloatingButtons] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
 
   // Jerarquía de roles con inicialización segura
   const [user, setUser] = useState(null);
@@ -106,6 +125,84 @@ export default function StarFamilyApp() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [cartOpen, modal]);
+
+  // Funciones para manejo de imágenes
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validar que sea una imagen
+      if (!file.type.startsWith('image/')) {
+        showToast('⚠️ Por favor selecciona un archivo de imagen', 'error');
+        return;
+      }
+      
+      // Validar tamaño (máximo 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('⚠️ La imagen no debe superar los 5MB', 'error');
+        return;
+      }
+      
+      setSelectedFile(file);
+      
+      // Crear vista previa
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImageToSupabase = async (file) => {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      showToast('⚠️ Configuración de Supabase requerida', 'error');
+      return null;
+    }
+
+    try {
+      setUploadingImage(true);
+      
+      // Generar nombre único para el archivo
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `product-images/${fileName}`;
+      
+      // Subir archivo a Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('products')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      // Obtener URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('products')
+        .getPublicUrl(filePath);
+
+      showToast('✅ Imagen subida exitosamente', 'success');
+      return publicUrl;
+      
+    } catch (error) {
+      console.error('Error subiendo imagen:', error);
+      showToast('❌ Error al subir la imagen: ' + error.message, 'error');
+      return null;
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const clearImagePreview = () => {
+    setImagePreview(null);
+    setSelectedFile(null);
+    setForm(prev => ({...prev, image: ''})); // Limpiar URL del formulario también
+    if (fileRef.current) {
+      fileRef.current.value = '';
+    }
+  };
 
   // Funciones de autenticación
   const handleLogin = async () => {
@@ -179,46 +276,84 @@ export default function StarFamilyApp() {
     
     setSyncing(true);
     try {
-      const res = await fetch(`${url}/rest/v1/products?select=*&active=eq.true`, {
-        headers: { apikey: key, Authorization: `Bearer ${key}` }
-      });
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('active', true);
       
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      }
+      if (error) throw error;
       
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        // MANEJO DE ERRORES: Filtrar filas vacías/nulas antes de mapear
-        const validData = data.filter(row => 
-          row && 
-          typeof row === 'object' && 
-          row.id != null && 
-          row.category != null
-        );
+      const mapped = (data || []).map(r => ({
+        id: r.id || `prod_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+        category: r.category || "Frescos",
+        name: r.name || "Producto sin nombre",
+        description: r.description || "",
+        price: Number(r.price) || 0,
+        bulkInfo: r.bulto || r.bulk_info || "",
+        image: r.imagen || r.image_url || ""
+      })).filter(r => r.name);
         
-        const mapped = validData.map(r => ({ 
-          id: r.id, 
-          category: r.category || "Sin categoría", 
-          name: r.name || "Sin nombre", 
-          description: r.description||"", 
-          price: r.price||0, 
-          bulkInfo: r.bulk_info||"", 
-          image: r.image_url||"" 
-        }));
-        
-        if (mapped.length > 0) {
-          saveProducts(mapped);
-          showToast(`✅ ${mapped.length} productos cargados desde Supabase`);
-        } else {
-          showToast("⚠️ No se encontraron productos válidos en Supabase", "warning");
-        }
+      if (mapped.length > 0) {
+        saveProducts(mapped);
+        showToast(`✅ ${mapped.length} productos cargados desde Supabase`);
       } else {
-        throw new Error("Respuesta inválida de Supabase");
+        showToast("⚠️ No se encontraron productos válidos en Supabase", "warning");
       }
     } catch(e) {
       console.error("Error en syncSupabase:", e);
       showToast("❌ Error al conectar con Supabase: " + e.message, "error");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const migrateProductsToSupabase = async () => {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      showToast('⚠️ Configuración de Supabase requerida', 'error');
+      return;
+    }
+
+    try {
+      setSyncing(true);
+      showToast('🔄 Migrando productos a Supabase...');
+      
+      // Preparar productos para migrar
+      const productsToMigrate = products.map(p => ({
+        id: p.id,
+        category: p.category,
+        name: p.name,
+        description: p.description || '',
+        price: p.price,
+        bulk_info: p.bulkInfo || '',
+        image_url: p.image || '',
+        active: true
+      }));
+      
+      // Insertar en batches de 10 para evitar límites
+      const batchSize = 10;
+      for (let i = 0; i < productsToMigrate.length; i += batchSize) {
+        const batch = productsToMigrate.slice(i, i + batchSize);
+        
+        const { data, error } = await supabase
+          .from('products')
+          .upsert(batch, {
+            onConflict: 'id',
+            ignoreDuplicates: false
+          });
+          
+        if (error) {
+          console.error(`Error en batch ${i/batchSize + 1}:`, error);
+          throw error;
+        }
+      }
+      
+      showToast(`✅ ${productsToMigrate.length} productos migrados a Supabase`, 'success');
+      
+    } catch (error) {
+      console.error('Error migrando productos:', error);
+      showToast('❌ Error al migrar productos: ' + error.message, 'error');
     } finally {
       setSyncing(false);
     }
@@ -251,17 +386,49 @@ export default function StarFamilyApp() {
     e.target.value = "";
   };
 
-  const handleFormSubmit = () => {
+  const handleFormSubmit = async () => {
     if (!form.name.trim() || !form.price) return showToast("⚠️ Nombre y precio son requeridos", "error");
-    const p = { ...form, id: editing ? form.id : `prod_${Date.now()}`, price: parseFloat(form.price) };
+    
+    let imageUrl = form.image;
+    
+    // Si hay una imagen seleccionada, subirla a Supabase
+    if (selectedFile) {
+      const uploadedUrl = await uploadImageToSupabase(selectedFile);
+      if (uploadedUrl) {
+        imageUrl = uploadedUrl;
+      } else {
+        // Si falla la subida, continuar con la URL existente o vacía
+        showToast("⚠️ Continuando sin subir la imagen", "warning");
+      }
+    }
+    
+    const p = { ...form, image: imageUrl, id: editing ? form.id : `prod_${Date.now()}`, price: parseFloat(form.price) };
     saveProducts(editing ? products.map(x => x.id === p.id ? p : x) : [...products, p]);
+    
+    // Limpiar estado de imagen
+    clearImagePreview();
     setForm({ id:"", category:"Frescos", name:"", description:"", price:"", bulkInfo:"", image:"" });
     setEditing(false);
     setAdminTab("list");
-    showToast(editing ? "✅ Producto actualizado" : "✅ Producto agregado");
+    showToast(editing ? "✏️ Producto actualizado" : "➕ Producto agregado");
   };
 
-  const startEdit = (p) => { setForm({...p, price: p.price.toString()}); setEditing(true); setAdminTab("add"); };
+  const startEdit = (p) => { 
+    setForm({...p, price: p.price.toString()}); 
+    setEditing(true); 
+    setAdminTab("add");
+    // Si el producto tiene una imagen, mostrarla como vista previa
+    if (p.image) {
+      setImagePreview(p.image);
+    } else {
+      setImagePreview(null);
+    }
+    // Limpiar solo el archivo seleccionado, no la vista previa
+    setSelectedFile(null);
+    if (fileRef.current) {
+      fileRef.current.value = '';
+    }
+  };
   const deleteProduct = (id) => { saveProducts(products.filter(p => p.id !== id)); showToast("🗑️ Producto eliminado"); };
 
   // Error Boundary y loading state
@@ -381,20 +548,32 @@ export default function StarFamilyApp() {
           </div>
         </>
       ) : (
-        <AdminPanel
-          products={products} form={form} setForm={setForm}
-          editing={editing} setEditing={setEditing}
-          adminTab={adminTab} setAdminTab={setAdminTab}
-          onSubmit={handleFormSubmit} onEdit={startEdit} onDelete={deleteProduct}
-          onExcel={handleExcel} fileRef={fileRef}
-          supaUrl={supaUrl} supaKey={supaKey}
-          setSupaUrl={setSupaUrl} setSupaKey={setSupaKey}
-          onSync={syncSupabase} syncing={syncing}
-          onSaveSupa={async () => {
-            try { await window.storage.set("roxy_supa", JSON.stringify({ url:supaUrl, key:supaKey })); showToast("✅ Configuración guardada"); } catch {}
-          }}
-          onReset={() => { saveProducts(SEED_PRODUCTS); showToast("✅ Productos restaurados"); }}
-        />
+        <AdminPanel 
+            products={products} 
+            form={form} 
+            setForm={setForm} 
+            editing={editing} 
+            setEditing={setEditing} 
+            adminTab={adminTab} 
+            setAdminTab={setAdminTab} 
+            onSubmit={handleFormSubmit} 
+            onEdit={startEdit} 
+            onDelete={deleteProduct} 
+            onExcel={handleExcel} 
+            fileRef={fileRef}
+            supaUrl={supaUrl} supaKey={supaKey}
+            setSupaUrl={setSupaUrl} setSupaKey={setSupaKey}
+            onSync={syncSupabase} syncing={syncing}
+            onSaveSupa={async () => {
+              try { await window.storage.set("roxy_supa", JSON.stringify({ url:supaUrl, key:supaKey })); showToast("✅ Configuración guardada"); } catch {}
+            }}
+            onReset={() => { saveProducts(SEED_PRODUCTS); showToast("✅ Productos restaurados"); }}
+            onImageSelect={handleImageSelect}
+            onClearImage={clearImagePreview}
+            imagePreview={imagePreview}
+            uploadingImage={uploadingImage}
+            onMigrate={migrateProductsToSupabase}
+          />
       )}
 
       {/* FOOTER */}
@@ -766,7 +945,7 @@ function CartDrawer({ cart, onRemove, onClose, total, onClear }) {
 // ADMIN PANEL
 // ═══════════════════════════════════════════════════════
 
-function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset }) {
+function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate }) {
   const input = { width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" };
   const ADMIN_CATS = CATS.filter(c => c !== "Todos");
 
@@ -852,9 +1031,116 @@ function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, se
               <textarea value={form.description} onChange={e => setForm({...form,description:e.target.value})} style={{...input,height:80,resize:"vertical"}} placeholder="Descripción del producto..." />
             </div>
             <div style={{ gridColumn:"1/-1" }}>
-              <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>URL DE IMAGEN</label>
-              <input value={form.image} onChange={e => setForm({...form,image:e.target.value})} style={input} placeholder="https://ejemplo.com/imagen.jpg" />
-              {form.image && <img src={form.image} alt="preview" style={{ marginTop:10, width:120, height:90, objectFit:"cover", borderRadius:10, border:"1px solid #E5E7EB" }} onError={e => e.target.style.display="none"} />}
+              <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>IMAGEN DEL PRODUCTO</label>
+              <div style={{ marginTop:5 }}>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display:"none" }}
+                  onChange={onImageSelect}
+                />
+                <div style={{ 
+                  border:"2px dashed #E5E7EB", 
+                  borderRadius:12, 
+                  padding:20, 
+                  textAlign:"center", 
+                  cursor:"pointer", 
+                  transition:"all 0.2s",
+                  background:"#FAFAFA",
+                  position:"relative"
+                }}
+                  onClick={() => fileRef.current?.click()}
+                  onMouseOver={(e) => { e.target.style.borderColor="#C41E3A"; e.target.style.background="#FFF5F5"; }}
+                  onMouseOut={(e) => { e.target.style.borderColor="#E5E7EB"; e.target.style.background="#FAFAFA"; }}
+                >
+                  {imagePreview ? (
+                    <div style={{ position:"relative" }}>
+                      <img 
+                        src={imagePreview} 
+                        alt="Vista previa" 
+                        style={{ 
+                          width: "100%", 
+                          maxWidth:200, 
+                          height:150, 
+                          objectFit:"cover", 
+                          borderRadius:8,
+                          border:"1px solid #E5E7EB"
+                        }} 
+                      />
+                      <div style={{ position:"absolute", top:8, right:8, display:"flex", gap:4 }}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onClearImage();
+                          }}
+                          style={{
+                            background:"rgba(220, 38, 38, 0.9)",
+                            color:"white",
+                            border:"none",
+                            borderRadius:"50%",
+                            width:24,
+                            height:24,
+                            cursor:"pointer",
+                            display:"flex",
+                            alignItems:"center",
+                            justifyContent:"center",
+                            fontSize:12,
+                            fontWeight:"bold"
+                          }}
+                          title="Borrar imagen"
+                        >
+                          ×
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            fileRef.current?.click();
+                          }}
+                          style={{
+                            background:"rgba(59, 130, 246, 0.9)",
+                            color:"white",
+                            border:"none",
+                            borderRadius:"50%",
+                            width:24,
+                            height:24,
+                            cursor:"pointer",
+                            display:"flex",
+                            alignItems:"center",
+                            justifyContent:"center",
+                            fontSize:12,
+                            fontWeight:"bold"
+                          }}
+                          title="Cambiar imagen"
+                        >
+                          📷
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ fontSize:32, marginBottom:8 }}>📷</div>
+                      <div style={{ fontWeight:600, color:"#374151", marginBottom:4 }}>
+                        {uploadingImage ? "Subiendo imagen..." : "Hacé clic para subir imagen"}
+                      </div>
+                      <div style={{ fontSize:12, color:"#9CA3AF" }}>
+                        Formatos: JPG, PNG, GIF (máx. 5MB)
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {uploadingImage && (
+                  <div style={{ 
+                    marginTop:10, 
+                    textAlign:"center", 
+                    color:"#C41E3A", 
+                    fontSize:13, 
+                    fontWeight:500 
+                  }}>
+                    ⏳ Subiendo imagen a Supabase...
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <div style={{ display:"flex", gap:10, marginTop:24 }}>
