@@ -381,30 +381,15 @@ export default function StarFamilyApp() {
         }
       }
       
-      // 2. SOLO si Supabase falla completamente → usar SEED_PRODUCTS como fallback inicial
+      // 2. SOLO si Supabase falla completamente → usar SEED_PRODUCTS como fallback LOCAL (no sincronizar)
       if (!productsLoaded) {
         try {
-          // Cargar SEED_PRODUCTS y sincronizarlos con Supabase (solo como inicialización)
-          await saveProducts(SEED_PRODUCTS, false, true); // Sincronizar con Supabase, guardar en local
-          console.log("🌱 SEED_PRODUCTS inicializados y sincronizados con Supabase");
+          // Cargar SEED_PRODUCTS solo LOCALMENTE, sin sincronizar con Supabase
+          await saveProducts(SEED_PRODUCTS, true, true); // Omitir sincronización, guardar solo local
+          console.log("🌱 SEED_PRODUCTS cargados localmente (fallback - NO sobrescribe Supabase)");
           productsLoaded = true;
-          
-          // Intentar cargar de nuevo desde Supabase para tener datos frescos
-          if (supabaseConfig && supabaseConfig.url && supabaseConfig.key) {
-            setTimeout(async () => {
-              try {
-                await loadProductsFromSupabase();
-                console.log("🔄 Recarga desde Supabase completada");
-              } catch (error) {
-                console.error('Error en recarga:', error);
-              }
-            }, 1000);
-          }
         } catch (error) {
-          console.error('Error inicializando SEED_PRODUCTS:', error);
-          // Como último recurso, cargar SEED_PRODUCTS localmente
-          await saveProducts(SEED_PRODUCTS, true, true);
-          console.log("📦 SEED_PRODUCTS cargados localmente (último recurso)");
+          console.error('Error cargando SEED_PRODUCTS localmente:', error);
         }
       }
       
@@ -437,10 +422,12 @@ export default function StarFamilyApp() {
     }
     // Sincronizar carrito automáticamente cuando cambian los productos
     syncCartWithProducts(p);
-    // Sincronizar con Supabase automáticamente solo si no se debe omitir
-    if (!skipSupabaseSync) {
-      await syncProductsWithSupabase(p);
-    }
+    
+    // ⚠️ ELIMINADO: No sincronizar automáticamente con Supabase para evitar sobrescribir datos
+    // La sincronización solo debe ocurrir explícitamente en handleFormSubmit
+    // if (!skipSupabaseSync) {
+    //   await syncProductsWithSupabase(p);
+    // }
   };
   const saveCart = async (c) => { setCart(c); setStorageItem("roxy_cart", c); };
   const savePriceHistory = async (h) => { setPriceHistory(h); setStorageItem("roxy_price_history", h); };
@@ -523,33 +510,9 @@ export default function StarFamilyApp() {
     }
   };
 
-  const syncProductsWithSupabase = async (productsToSync) => {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      console.warn('Configuración de Supabase no disponible');
-      return;
-    }
-
-    try {
-      // Sincronizar todos los productos locales con Supabase
-      const syncPromises = (productsToSync || products).map(product => saveProductToSupabase(product));
-      const results = await Promise.allSettled(syncPromises);
-      
-      const successful = results.filter(r => r.status === 'fulfilled').length;
-      const failed = results.filter(r => r.status === 'rejected').length;
-      
-      console.log(`📊 Sincronización de productos: ${successful} exitosos, ${failed} fallidos`);
-      
-      if (failed > 0) {
-        showToast(`⚠️ ${failed} productos no se sincronizaron con Supabase`, 'warning');
-      } else {
-        showToast('✅ Todos los productos sincronizados con Supabase', 'success');
-      }
-    } catch (error) {
-      console.error('Error en sincronización masiva:', error);
-      showToast('❌ Error en sincronización con Supabase', 'error');
-    }
-  };
+  // ⚠️ ELIMINADO: syncProductsWithSupabase para evitar sobrescribir datos de Supabase
+// La sincronización ahora solo ocurre individualmente en handleFormSubmit
+// const syncProductsWithSupabase = async (productsToSync) => { ... };
 
   const loadPriceHistoryFromSupabase = async () => {
     const supabase = getSupabaseClient();
