@@ -89,6 +89,11 @@ export default function StarFamilyApp() {
   const [scrollThreshold, setScrollThreshold] = useState(150);
   const [isScrolling, setIsScrolling] = useState(false);
   const [showTimer, setShowTimer] = useState(null);
+  
+  // Estados para filtros de búsqueda
+  const [searchTerm, setSearchTerm] = useState('');
+  const [priceRange, setPriceRange] = useState({ min: '', max: '' });
+  const [showFilters, setShowFilters] = useState(false);
   const [priceHistory, setPriceHistory] = useState([]);
   const [restorePoints, setRestorePoints] = useState([]);
 
@@ -717,7 +722,37 @@ export default function StarFamilyApp() {
   const cartTotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
 
-  const filtered = cat === "Todos" ? (products || []) : (products || [])?.filter(p => p && typeof p === 'object' && p?.category && p?.category === cat);
+  const filtered = useMemo(() => {
+  let result = products || [];
+  
+  // Filtrar por categoría
+  if (cat !== "Todos") {
+    result = result.filter(p => p && typeof p === 'object' && p?.category && p?.category === cat);
+  }
+  
+  // Filtrar por término de búsqueda
+  if (searchTerm.trim()) {
+    result = result.filter(p => 
+      p && typeof p === 'object' && (
+        (p.name && p.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()))
+      )
+    );
+  }
+  
+  // Filtrar por rango de precios
+  const minPrice = priceRange.min ? parseFloat(priceRange.min) : 0;
+  const maxPrice = priceRange.max ? parseFloat(priceRange.max) : Infinity;
+  
+  result = result.filter(p => 
+    p && typeof p === 'object' && 
+    p.price && 
+    p.price >= minPrice && 
+    p.price <= maxPrice
+  );
+  
+  return result;
+}, [products, cat, searchTerm, priceRange]);
   
   // DIAGNÓSTICO: Verificar estado de productos y filtered
   console.log("🔍 DIAGNÓSTICO DE RENDERIZADO:", {
@@ -1514,6 +1549,179 @@ export default function StarFamilyApp() {
                   {c}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* SEARCH AND FILTERS BAR */}
+          <div style={{ background:"white", borderBottom:"1px solid #E5E7EB", padding:"16px", position:"sticky", top:106, zIndex:95 }}>
+            <div style={{ maxWidth:1200, margin:"0 auto" }}>
+              <div style={{ display:"flex", gap:12, alignItems:"center", flexWrap:"wrap" }}>
+                {/* Search Input */}
+                <div style={{ flex:1, minWidth:250, position:"relative" }}>
+                  <input
+                    type="text"
+                    placeholder="🔍 Buscar productos..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{
+                      width:"100%",
+                      padding:"12px 16px 12px 44px",
+                      border:"1px solid #E5E7EB",
+                      borderRadius:12,
+                      fontSize:14,
+                      fontFamily:"'Poppins',sans-serif",
+                      outline:"none",
+                      transition:"all 0.2s",
+                      background:"#F9FAFB"
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#C41E3A";
+                      e.target.style.background = "white";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#E5E7EB";
+                      e.target.style.background = "#F9FAFB";
+                    }}
+                  />
+                  <div style={{ position:"absolute", left:16, top:14, fontSize:18, opacity:0.5 }}>🔍</div>
+                </div>
+
+                {/* Filters Toggle Button */}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowFilters(!showFilters)}
+                  style={{
+                    padding:"12px 20px",
+                    background:showFilters ? "#C41E3A" : "white",
+                    color:showFilters ? "white" : "#374151",
+                    border:"1px solid #E5E7EB",
+                    borderRadius:12,
+                    fontSize:14,
+                    fontWeight:600,
+                    fontFamily:"'Poppins',sans-serif",
+                    cursor:"pointer",
+                    display:"flex",
+                    alignItems:"center",
+                    gap:8,
+                    transition:"all 0.2s"
+                  }}
+                >
+                  <span>🎛️</span>
+                  Filtros
+                  {(searchTerm || priceRange.min || priceRange.max) && (
+                    <span style={{
+                      background:"rgba(196, 30, 58, 0.2)",
+                      color:"#C41E3A",
+                      padding:"2px 6px",
+                      borderRadius:10,
+                      fontSize:11
+                    }}>
+                      Activo
+                    </span>
+                  )}
+                </motion.button>
+
+                {/* Clear Filters Button */}
+                {(searchTerm || priceRange.min || priceRange.max) && (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      setSearchTerm('');
+                      setPriceRange({ min: '', max: '' });
+                    }}
+                    style={{
+                      padding:"12px 20px",
+                      background:"#F3F4F6",
+                      color:"#6B7280",
+                      border:"1px solid #E5E7EB",
+                      borderRadius:12,
+                      fontSize:14,
+                      fontWeight:600,
+                      fontFamily:"'Poppins',sans-serif",
+                      cursor:"pointer",
+                      transition:"all 0.2s"
+                    }}
+                  >
+                    🗑️ Limpiar
+                  </motion.button>
+                )}
+              </div>
+
+              {/* Expandable Filters */}
+              <AnimatePresence>
+                {showFilters && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    style={{ overflow:"hidden", marginTop:16 }}
+                  >
+                    <div style={{ 
+                      display:"flex", 
+                      gap:16, 
+                      alignItems:"center",
+                      padding:"16px",
+                      background:"#F9FAFB",
+                      borderRadius:12,
+                      border:"1px solid #E5E7EB"
+                    }}>
+                      <div style={{ fontSize:14, fontWeight:600, color:"#374151", fontFamily:"'Poppins',sans-serif" }}>
+                        💰 Rango de precios:
+                      </div>
+                      <input
+                        type="number"
+                        placeholder="Mínimo"
+                        value={priceRange.min}
+                        onChange={(e) => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
+                        style={{
+                          width:120,
+                          padding:"8px 12px",
+                          border:"1px solid #E5E7EB",
+                          borderRadius:8,
+                          fontSize:14,
+                          fontFamily:"'Poppins',sans-serif",
+                          outline:"none"
+                        }}
+                      />
+                      <span style={{ color:"#6B7280" }}>—</span>
+                      <input
+                        type="number"
+                        placeholder="Máximo"
+                        value={priceRange.max}
+                        onChange={(e) => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
+                        style={{
+                          width:120,
+                          padding:"8px 12px",
+                          border:"1px solid #E5E7EB",
+                          borderRadius:8,
+                          fontSize:14,
+                          fontFamily:"'Poppins',sans-serif",
+                          outline:"none"
+                        }}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Results Summary */}
+              {(searchTerm || priceRange.min || priceRange.max) && (
+                <div style={{ 
+                  marginTop:12, 
+                  fontSize:13, 
+                  color:"#6B7280",
+                  fontFamily:"'Poppins',sans-serif"
+                }}>
+                  {filtered.length} productos encontrados
+                  {searchTerm && ` • "${searchTerm}"`}
+                  {(priceRange.min || priceRange.max) && 
+                    ` • $${priceRange.min || '0'} - $${priceRange.max || '∞'}`
+                  }
+                </div>
+              )}
             </div>
           </div>
 
