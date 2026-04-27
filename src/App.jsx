@@ -282,17 +282,14 @@ export default function StarFamilyApp() {
     setAuthLoading(true);
     try {
       // Autenticación simple basada en email para demostración
-      if (email === "ciborg347@gmail.com" && password === "superadmin123") {
-        setUser({ email: "ciborg347@gmail.com", role: "SuperAdmin" });
-        showToast("✅ SuperAdmin autenticado", "success");
-      } else if (email === "starfamily347@gmail.com" && password === "admin123") {
-        setUser({ email: "starfamily347@gmail.com", role: "Admin" });
-        showToast("✅ Admin autenticado", "success");
+      if (email === "admin@starfamily.com" && password === "admin123") {
+        setUser({ email, role: "admin" });
+        showToast("✅ Sesión iniciada como administrador", "success");
       } else {
         showToast("❌ Credenciales incorrectas", "error");
       }
     } catch (error) {
-      showToast("❌ Error en autenticación", "error");
+      showToast("❌ Error al iniciar sesión", "error");
     } finally {
       setAuthLoading(false);
     }
@@ -1371,11 +1368,60 @@ export default function StarFamilyApp() {
             onSaveSupa={async () => {
               try { await window.storage.set("roxy_supa", JSON.stringify({ url:supaUrl, key:supaKey })); showToast("✅ Configuración guardada"); } catch {}
             }}
-            onReset={async () => { 
-              await saveProducts(SEED_PRODUCTS); 
-              await syncProductsWithSupabase();
-              showToast("✅ Productos restaurados y sincronizados"); 
-            }}
+            onReset={async () => {
+              setLoading(true);
+              try {
+                // Limpiar completamente almacenamiento local
+                try {
+                  await window.storage.remove("roxy_products");
+                  await window.storage.remove("roxy_cart");
+                  await window.storage.remove("roxy_price_history");
+                  await window.storage.remove("roxy_restore_points");
+                  await window.storage.remove("roxy_image_preview");
+                  console.log("🧹 Almacenamiento local limpiado");
+                } catch (error) {
+                  console.error("Error limpiando almacenamiento local:", error);
+                }
+                
+                // Limpiar Supabase si hay configuración
+                const supabase = getSupabaseClient();
+                if (supabase) {
+                  try {
+                    // Eliminar todos los productos de Supabase
+                    const { error: deleteError } = await supabase
+                      .from('products')
+                      .delete()
+                      .neq('id', 'impossible_id'); // Eliminar todos
+                    
+                    if (deleteError) {
+                      console.warn("⚠️ No se pudieron eliminar productos de Supabase:", deleteError);
+                    } else {
+                      console.log("🧹 Productos eliminados de Supabase");
+                    }
+                  } catch (error) {
+                    console.warn("⚠️ Error limpiando Supabase:", error);
+                  }
+                }
+                
+                // Resetear estado a productos iniciales
+                setProducts([]);
+                setCart([]);
+                setPriceHistory([]);
+                setRestorePoints([]);
+                setImagePreview(null);
+                
+                // Cargar SEED_PRODUCTS desde cero
+                await saveProducts(SEED_PRODUCTS, false, false);
+                
+                showToast("🔄 Sistema reiniciado completamente - Productos cargados desde cero");
+                console.log("✅ Reset completo finalizado");
+              } catch (error) {
+                console.error("Error en reset completo:", error);
+                showToast("❌ Error al reiniciar sistema", "error");
+              } finally {
+                setLoading(false);
+              }
+            }} 
             onImageSelect={handleImageSelect}
             onClearImage={clearImagePreview}
             imagePreview={imagePreview}
