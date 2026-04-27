@@ -118,25 +118,31 @@ export default function StarFamilyApp() {
         setScrollDirection('up');
       }
       
-      // Lógica de visibilidad con umbral
+      // Lógica de visibilidad con umbral - PRIORIDAD AL FOOTER
       const footer = document.querySelector('footer');
       let shouldHide = false;
       
+      // 1. PRIORITY: Si el footer es visible, ocultar siempre
       if (footer) {
         const footerRect = footer.getBoundingClientRect();
         const windowHeight = window.innerHeight;
-        // Ocultar cuando el footer es visible
-        shouldHide = footerRect.top < windowHeight;
+        // Ocultar cuando el footer es visible (prioridad máxima)
+        if (footerRect.top < windowHeight) {
+          shouldHide = true;
+        }
       }
       
-      // Ocultar por scroll hacia abajo después del umbral
-      if (scrollDirection === 'down' && currentScrollY > scrollThreshold) {
-        shouldHide = true;
-      }
-      
-      // Mostrar al scrollear hacia arriba
-      if (scrollDirection === 'up') {
-        shouldHide = false;
+      // 2. Si el footer no es visible, aplicar lógica de scroll
+      if (!shouldHide) {
+        // Ocultar por scroll hacia abajo después del umbral
+        if (scrollDirection === 'down' && currentScrollY > scrollThreshold) {
+          shouldHide = true;
+        }
+        
+        // Mostrar al scrollear hacia arriba
+        if (scrollDirection === 'up') {
+          shouldHide = false;
+        }
       }
       
       setHideFloatingButtons(shouldHide);
