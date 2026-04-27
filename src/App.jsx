@@ -66,7 +66,7 @@ const getSupabaseClient = () => {
 export default function StarFamilyApp() {
   // FLUJO DE DATOS: Inicialización segura con valores por defecto
   const [view, setView] = useState("shop");
-  const [products, setProducts] = useState((SEED_PRODUCTS && Array.isArray(SEED_PRODUCTS)) ? SEED_PRODUCTS : []);
+  const [products, setProducts] = useState([]);
   const [cat, setCat] = useState("Todos");
   const [cart, setCart] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
@@ -333,7 +333,19 @@ export default function StarFamilyApp() {
       
       // Si no se pudieron cargar desde Supabase, cargar desde almacenamiento local
       if (!productsLoaded) {
-        try { const r = await window.storage.get("roxy_products"); if (r?.value) setProducts(JSON.parse(r.value)); } catch {}
+        try { 
+          const r = await window.storage.get("roxy_products"); 
+          if (r?.value) {
+            setProducts(JSON.parse(r.value));
+            productsLoaded = true;
+          }
+        } catch {}
+      }
+      
+      // Si todavía no hay productos, cargar SEED_PRODUCTS como último recurso
+      if (!productsLoaded && products.length === 0) {
+        setProducts(SEED_PRODUCTS);
+        console.log("📦 Cargando productos iniciales (SEED_PRODUCTS)");
       }
       
       // Cargar otros datos desde almacenamiento local
