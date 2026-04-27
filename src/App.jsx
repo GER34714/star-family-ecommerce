@@ -757,8 +757,7 @@ export default function StarFamilyApp() {
       const supabase = getSupabaseClient();
       const { data, error } = await supabase
         .from('products')
-        .select('*')
-        .eq('active', true);
+        .select('*');
       
       if (error) throw error;
       
@@ -769,7 +768,7 @@ export default function StarFamilyApp() {
         description: r.description || "",
         price: Number(r.price) || 0,
         bulkInfo: r.bulto || r.bulk_info || "",
-        image_url: r.imagen || r.image_url || ""
+        image_url: r.image_url || ""
       })).filter(r => r.name);
         
       if (mapped.length > 0) {
@@ -823,7 +822,7 @@ export default function StarFamilyApp() {
           if (!productName) continue;
           
           const existingProduct = existingProductsMap.get(productName.toLowerCase());
-          const newImageData = r.imagen || r.image_url || "";
+          const newImageData = r.image_url || "";
           
           let finalImageUrl = newImageData;
           
