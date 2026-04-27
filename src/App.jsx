@@ -466,7 +466,7 @@ export default function StarFamilyApp() {
           description: product.description || '',
           price: product.price,
           bulk_info: product.bulkInfo || '',
-          image_url: product.image || '',
+          image_url: product.image_url || '',
           active: true
         }, {
           onConflict: 'id'
@@ -723,7 +723,7 @@ export default function StarFamilyApp() {
         description: r.description || "",
         price: Number(r.price) || 0,
         bulkInfo: r.bulk_info || "",
-        image: r.image_url || ""
+        image_url: r.image_url || ""
       })).filter(r => r.name);
         
       if (mapped.length > 0) {
@@ -1703,7 +1703,7 @@ function ProductCard({ p, onOpen, onAdd }) {
     category = 'Sin categoría', 
     name = 'Producto sin nombre', 
     price = 0, 
-    image = '', 
+    image_url = '', 
     bulkInfo = '',
     description = ''
   } = p || {};
@@ -1718,8 +1718,8 @@ function ProductCard({ p, onOpen, onAdd }) {
     <div className="product-card" onClick={onOpen}>
       {/* Image */}
       <div style={{ position:"relative", aspectRatio:"4/3", overflow:"hidden", background:`linear-gradient(135deg,${color}22,${color}44)` }}>
-        {image
-          ? <img src={image} alt={name || "Producto"} style={{ width:"100%", height:"100%", objectFit:"cover", transition:"transform 0.3s" }} onError={e => { e.target.style.display="none"; }} />
+        {image_url
+          ? <img src={image_url} alt={name || "Producto"} style={{ width:"100%", height:"100%", objectFit:"cover", transition:"transform 0.3s" }} onError={e => { e.target.src = "https://via.placeholder.com/300x300/f5a623/ffffff?text=Star+Family"; }} />
           : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:42 }}>{emoji}</div>
         }
         <div style={{ position:"absolute", top:8, left:8, background:color, color:"white", fontSize:9, fontWeight:800, borderRadius:6, padding:"3px 8px", letterSpacing:0.5 }}>{category?.toUpperCase() || ""}</div>
@@ -1750,8 +1750,8 @@ function ProductModal({ p, qty, setQty, onAdd, onClose }) {
   return (
     <div>
       <div style={{ position:"relative", height:200, background:`linear-gradient(135deg,${color},${color}99)`, borderRadius:"14px 14px 0 0", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" }}>
-        {p?.image
-          ? <img src={p?.image} alt={p?.name || "Producto"} style={{ width:"100%", height:"100%", objectFit:"cover" }} onError={e => e.target.style.display="none"} />
+        {p?.image_url
+          ? <img src={p?.image_url} alt={p?.name || "Producto"} style={{ width:"100%", height:"100%", objectFit:"cover" }} onError={e => { e.target.src = "https://via.placeholder.com/300x200/f5a623/ffffff?text=Star+Family"; }} />
           : <span style={{ fontSize:72 }}>{emoji}</span>
         }
         <button onClick={onClose} style={{ position:"absolute", top:12, right:12, background:"rgba(0,0,0,0.4)", color:"white", border:"none", borderRadius:8, width:36, height:36, cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
@@ -2556,7 +2556,7 @@ function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, se
               products.filter(Boolean).map(p => (
               <div key={p.id} style={{ background:"white", borderRadius:12, padding:"12px 16px", display:"flex", gap:12, alignItems:"center", boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
                 <div style={{ width:46, height:46, borderRadius:10, background:`${CAT_COLOR[p?.category]||"#C41E3A"}18`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0, overflow:"hidden" }}>
-                  {p?.image ? <img src={p?.image} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" onError={e => { e.target.style.display="none"; }} /> : (CAT_EMOJI[p?.category]||"🍖")}
+                  {p?.image_url ? <img src={p?.image_url} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" onError={e => { e.target.src = "https://via.placeholder.com/46x46/f5a623/ffffff?text=SF"; }} /> : (CAT_EMOJI[p?.category]||"🍖")}
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ fontWeight:700, fontSize:14, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p?.name || "Sin nombre"}</div>
