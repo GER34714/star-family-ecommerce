@@ -85,6 +85,7 @@ export default function StarFamilyApp() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [priceHistory, setPriceHistory] = useState([]);
 
   // Jerarquía de roles con inicialización segura
   const [user, setUser] = useState(null);
@@ -240,6 +241,7 @@ export default function StarFamilyApp() {
       try { const r = await window.storage.get("roxy_products"); if (r?.value) setProducts(JSON.parse(r.value)); } catch {}
       try { const r = await window.storage.get("roxy_cart"); if (r?.value) setCart(JSON.parse(r.value)); } catch {}
       try { const r = await window.storage.get("roxy_supa"); if (r?.value) { const d = JSON.parse(r.value); setSupaUrl(d.url||""); setSupaKey(d.key||""); } } catch {}
+      try { const r = await window.storage.get("roxy_price_history"); if (r?.value) setPriceHistory(JSON.parse(r.value)); } catch {}
       finally {
         setLoading(false);
       }
@@ -248,6 +250,7 @@ export default function StarFamilyApp() {
 
   const saveProducts = async (p) => { setProducts(p); try { await window.storage.set("roxy_products", JSON.stringify(p)); } catch {} };
   const saveCart = async (c) => { setCart(c); try { await window.storage.set("roxy_cart", JSON.stringify(c)); } catch {} };
+  const savePriceHistory = async (h) => { setPriceHistory(h); try { await window.storage.set("roxy_price_history", JSON.stringify(h)); } catch {} };
 
   const addToCart = (product, q = 1) => {
     const ex = cart.find(i => i.id === product.id);
@@ -369,21 +372,202 @@ export default function StarFamilyApp() {
         const wb = XLSX.read(evt.target.result, { type: "binary" });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(ws);
-        const imported = rows.map((r, i) => ({
-          id: `xl_${Date.now()}_${i}`,
-          category: r.categoria || r.category || "Frescos",
-          name: r.nombre || r.name || "",
-          description: r.descripcion || r.description || "",
-          price: parseFloat(r.precio || r.price || 0),
-          bulkInfo: r.bulto || r.bulk_info || "",
-          image: r.imagen || r.image_url || ""
-        })).filter(r => r.name);
-        if (imported.length) { saveProducts([...products, ...imported]); showToast(`✅ ${imported.length} productos importados`); }
-        else showToast("⚠️ No se encontraron productos", "error");
-      } catch (err) { showToast("❌ Error al leer Excel: " + err.message, "error"); }
+        
+        // Crear mapa de productos existentes por nombre para búsqueda rápida
+        const existingProductsMap = new Map();
+        products.forEach(p => {
+          if (p && p.name) {
+            existingProductsMap.set(p.name.toLowerCase().trim(), p);
+          }
+        });
+        
+        let updatedCount = 0;
+        let newCount = 0;
+        let imageUpdatedCount = 0;
+        
+        const processedProducts = rows.map((r, i) => {
+          const productName = (r.nombre || r.name || "").trim();
+          if (!productName) return null;
+          
+          const existingProduct = existingProductsMap.get(productName.toLowerCase());
+          
+          const newImageData = r.imagen || r.image_url || "";
+          
+          if (existingProduct) {
+            // Producto existe - actualizarlo
+            updatedCount++;
+            
+            // Solo actualizar la imagen si el Excel tiene una nueva URL de imagen
+            const shouldUpdateImage = newImageData && newImageData !== existingProduct.image;
+            if (shouldUpdateImage) imageUpdatedCount++;
+            
+            return {
+              ...existingProduct,
+              category: r.categoria || r.category || existingProduct.category,
+              name: productName,
+              description: r.descripcion || r.description || existingProduct.description,
+              price: parseFloat(r.precio || r.price || existingProduct.price),
+              bulkInfo: r.bulto || r.bulk_info || existingProduct.bulkInfo,
+              image: shouldUpdateImage ? newImageData : existingProduct.image
+            };
+          } else {
+            // Producto nuevo - crearlo
+            newCount++;
+            return {
+              id: `xl_${Date.now()}_${i}`,
+              category: r.categoria || r.category || "Frescos",
+              name: productName,
+              description: r.descripcion || r.description || "",
+              price: parseFloat(r.precio || r.price || 0),
+              bulkInfo: r.bulto || r.bulk_info || "",
+              image: newImageData
+            };
+          }
+        }).filter(p => p !== null);
+        
+        if (processedProducts.length > 0) {
+          // Combinar productos actualizados y nuevos
+          const updatedProducts = products.map(existing => {
+            const updated = processedProducts.find(p => p.id === existing.id);
+            return updated || existing;
+          });
+          
+          // Agregar productos nuevos que no estaban en la lista original
+          const newProducts = processedProducts.filter(p => !products.find(existing => existing.id === p.id));
+          
+          const finalProducts = [...updatedProducts, ...newProducts];
+          saveProducts(finalProducts);
+          
+          // Mensaje detallado de resultados
+          let message = `✅ Procesados ${processedProducts.length} productos:`;
+          if (updatedCount > 0) message += ` ${updatedCount} actualizados`;
+          if (newCount > 0) message += ` ${newCount} nuevos`;
+          if (imageUpdatedCount > 0) message += ` (${imageUpdatedCount} con imágenes actualizadas)`;
+          
+          showToast(message);
+        } else {
+          showToast("⚠️ No se encontraron productos válidos en el Excel", "error");
+        }
+      } catch (err) { 
+        showToast("❌ Error al leer Excel: " + err.message, "error"); 
+      }
     };
     reader.readAsBinaryString(file);
     e.target.value = "";
+  };
+
+  // Funciones de administración de precios
+  const updateSinglePrice = (productId, newPrice) => {
+    const product = products.find(p => p.id === productId);
+    const oldPrice = product.price;
+    const updatedProducts = products.map(p => 
+      p.id === productId ? { ...p, price: parseFloat(newPrice) } : p
+    );
+    
+    // Registrar cambio en historial
+    const historyEntry = {
+      id: `hist_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      type: 'individual',
+      productId: productId,
+      productName: product.name,
+      category: product.category,
+      oldPrice: oldPrice,
+      newPrice: parseFloat(newPrice),
+      difference: parseFloat(newPrice) - oldPrice,
+      percentageChange: ((parseFloat(newPrice) - oldPrice) / oldPrice * 100).toFixed(2),
+      user: user?.email || 'unknown'
+    };
+    
+    const newHistory = [historyEntry, ...priceHistory].slice(0, 100); // Mantener últimos 100 cambios
+    savePriceHistory(newHistory);
+    saveProducts(updatedProducts);
+    showToast("✅ Precio actualizado", "success");
+  };
+
+  const updateBulkPrices = (adjustmentType, value, selectedCategories = []) => {
+    let updatedCount = 0;
+    const changes = [];
+    
+    const updatedProducts = products.map(p => {
+      // Si hay categorías seleccionadas, solo afectar a esas
+      if (selectedCategories.length > 0 && !selectedCategories.includes(p.category)) {
+        return p;
+      }
+      
+      let newPrice = p.price;
+      
+      if (adjustmentType === 'percentage') {
+        newPrice = p.price * (1 + parseFloat(value) / 100);
+      } else if (adjustmentType === 'fixed') {
+        newPrice = p.price + parseFloat(value);
+      }
+      
+      // Redondear a 2 decimales
+      newPrice = Math.round(newPrice * 100) / 100;
+      
+      if (newPrice !== p.price) {
+        updatedCount++;
+        changes.push({
+          productId: p.id,
+          productName: p.name,
+          category: p.category,
+          oldPrice: p.price,
+          newPrice: newPrice,
+          difference: newPrice - p.price,
+          percentageChange: ((newPrice - p.price) / p.price * 100).toFixed(2)
+        });
+        return { ...p, price: newPrice };
+      }
+      return p;
+    });
+    
+    // Registrar cambios en historial
+    const historyEntry = {
+      id: `hist_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      type: 'bulk',
+      adjustmentType: adjustmentType,
+      adjustmentValue: parseFloat(value),
+      affectedCategories: selectedCategories.length > 0 ? selectedCategories : ['Todas'],
+      changesCount: updatedCount,
+      changes: changes,
+      user: user?.email || 'unknown'
+    };
+    
+    const newHistory = [historyEntry, ...priceHistory].slice(0, 100); // Mantener últimos 100 cambios
+    savePriceHistory(newHistory);
+    saveProducts(updatedProducts);
+    showToast(`✅ ${updatedCount} precios actualizados`, "success");
+    return updatedCount;
+  };
+
+  const previewBulkPriceChanges = (adjustmentType, value, selectedCategories = []) => {
+    return products.map(p => {
+      // Si hay categorías seleccionadas, solo afectar a esas
+      if (selectedCategories.length > 0 && !selectedCategories.includes(p.category)) {
+        return { ...p, newPrice: p.price, changed: false };
+      }
+      
+      let newPrice = p.price;
+      
+      if (adjustmentType === 'percentage') {
+        newPrice = p.price * (1 + parseFloat(value) / 100);
+      } else if (adjustmentType === 'fixed') {
+        newPrice = p.price + parseFloat(value);
+      }
+      
+      // Redondear a 2 decimales
+      newPrice = Math.round(newPrice * 100) / 100;
+      
+      return { 
+        ...p, 
+        newPrice, 
+        changed: newPrice !== p.price,
+        difference: newPrice - p.price,
+        percentageChange: ((newPrice - p.price) / p.price * 100).toFixed(2)
+      };
+    });
   };
 
   const handleFormSubmit = async () => {
@@ -573,6 +757,10 @@ export default function StarFamilyApp() {
             imagePreview={imagePreview}
             uploadingImage={uploadingImage}
             onMigrate={migrateProductsToSupabase}
+            onUpdateSinglePrice={updateSinglePrice}
+            onUpdateBulkPrices={updateBulkPrices}
+            onPreviewBulkPriceChanges={previewBulkPriceChanges}
+            priceHistory={priceHistory}
           />
       )}
 
@@ -942,10 +1130,508 @@ function CartDrawer({ cart, onRemove, onClose, total, onClear }) {
 }
 
 // ═══════════════════════════════════════════════════════
+// PRICE MANAGEMENT COMPONENT
+// ═══════════════════════════════════════════════════════
+
+function PriceManagement({ products, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory }) {
+  const [priceMode, setPriceMode] = useState("individual"); // individual | bulk
+  const [bulkType, setBulkType] = useState("percentage"); // percentage | fixed
+  const [bulkValue, setBulkValue] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [previewData, setPreviewData] = useState(null);
+  const [editingPrice, setEditingPrice] = useState(null);
+  const [tempPrice, setTempPrice] = useState("");
+
+  const input = { width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" };
+
+  const handleBulkPreview = () => {
+    if (!bulkValue || isNaN(bulkValue)) return;
+    const preview = onPreviewBulkPriceChanges(bulkType, bulkValue, selectedCategories);
+    setPreviewData(preview);
+  };
+
+  const handleBulkApply = () => {
+    if (!bulkValue || isNaN(bulkValue)) return;
+    if (!window.confirm(`¿Estás seguro que querés aplicar este ajuste a todos los productos${selectedCategories.length > 0 ? " de las categorías seleccionadas" : ""}?`)) return;
+    
+    const updatedCount = onUpdateBulkPrices(bulkType, bulkValue, selectedCategories);
+    setPreviewData(null);
+    setBulkValue("");
+  };
+
+  const handleSinglePriceUpdate = (productId, newPrice) => {
+    if (!newPrice || isNaN(newPrice) || parseFloat(newPrice) <= 0) return;
+    onUpdateSinglePrice(productId, newPrice);
+    setEditingPrice(null);
+    setTempPrice("");
+  };
+
+  const toggleCategory = (category) => {
+    setSelectedCategories(prev => 
+      prev.includes(category) 
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
+  };
+
+  const changedProducts = previewData?.filter(p => p.changed) || [];
+  const totalProducts = previewData?.length || 0;
+
+  return (
+    <div style={{ background:"white", borderRadius:16, padding:24 }}>
+      <h3 style={{ margin:"0 0 6px", fontWeight:800 }}>💰 Administración de Precios</h3>
+      <p style={{ color:"#6B7280", fontSize:14, marginBottom:20 }}>Modificá precios de forma individual o masiva.</p>
+
+      {/* MODE SELECTOR */}
+      <div style={{ display:"flex", gap:10, marginBottom:24 }}>
+        <button 
+          onClick={() => setPriceMode("individual")}
+          style={{ 
+            flex:1,
+            padding:12,
+            borderRadius:10,
+            border: priceMode === "individual" ? "2px solid #C41E3A" : "1px solid #E5E7EB",
+            background: priceMode === "individual" ? "#C41E3A" : "white",
+            color: priceMode === "individual" ? "white" : "#374151",
+            fontWeight:600,
+            cursor:"pointer",
+            fontSize:14
+          }}
+        >
+          🎯 Individual
+        </button>
+        <button 
+          onClick={() => setPriceMode("bulk")}
+          style={{ 
+            flex:1,
+            padding:12,
+            borderRadius:10,
+            border: priceMode === "bulk" ? "2px solid #C41E3A" : "1px solid #E5E7EB",
+            background: priceMode === "bulk" ? "#C41E3A" : "white",
+            color: priceMode === "bulk" ? "white" : "#374151",
+            fontWeight:600,
+            cursor:"pointer",
+            fontSize:14
+          }}
+        >
+          📊 Masivo
+        </button>
+      </div>
+
+      {/* INDIVIDUAL MODE */}
+      {priceMode === "individual" && (
+        <div>
+          <div style={{ marginBottom:16, fontWeight:600, color:"#374151" }}>
+            Modificación Individual de Precios
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:10, maxHeight:400, overflowY:"auto" }}>
+            {products.map(p => (
+              <div key={p.id} style={{ 
+                display:"flex", 
+                alignItems:"center", 
+                gap:12, 
+                padding:12, 
+                border:"1px solid #E5E7EB", 
+                borderRadius:10,
+                background:"#FAFAFA"
+              }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontWeight:600, fontSize:14, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                    {p.name}
+                  </div>
+                  <div style={{ fontSize:12, color:"#9CA3AF" }}>
+                    {p.category}
+                  </div>
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  {editingPrice === p.id ? (
+                    <>
+                      <input
+                        type="number"
+                        value={tempPrice}
+                        onChange={(e) => setTempPrice(e.target.value)}
+                        placeholder={p.price}
+                        style={{ width:100, padding:"6px 10px", border:"1px solid #C41E3A", borderRadius:6, fontSize:14 }}
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => handleSinglePriceUpdate(p.id, tempPrice)}
+                        style={{ background:"#C41E3A", color:"white", border:"none", borderRadius:6, padding:"6px 10px", cursor:"pointer", fontSize:12 }}
+                      >
+                        ✅
+                      </button>
+                      <button
+                        onClick={() => { setEditingPrice(null); setTempPrice(""); }}
+                        style={{ background:"#6B7280", color:"white", border:"none", borderRadius:6, padding:"6px 10px", cursor:"pointer", fontSize:12 }}
+                      >
+                        ❌
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontWeight:700, color:"#C41E3A", minWidth:80, textAlign:"right" }}>
+                        ${p.price.toLocaleString("es-AR")}
+                      </div>
+                      <button
+                        onClick={() => { setEditingPrice(p.id); setTempPrice(p.price.toString()); }}
+                        style={{ background:"#EFF6FF", border:"none", borderRadius:6, padding:"6px 10px", cursor:"pointer", fontSize:12 }}
+                      >
+                        ✏️
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* BULK MODE */}
+      {priceMode === "bulk" && (
+        <div>
+          <div style={{ marginBottom:16, fontWeight:600, color:"#374151" }}>
+            Ajuste Masivo de Precios
+          </div>
+
+          {/* CATEGORY FILTER */}
+          <div style={{ marginBottom:20 }}>
+            <div style={{ fontSize:13, fontWeight:600, marginBottom:8, color:"#374151" }}>
+              Categorías (opcional - dejá vacío para afectar a todos)
+            </div>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+              {CATS.filter(c => c !== "Todos").map(category => (
+                <button
+                  key={category}
+                  onClick={() => toggleCategory(category)}
+                  style={{
+                    padding:"6px 12px",
+                    borderRadius:8,
+                    border: selectedCategories.includes(category) ? "2px solid #C41E3A" : "1px solid #E5E7EB",
+                    background: selectedCategories.includes(category) ? "#C41E3A" : "white",
+                    color: selectedCategories.includes(category) ? "white" : "#374151",
+                    fontSize:12,
+                    fontWeight:600,
+                    cursor:"pointer"
+                  }}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ADJUSTMENT TYPE */}
+          <div style={{ display:"flex", gap:10, marginBottom:20 }}>
+            <button
+              onClick={() => setBulkType("percentage")}
+              style={{
+                flex:1,
+                padding:10,
+                borderRadius:8,
+                border: bulkType === "percentage" ? "2px solid #C41E3A" : "1px solid #E5E7EB",
+                background: bulkType === "percentage" ? "#C41E3A" : "white",
+                color: bulkType === "percentage" ? "white" : "#374151",
+                fontWeight:600,
+                cursor:"pointer",
+                fontSize:13
+              }}
+            >
+              📈 Porcentaje
+            </button>
+            <button
+              onClick={() => setBulkType("fixed")}
+              style={{
+                flex:1,
+                padding:10,
+                borderRadius:8,
+                border: bulkType === "fixed" ? "2px solid #C41E3A" : "1px solid #E5E7EB",
+                background: bulkType === "fixed" ? "#C41E3A" : "white",
+                color: bulkType === "fixed" ? "white" : "#374151",
+                fontWeight:600,
+                cursor:"pointer",
+                fontSize:13
+              }}
+            >
+              💰 Valor Fijo
+            </button>
+          </div>
+
+          {/* VALUE INPUT */}
+          <div style={{ marginBottom:20 }}>
+            <div style={{ fontSize:13, fontWeight:600, marginBottom:8, color:"#374151" }}>
+              {bulkType === "percentage" ? "Porcentaje de ajuste (%)" : "Valor de ajuste ($)"}
+            </div>
+            <input
+              type="number"
+              value={bulkValue}
+              onChange={(e) => setBulkValue(e.target.value)}
+              placeholder={bulkType === "percentage" ? "Ej: 10 para 10% o -5 para -5%" : "Ej: 100 para agregar $100 o -50 para restar $50"}
+              style={input}
+            />
+          </div>
+
+          {/* ACTION BUTTONS */}
+          <div style={{ display:"flex", gap:10 }}>
+            <button
+              onClick={handleBulkPreview}
+              disabled={!bulkValue || isNaN(bulkValue)}
+              style={{
+                flex:1,
+                padding:12,
+                borderRadius:10,
+                border:"1px solid #2563EB",
+                background:"#2563EB",
+                color:"white",
+                fontWeight:600,
+                cursor: (!bulkValue || isNaN(bulkValue)) ? "not-allowed" : "pointer",
+                fontSize:14,
+                opacity: (!bulkValue || isNaN(bulkValue)) ? 0.5 : 1
+              }}
+            >
+              👁️ Vista Previa
+            </button>
+            <button
+              onClick={handleBulkApply}
+              disabled={!bulkValue || isNaN(bulkValue)}
+              style={{
+                flex:1,
+                padding:12,
+                borderRadius:10,
+                border:"1px solid #C41E3A",
+                background:"#C41E3A",
+                color:"white",
+                fontWeight:600,
+                cursor: (!bulkValue || isNaN(bulkValue)) ? "not-allowed" : "pointer",
+                fontSize:14,
+                opacity: (!bulkValue || isNaN(bulkValue)) ? 0.5 : 1
+              }}
+            >
+              ⚡ Aplicar Cambios
+            </button>
+          </div>
+
+          {/* PREVIEW RESULTS */}
+          {previewData && (
+            <div style={{ marginTop:24, padding:16, background:"#F0FDF4", borderRadius:12, border:"1px solid #BBF7D0" }}>
+              <div style={{ fontWeight:700, color:"#166534", marginBottom:12 }}>
+                📊 Vista Previa de Cambios
+              </div>
+              <div style={{ fontSize:13, color:"#166534", marginBottom:8 }}>
+                • {changedProducts.length} de {totalProducts} productos serán modificados
+              </div>
+              <div style={{ fontSize:13, color:"#166534", marginBottom:16 }}>
+                • {selectedCategories.length > 0 ? `Categorías seleccionadas: ${selectedCategories.join(", ")}` : "Todas las categorías"}
+              </div>
+              
+              {/* SAMPLE OF CHANGES */}
+              <div style={{ maxHeight:200, overflowY:"auto" }}>
+                {changedProducts.slice(0, 5).map(p => (
+                  <div key={p.id} style={{ 
+                    display:"flex", 
+                    justifyContent:"space-between", 
+                    alignItems:"center", 
+                    padding:"8px 12px", 
+                    background:"white", 
+                    borderRadius:8, 
+                    marginBottom:6,
+                    fontSize:12
+                  }}>
+                    <div>
+                      <div style={{ fontWeight:600 }}>{p.name}</div>
+                      <div style={{ color:"#9CA3AF" }}>{p.category}</div>
+                    </div>
+                    <div style={{ textAlign:"right" }}>
+                      <div style={{ textDecoration:"line-through", color:"#9CA3AF" }}>
+                        ${p.price.toLocaleString("es-AR")}
+                      </div>
+                      <div style={{ fontWeight:700, color:"#C41E3A" }}>
+                        ${p.newPrice.toLocaleString("es-AR")}
+                      </div>
+                      <div style={{ fontSize:11, color: p.difference > 0 ? "#059669" : "#DC2626" }}>
+                        {p.difference > 0 ? "+" : ""}{p.percentageChange}%
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {changedProducts.length > 5 && (
+                  <div style={{ textAlign:"center", color:"#9CA3AF", fontSize:11, marginTop:8 }}>
+                    ... y {changedProducts.length - 5} productos más
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// PRICE HISTORY COMPONENT
+// ═══════════════════════════════════════════════════════
+
+function PriceHistory({ priceHistory }) {
+  const formatDate = (timestamp) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+  };
+
+  const formatPrice = (price) => {
+    return `$${Number(price).toLocaleString('es-AR')}`;
+  };
+
+  return (
+    <div style={{ background:"white", borderRadius:16, padding:24 }}>
+      <h3 style={{ margin:"0 0 6px", fontWeight:800 }}>📜 Historial de Cambios de Precios</h3>
+      <p style={{ color:"#6B7280", fontSize:14, marginBottom:20 }}>
+        Registro completo de todos los cambios de precios con fecha y hora.
+      </p>
+
+      {priceHistory.length === 0 ? (
+        <div style={{ textAlign:"center", padding:40, color:"#9CA3AF" }}>
+          <div style={{ fontSize:48, marginBottom:12 }}>📋</div>
+          <div style={{ fontSize:16, fontWeight:600, marginBottom:4 }}>No hay cambios registrados</div>
+          <div style={{ fontSize:13 }}>Los cambios de precios aparecerán aquí cuando los realices</div>
+        </div>
+      ) : (
+        <div style={{ display:"flex", flexDirection:"column", gap:12, maxHeight:500, overflowY:"auto" }}>
+          {priceHistory.map((entry) => (
+            <div key={entry.id} style={{ 
+              background:"#FAFAFA", 
+              borderRadius:12, 
+              padding:16, 
+              border:"1px solid #E5E7EB" 
+            }}>
+              {/* Header */}
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                <div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+                    <span style={{ 
+                      background: entry.type === 'individual' ? "#EFF6FF" : "#F0FDF4", 
+                      color: entry.type === 'individual' ? "#1E40AF" : "#166534",
+                      padding:"4px 8px", 
+                      borderRadius:6, 
+                      fontSize:11, 
+                      fontWeight:600 
+                    }}>
+                      {entry.type === 'individual' ? '🎯 Individual' : '📊 Masivo'}
+                    </span>
+                    <span style={{ fontSize:13, color:"#6B7280", fontWeight:500 }}>
+                      {entry.user}
+                    </span>
+                  </div>
+                  <div style={{ fontSize:12, color:"#9CA3AF", fontFamily:"monospace" }}>
+                    {formatDate(entry.timestamp)}
+                  </div>
+                </div>
+                {entry.type === 'bulk' && (
+                  <div style={{ textAlign:"right" }}>
+                    <div style={{ fontSize:11, color:"#6B7280" }}>
+                      {entry.adjustmentType === 'percentage' ? 'Porcentaje' : 'Valor fijo'}
+                    </div>
+                    <div style={{ fontSize:12, fontWeight:600, color: entry.adjustmentValue > 0 ? "#059669" : "#DC2626" }}>
+                      {entry.adjustmentType === 'percentage' 
+                        ? `${entry.adjustmentValue > 0 ? '+' : ''}${entry.adjustmentValue}%`
+                        : `${entry.adjustmentValue > 0 ? '+' : ''}${formatPrice(entry.adjustmentValue)}`
+                      }
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Content */}
+              {entry.type === 'individual' ? (
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <div>
+                    <div style={{ fontWeight:600, fontSize:14, marginBottom:2 }}>{entry.productName}</div>
+                    <div style={{ fontSize:12, color:"#9CA3AF" }}>{entry.category}</div>
+                  </div>
+                  <div style={{ textAlign:"right" }}>
+                    <div style={{ textDecoration:"line-through", color:"#9CA3AF", fontSize:12 }}>
+                      {formatPrice(entry.oldPrice)}
+                    </div>
+                    <div style={{ fontWeight:700, color:"#C41E3A", fontSize:14 }}>
+                      {formatPrice(entry.newPrice)}
+                    </div>
+                    <div style={{ fontSize:11, color: entry.difference > 0 ? "#059669" : "#DC2626" }}>
+                      {entry.difference > 0 ? '+' : ''}{entry.percentageChange}%
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontSize:12, color:"#6B7280", marginBottom:8 }}>
+                    <strong>{entry.changesCount}</strong> productos afectados
+                    {entry.affectedCategories.length > 0 && (
+                      <span> · Categorías: {entry.affectedCategories.join(', ')}</span>
+                    )}
+                  </div>
+                  
+                  {/* Show first 3 changes as examples */}
+                  {entry.changes.slice(0, 3).map((change, idx) => (
+                    <div key={idx} style={{ 
+                      display:"flex", 
+                      justifyContent:"space-between", 
+                      alignItems:"center", 
+                      padding:"6px 8px", 
+                      background:"white", 
+                      borderRadius:6, 
+                      marginBottom:4,
+                      fontSize:11
+                    }}>
+                      <div>
+                        <span style={{ fontWeight:500 }}>{change.productName}</span>
+                        <span style={{ color:"#9CA3AF", marginLeft:6 }}>{change.category}</span>
+                      </div>
+                      <div style={{ textAlign:"right" }}>
+                        <span style={{ textDecoration:"line-through", color:"#9CA3AF", marginRight:6 }}>
+                          {formatPrice(change.oldPrice)}
+                        </span>
+                        <span style={{ fontWeight:600, color:"#C41E3A" }}>
+                          {formatPrice(change.newPrice)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {entry.changes.length > 3 && (
+                    <div style={{ textAlign:"center", color:"#9CA3AF", fontSize:11, marginTop:4 }}>
+                      ... y {entry.changes.length - 3} productos más
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      
+      {priceHistory.length > 0 && (
+        <div style={{ marginTop:16, padding:12, background:"#FEF3C7", borderRadius:8, border:"1px solid #FDE68A" }}>
+          <div style={{ fontSize:12, color:"#92400E", textAlign:"center" }}>
+            📊 Mostrando los últimos {priceHistory.length} cambios · El historial se mantiene en tu navegador
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
 // ADMIN PANEL
 // ═══════════════════════════════════════════════════════
 
-function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate }) {
+function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory }) {
   const input = { width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" };
   const ADMIN_CATS = CATS.filter(c => c !== "Todos");
 
@@ -958,7 +1644,7 @@ function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, se
 
       {/* TABS */}
       <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
-        {[["list","📋 Productos"],["add", editing?"✏️ Editar":"➕ Agregar"],["excel","📊 Excel"]].map(([t,label]) => (
+        {[["list","📋 Productos"],["add", editing?"✏️ Editar":"➕ Agregar"],["prices","💰 Precios"],["history","📜 Historial"],["excel","📊 Excel"]].map(([t,label]) => (
           <button key={t} onClick={() => setAdminTab(t)} style={{ background:adminTab===t?"#C41E3A":"white", color:adminTab===t?"white":"#374151", border:adminTab===t?"none":"1px solid #E5E7EB", borderRadius:10, padding:"8px 16px", cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Poppins',sans-serif" }}>
             {label}
           </button>
@@ -1155,6 +1841,22 @@ function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, se
             </button>
           </div>
         </div>
+      )}
+
+      {/* TAB: PRICES */}
+      {adminTab === "prices" && (
+        <PriceManagement 
+          products={products}
+          onUpdateSinglePrice={onUpdateSinglePrice}
+          onUpdateBulkPrices={onUpdateBulkPrices}
+          onPreviewBulkPriceChanges={onPreviewBulkPriceChanges}
+          priceHistory={priceHistory}
+        />
+      )}
+
+      {/* TAB: HISTORY */}
+      {adminTab === "history" && (
+        <PriceHistory priceHistory={priceHistory} />
       )}
 
       {/* TAB: EXCEL */}
