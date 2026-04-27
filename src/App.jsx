@@ -89,6 +89,10 @@ export default function StarFamilyApp() {
   const [scrollThreshold, setScrollThreshold] = useState(150);
   const [isScrolling, setIsScrolling] = useState(false);
   const [showTimer, setShowTimer] = useState(null);
+  
+  // Estados para el carrusel de categorías
+  const [isVerticalScrolling, setIsVerticalScrolling] = useState(false);
+  const [isCategoryHovered, setIsCategoryHovered] = useState(false);
   const [priceHistory, setPriceHistory] = useState([]);
   const [restorePoints, setRestorePoints] = useState([]);
 
@@ -226,6 +230,31 @@ export default function StarFamilyApp() {
       }
     };
   }, [cartOpen, modal, scrollDirection, scrollThreshold, lastScrollY, showTimer]);
+
+  // Efecto para detectar scroll vertical y controlar el carrusel de categorías
+  useEffect(() => {
+    let scrollTimer;
+    
+    const handleVerticalScroll = () => {
+      const currentScrollY = window.scrollY;
+      setIsVerticalScrolling(currentScrollY > 100);
+      
+      // Debounce para detectar fin del scroll
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => {
+        setIsVerticalScrolling(false);
+      }, 150);
+    };
+
+    window.addEventListener('scroll', handleVerticalScroll);
+    
+    return () => {
+      window.removeEventListener('scroll', handleVerticalScroll);
+      if (scrollTimer) {
+        clearTimeout(scrollTimer);
+      }
+    };
+  }, []);
 
   // Funciones para manejo de imágenes
   const handleImageSelect = (e) => {
@@ -1506,16 +1535,116 @@ export default function StarFamilyApp() {
             </div>
           </div>
 
-          {/* CATEGORY BAR */}
-          <div style={{ background:"white", borderBottom:"1px solid #E5E7EB", position:"sticky", top:62, zIndex:100 }}>
-            <div className="cat-scroll">
-              {CATS.map(c => (
-                <button key={c} onClick={() => setCat(c)} style={{ background: cat===c ? CAT_COLOR[c]||"#C41E3A" : "transparent", color: cat===c ? "white" : "#555", border: cat===c ? "none" : "1.5px solid #E5E7EB", borderRadius:20, padding:"7px 16px", cursor:"pointer", fontSize:13, fontWeight:600, whiteSpace:"nowrap", flexShrink:0, fontFamily:"'Poppins',sans-serif", transition:"all 0.18s" }}>
+          {/* INFINITE CATEGORY MARQUEE - CYBERPUNK PREMIUM */}
+          <div 
+            style={{ 
+              background:"rgba(15, 23, 42, 0.95)", 
+              backdropFilter:"blur(20px)", 
+              borderBottom:"1px solid rgba(196, 30, 58, 0.3)", 
+              position:"sticky", 
+              top:62, 
+              zIndex:100,
+              overflow:"hidden",
+              position:"relative"
+            }}
+            onMouseEnter={() => setIsCategoryHovered(true)}
+            onMouseLeave={() => setIsCategoryHovered(false)}
+          >
+            {/* FADING EDGES */}
+            <div 
+              style={{
+                position:"absolute",
+                left:0,
+                top:0,
+                bottom:0,
+                width:80,
+                background:"linear-gradient(to right, rgba(15, 23, 42, 1) 0%, rgba(15, 23, 42, 0.8) 50%, transparent 100%)",
+                zIndex:10,
+                pointerEvents:"none"
+              }}
+            />
+            <div 
+              style={{
+                position:"absolute",
+                right:0,
+                top:0,
+                bottom:0,
+                width:80,
+                background:"linear-gradient(to left, rgba(15, 23, 42, 1) 0%, rgba(15, 23, 42, 0.8) 50%, transparent 100%)",
+                zIndex:10,
+                pointerEvents:"none"
+              }}
+            />
+            
+            {/* INFINITE MARQUEE CONTAINER */}
+            <div 
+              style={{
+                display:"flex",
+                alignItems:"center",
+                padding:"16px 0",
+                animationPlayState: (isCategoryHovered || isVerticalScrolling) ? "paused" : "running"
+              }}
+              className="category-marquee"
+            >
+              {/* DUPLICATE CATEGORIES FOR INFINITE LOOP */}
+              {[...CATS, ...CATS].map((c, index) => (
+                <motion.button
+                  key={`${c}-${index}`}
+                  onClick={() => setCat(c)}
+                  whileHover={{ 
+                    scale: 1.05,
+                    boxShadow: "0 4px 20px rgba(196, 30, 58, 0.4)"
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                  style={{
+                    background: cat===c 
+                      ? "linear-gradient(135deg, rgba(196, 30, 58, 0.9), rgba(196, 30, 58, 0.7))" 
+                      : "rgba(30, 41, 59, 0.6)",
+                    backdropFilter: "blur(10px)",
+                    color: cat===c ? "white" : "rgba(255, 255, 255, 0.8)",
+                    border: cat===c 
+                      ? "1px solid rgba(196, 30, 58, 0.6)" 
+                      : "1px solid rgba(255, 255, 255, 0.1)",
+                    borderRadius:16,
+                    padding:"10px 20px",
+                    cursor:"pointer",
+                    fontSize:14,
+                    fontWeight:600,
+                    whiteSpace:"nowrap",
+                    flexShrink:0,
+                    fontFamily:"'Poppins',sans-serif",
+                    transition:"all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    margin:"0 12px",
+                    boxShadow: cat===c 
+                      ? "0 2px 10px rgba(196, 30, 58, 0.3)" 
+                      : "0 2px 8px rgba(0, 0, 0, 0.1)",
+                    textShadow: cat===c ? "0 1px 2px rgba(0, 0, 0, 0.3)" : "none"
+                  }}
+                >
+                  <span style={{ marginRight:6 }}>{CAT_EMOJI[c] || "📦"}</span>
                   {c}
-                </button>
+                </motion.button>
               ))}
             </div>
           </div>
+          
+          {/* CSS ANIMATION FOR MARQUEE */}
+          <style jsx>{`
+            @keyframes marquee {
+              0% { transform: translateX(0); }
+              100% { transform: translateX(-50%); }
+            }
+            
+            .category-marquee {
+              display: flex;
+              animation: marquee 45s linear infinite;
+              width: fit-content;
+            }
+            
+            .category-marquee:hover {
+              animation-play-state: paused;
+            }
+          `}</style>
 
           {/* PRODUCT GRID */}
           <div style={{ maxWidth:1200, margin:"0 auto", padding:"20px 12px 48px" }}>
