@@ -318,8 +318,13 @@ export default function StarFamilyApp() {
       
       // 1. SIEMPRE intentar cargar productos directamente desde Supabase (fuente de verdad)
       if (supabaseConfig && supabaseConfig.url && supabaseConfig.key) {
+        console.log("🔍 INTENTANDO CARGAR DESDE SUPABASE...");
+        console.log("🔍 Configuración:", { url: supabaseConfig.url, keyConfigured: !!supabaseConfig.key });
+        
         try {
           productsLoaded = await loadProductsFromSupabase();
+          console.log("🔍 RESULTADO loadProductsFromSupabase:", productsLoaded);
+          
           if (productsLoaded) {
             console.log("☁️ Productos cargados desde Supabase (fuente de datos en tiempo real)");
             // Limpiar caché local para forzar siempre datos frescos
@@ -331,6 +336,8 @@ export default function StarFamilyApp() {
           console.error('Error cargando desde Supabase:', error);
           console.log("🔄 Error en Supabase, intentando fallback...");
         }
+      } else {
+        console.log("🔍 NO HAY CONFIGURACIÓN DE SUPABASE");
       }
       
       // 2. Si Supabase falla, mostrar lista vacía PERO sin bloquear futuros intentos
@@ -622,9 +629,13 @@ export default function StarFamilyApp() {
   });
 
   const loadProductsFromSupabase = async () => {
+    console.log("🔍 loadProductsFromSupabase: INICIANDO...");
+    
     const supabase = getSupabaseClient();
+    console.log("🔍 Cliente Supabase obtenido:", !!supabase);
+    
     if (!supabase) {
-      console.warn('Configuración de Supabase no disponible');
+      console.warn('⚠️ Configuración de Supabase no disponible');
       return false;
     }
 
@@ -644,6 +655,9 @@ export default function StarFamilyApp() {
       console.log("🔍 RESPUESTA COMPLETA DE SUPABASE:");
       console.log("📦 Data:", data);
       console.log("❌ Error:", error);
+      console.log("🔍 Data length:", data?.length);
+      console.log("🔍 Data type:", typeof data);
+      console.log("🔍 Error details:", error ? { message: error.message, code: error.code, details: error.details } : 'No error');
       
       // DIAGNÓSTICO DETALLADO DEL ERROR
       if (error) {
@@ -745,13 +759,16 @@ export default function StarFamilyApp() {
         // DEBUG TOTAL: Log directo de lectura de tabla
         console.log("Intentando leer tabla 'products'...", await supabase.from('products').select('*'));
       
+      console.log("🔍 loadProductsFromSupabase: RETORNANDO true");
       return true;
       } else {
-        console.log("⚠️ No se encontraron productos en Supabase");
+        console.log("⚠️ loadProductsFromSupabase: No se encontraron productos en Supabase");
+        console.log("🔍 loadProductsFromSupabase: RETORNANDO false");
         return false;
       }
     } catch(e) {
-      console.error("Error cargando productos desde Supabase:", e);
+      console.error("🔍 loadProductsFromSupabase: ERROR:", e);
+      console.log("🔍 loadProductsFromSupabase: RETORNANDO false por error");
       return false;
     }
   };
