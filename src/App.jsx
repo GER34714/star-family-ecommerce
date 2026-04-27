@@ -324,11 +324,18 @@ export default function StarFamilyApp() {
       
       finally {
         setLoading(false);
+        // Sincronizar carrito con productos cargados
+        syncCartWithProducts(products);
       }
     })();
   }, []);
 
-  const saveProducts = async (p) => { setProducts(p); try { await window.storage.set("roxy_products", JSON.stringify(p)); } catch {} };
+  const saveProducts = async (p) => { 
+    setProducts(p); 
+    try { await window.storage.set("roxy_products", JSON.stringify(p)); } catch {} 
+    // Sincronizar carrito automáticamente cuando cambian los productos
+    syncCartWithProducts(p);
+  };
   const saveCart = async (c) => { setCart(c); try { await window.storage.set("roxy_cart", JSON.stringify(c)); } catch {} };
   const savePriceHistory = async (h) => { setPriceHistory(h); try { await window.storage.set("roxy_price_history", JSON.stringify(h)); } catch {} };
   const saveRestorePoints = async (rp) => { setRestorePoints(rp); try { await window.storage.set("roxy_restore_points", JSON.stringify(rp)); } catch {} };
@@ -526,7 +533,6 @@ export default function StarFamilyApp() {
 
       // Restaurar productos
       await saveProducts(restorePoint.products);
-      setProducts(restorePoint.products);
 
       // Restaurar historial de precios
       await savePriceHistory(restorePoint.priceHistory);
@@ -547,6 +553,33 @@ export default function StarFamilyApp() {
   const autoBackup = async () => {
     // Crear backup automático antes de cambios importantes
     await createRestorePoint("Backup antes de cambios importantes");
+  };
+
+  const syncCartWithProducts = (updatedProducts) => {
+    // Actualizar carrito para reflejar cambios en productos
+    const updatedCart = cart
+      .map(cartItem => {
+        const product = updatedProducts.find(p => p.id === cartItem.id);
+        if (!product) {
+          // Producto eliminado - remover del carrito
+          return null;
+        }
+        // Producto actualizado - actualizar información
+        return {
+          ...cartItem,
+          name: product.name,
+          price: product.price,
+          category: product.category,
+          bulkInfo: product.bulkInfo,
+          image: product.image
+        };
+      })
+      .filter(Boolean); // Eliminar items nulos (productos eliminados)
+    
+    if (JSON.stringify(cart) !== JSON.stringify(updatedCart)) {
+      saveCart(updatedCart);
+      console.log('🔄 Carrito sincronizado con cambios de productos');
+    }
   };
 
   const addToCart = (product, q = 1) => {
@@ -1057,7 +1090,11 @@ export default function StarFamilyApp() {
       fileRef.current.value = '';
     }
   };
-  const deleteProduct = (id) => { saveProducts(products.filter(p => p.id !== id)); showToast("🗑️ Producto eliminado"); };
+  const deleteProduct = (id) => { 
+    const updatedProducts = products.filter(p => p.id !== id);
+    saveProducts(updatedProducts); 
+    showToast("🗑️ Producto eliminado"); 
+  };
 
   // Error Boundary y loading state
   if (loading) {
