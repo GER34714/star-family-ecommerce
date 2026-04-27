@@ -308,9 +308,36 @@ export default function StarFamilyApp() {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      try { const r = await window.storage.get("roxy_products"); if (r?.value) setProducts(JSON.parse(r.value)); } catch {}
+      
+      // Cargar configuración de Supabase primero
+      let supabaseConfig = null;
+      try { 
+        const r = await window.storage.get("roxy_supa"); 
+        if (r?.value) { 
+          const d = JSON.parse(r.value); 
+          setSupaUrl(d.url||""); 
+          setSupaKey(d.key||""); 
+          supabaseConfig = d;
+        } 
+      } catch {}
+      
+      // Intentar cargar productos desde Supabase si hay configuración
+      let productsLoaded = false;
+      if (supabaseConfig && supabaseConfig.url && supabaseConfig.key) {
+        try {
+          productsLoaded = await loadProductsFromSupabase();
+        } catch (error) {
+          console.error('Error cargando productos desde Supabase:', error);
+        }
+      }
+      
+      // Si no se pudieron cargar desde Supabase, cargar desde almacenamiento local
+      if (!productsLoaded) {
+        try { const r = await window.storage.get("roxy_products"); if (r?.value) setProducts(JSON.parse(r.value)); } catch {}
+      }
+      
+      // Cargar otros datos desde almacenamiento local
       try { const r = await window.storage.get("roxy_cart"); if (r?.value) setCart(JSON.parse(r.value)); } catch {}
-      try { const r = await window.storage.get("roxy_supa"); if (r?.value) { const d = JSON.parse(r.value); setSupaUrl(d.url||""); setSupaKey(d.key||""); } } catch {}
       try { const r = await window.storage.get("roxy_price_history"); if (r?.value) setPriceHistory(JSON.parse(r.value)); } catch {}
       try { const r = await window.storage.get("roxy_restore_points"); if (r?.value) setRestorePoints(JSON.parse(r.value)); } catch {}
       try { const r = await window.storage.get("roxy_image_preview"); if (r?.value) setImagePreview(r.value); } catch {}
@@ -330,13 +357,15 @@ export default function StarFamilyApp() {
     })();
   }, []);
 
-  const saveProducts = async (p) => { 
+  const saveProducts = async (p, skipSupabaseSync = false) => { 
     setProducts(p); 
     try { await window.storage.set("roxy_products", JSON.stringify(p)); } catch {} 
     // Sincronizar carrito automáticamente cuando cambian los productos
     syncCartWithProducts(p);
-    // Sincronizar con Supabase automáticamente
-    await syncProductsWithSupabase();
+    // Sincronizar con Supabase automáticamente solo si no se debe omitir
+    if (!skipSupabaseSync) {
+      await syncProductsWithSupabase();
+    }
   };
   const saveCart = async (c) => { setCart(c); try { await window.storage.set("roxy_cart", JSON.stringify(c)); } catch {} };
   const savePriceHistory = async (h) => { setPriceHistory(h); try { await window.storage.set("roxy_price_history", JSON.stringify(h)); } catch {} };
@@ -595,6 +624,45 @@ export default function StarFamilyApp() {
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
 
   const filtered = cat === "Todos" ? (products || []) : (products || [])?.filter(p => p && typeof p === 'object' && p?.category && p?.category === cat);
+
+  const loadProductsFromSupabase = async () => {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      console.warn('Configuración de Supabase no disponible, usando datos locales');
+      return false;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('active', true);
+      
+      if (error) throw error;
+      
+      const mapped = (data || []).map(r => ({
+        id: r.id || `prod_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+        category: r.category || "Frescos",
+        name: r.name || "Producto sin nombre",
+        description: r.description || "",
+        price: Number(r.price) || 0,
+        bulkInfo: r.bulk_info || "",
+        image: r.image_url || ""
+      })).filter(r => r.name);
+        
+      if (mapped.length > 0) {
+        await saveProducts(mapped, true); // Omitir sincronización automática
+        console.log(`✅ ${mapped.length} productos cargados desde Supabase al iniciar`);
+        return true;
+      } else {
+        console.log("⚠️ No se encontraron productos en Supabase");
+        return false;
+      }
+    } catch(e) {
+      console.error("Error cargando productos desde Supabase:", e);
+      return false;
+    }
+  };
 
   const syncSupabase = async () => {
     // Variables de entorno por defecto para producción
