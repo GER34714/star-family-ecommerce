@@ -45,8 +45,45 @@ const SEED_PRODUCTS = [
 const fmt = (p) => `$${Number(p).toLocaleString("es-AR")}`;
 
 // ═══════════════════════════════════════════════════════
+// STORAGE HELPERS
+// ═══════════════════════════════════════════════════════
+
+const getStorageItem = (key) => {
+  try {
+    const value = localStorage.getItem(key);
+    return value ? JSON.parse(value) : null;
+  } catch (error) {
+    console.error(`Error getting localStorage item ${key}:`, error);
+    return null;
+  }
+};
+
+const setStorageItem = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (error) {
+    console.error(`Error setting localStorage item ${key}:`, error);
+    return false;
+  }
+};
+
+const removeStorageItem = (key) => {
+  try {
+    localStorage.removeItem(key);
+    return true;
+  } catch (error) {
+    console.error(`Error removing localStorage item ${key}:`, error);
+    return false;
+  }
+};
+
+// ═══════════════════════════════════════════════════════
 // SUPABASE CONFIGURATION
 // ═══════════════════════════════════════════════════════
+
+// Singleton para evitar múltiples instancias de Supabase
+let supabaseInstance = null;
 
 const getSupabaseClient = () => {
   const url = process.env.REACT_APP_SUPABASE_URL || localStorage.getItem('supa_url') || '';
@@ -56,7 +93,14 @@ const getSupabaseClient = () => {
   
   if (!url || !key) return null;
   
-  return createClient(url, key);
+  // Retornar instancia existente si ya existe
+  if (supabaseInstance) {
+    return supabaseInstance;
+  }
+  
+  // Crear nueva instancia solo si no existe
+  supabaseInstance = createClient(url, key);
+  return supabaseInstance;
 };
 
 // ═══════════════════════════════════════════════════════
@@ -309,64 +353,67 @@ export default function StarFamilyApp() {
       // Cargar configuración de Supabase primero
       let supabaseConfig = null;
       try { 
-        const r = await window.storage.get("roxy_supa"); 
-        if (r?.value) { 
-          const d = JSON.parse(r.value); 
-          setSupaUrl(d.url||""); 
-          setSupaKey(d.key||""); 
-          supabaseConfig = d;
+        const supaConfig = getStorageItem("roxy_supa"); 
+        if (supaConfig) { 
+          setSupaUrl(supaConfig.url||""); 
+          setSupaKey(supaConfig.key||""); 
+          supabaseConfig = supaConfig;
         } 
       } catch {}
       
-      // Cargar productos con lógica unificada que permita edición
+      // Lógica de carga con Supabase como fuente principal
       let productsLoaded = false;
       
-      // Si hay configuración de Supabase, intentar cargar desde allí primero
+      // 1. Intentar cargar productos desde Supabase (fuente principal)
       if (supabaseConfig && supabaseConfig.url && supabaseConfig.key) {
         try {
           productsLoaded = await loadProductsFromSupabase();
           if (productsLoaded) {
-            console.log("✅ Productos cargados desde Supabase exitosamente");
+            console.log("✅ Productos cargados desde Supabase (fuente principal)");
           } else {
-            console.log("⚠️ No hay productos en Supabase, intentando con almacenamiento local...");
+            console.log("⚠️ Supabase no devolvió productos, intentando caché local...");
           }
         } catch (error) {
-          console.error('Error cargando productos desde Supabase:', error);
-          console.log("🔄 Intentando con almacenamiento local...");
+          console.error('Error cargando desde Supabase:', error);
+          console.log("🔄 Supabase falló, intentando caché local...");
         }
       }
       
-      // Si no se cargaron desde Supabase, intentar con locales
+      // 2. Si Supabase falla o devuelve vacío → intentar localStorage como caché
       if (!productsLoaded) {
-        try { 
-          const r = await window.storage.get("roxy_products"); 
-          if (r?.value) {
-            const localProducts = JSON.parse(r.value);
-            // Guardar productos locales en el estado SIN sincronización para evitar sobreescribir datos reales
-            await saveProducts(localProducts, true, false); // Omitir sincronización, permitir guardado local
-            console.log("📦 Productos cargados desde almacenamiento local");
-            productsLoaded = true;
-          } else if (products.length === 0) {
-            // Cargar SEED_PRODUCTS como último recurso
-            // Guardar SEED_PRODUCTS en el estado SIN sincronización para evitar sobreescribir datos reales
-            await saveProducts(SEED_PRODUCTS, true, false); // Omitir sincronización, permitir guardado local
-            console.log("📦 Cargando productos iniciales (SEED_PRODUCTS)");
+        try {
+          const localProducts = getStorageItem("roxy_products");
+          if (localProducts) {
+            // Cargar productos locales SIN sincronizar (para no sobreescribir Supabase)
+            await saveProducts(localProducts, true, true); // Omitir sincronización, permitir guardado local
+            console.log("📦 Productos cargados desde caché local");
             productsLoaded = true;
           }
         } catch (error) {
-          console.error('Error cargando productos locales:', error);
-          // Como último recurso, cargar SEED_PRODUCTS directamente SIN sincronización
-          await saveProducts(SEED_PRODUCTS, true, false); // Omitir sincronización, permitir guardado local
-          console.log("📦 Cargando productos iniciales (SEED_PRODUCTS) - fallback");
+          console.error('Error cargando desde caché local:', error);
+        }
+      }
+      
+      // 3. Si localStorage también está vacío → usar SEED_PRODUCTS y subirlos a Supabase
+      if (!productsLoaded) {
+        try {
+          // Cargar SEED_PRODUCTS y sincronizarlos con Supabase (solo si no hay nada allí)
+          await saveProducts(SEED_PRODUCTS, false, true); // Sincronizar con Supabase, guardar en local
+          console.log("📦 SEED_PRODUCTS cargados y sincronizados con Supabase");
           productsLoaded = true;
+        } catch (error) {
+          console.error('Error cargando SEED_PRODUCTS:', error);
+          // Como último recurso, cargar SEED_PRODUCTS sin sincronizar
+          await saveProducts(SEED_PRODUCTS, true, true);
+          console.log("📦 SEED_PRODUCTS cargados localmente (fallback)");
         }
       }
       
       // Cargar otros datos desde almacenamiento local
-      try { const r = await window.storage.get("roxy_cart"); if (r?.value) setCart(JSON.parse(r.value)); } catch {}
-      try { const r = await window.storage.get("roxy_price_history"); if (r?.value) setPriceHistory(JSON.parse(r.value)); } catch {}
-      try { const r = await window.storage.get("roxy_restore_points"); if (r?.value) setRestorePoints(JSON.parse(r.value)); } catch {}
-      try { const r = await window.storage.get("roxy_image_preview"); if (r?.value) setImagePreview(r.value); } catch {}
+      try { const cartData = getStorageItem("roxy_cart"); if (cartData) setCart(cartData); } catch {}
+      try { const historyData = getStorageItem("roxy_price_history"); if (historyData) setPriceHistory(historyData); } catch {}
+      try { const restoreData = getStorageItem("roxy_restore_points"); if (restoreData) setRestorePoints(restoreData); } catch {}
+      try { const imageData = getStorageItem("roxy_image_preview"); if (imageData) setImagePreview(imageData); } catch {}
       
       // Cargar historial desde Supabase si hay configuración
       try {
@@ -387,7 +434,7 @@ export default function StarFamilyApp() {
     setProducts(p); 
     // Solo guardar en almacenamiento local si no se debe omitir
     if (!skipLocalStorage) {
-      try { await window.storage.set("roxy_products", JSON.stringify(p)); } catch {} 
+      setStorageItem("roxy_products", p); 
     }
     // Sincronizar carrito automáticamente cuando cambian los productos
     syncCartWithProducts(p);
@@ -396,10 +443,10 @@ export default function StarFamilyApp() {
       await syncProductsWithSupabase(p);
     }
   };
-  const saveCart = async (c) => { setCart(c); try { await window.storage.set("roxy_cart", JSON.stringify(c)); } catch {} };
-  const savePriceHistory = async (h) => { setPriceHistory(h); try { await window.storage.set("roxy_price_history", JSON.stringify(h)); } catch {} };
-  const saveRestorePoints = async (rp) => { setRestorePoints(rp); try { await window.storage.set("roxy_restore_points", JSON.stringify(rp)); } catch {} };
-  const saveImagePreview = async (preview) => { setImagePreview(preview); try { await window.storage.set("roxy_image_preview", preview); } catch {} };
+  const saveCart = async (c) => { setCart(c); setStorageItem("roxy_cart", c); };
+  const savePriceHistory = async (h) => { setPriceHistory(h); setStorageItem("roxy_price_history", h); };
+  const saveRestorePoints = async (rp) => { setRestorePoints(rp); setStorageItem("roxy_restore_points", rp); };
+  const saveImagePreview = async (preview) => { setImagePreview(preview); setStorageItem("roxy_image_preview", preview); };
 
   // Funciones para persistir en Supabase
   const saveProductToSupabase = async (product) => {
@@ -1366,18 +1413,18 @@ export default function StarFamilyApp() {
             setSupaUrl={setSupaUrl} setSupaKey={setSupaKey}
             onSync={syncSupabase} syncing={syncing}
             onSaveSupa={async () => {
-              try { await window.storage.set("roxy_supa", JSON.stringify({ url:supaUrl, key:supaKey })); showToast("✅ Configuración guardada"); } catch {}
+              try { setStorageItem("roxy_supa", { url:supaUrl, key:supaKey }); showToast("✅ Configuración guardada"); } catch {}
             }}
             onReset={async () => {
               setLoading(true);
               try {
                 // Limpiar completamente almacenamiento local
                 try {
-                  await window.storage.remove("roxy_products");
-                  await window.storage.remove("roxy_cart");
-                  await window.storage.remove("roxy_price_history");
-                  await window.storage.remove("roxy_restore_points");
-                  await window.storage.remove("roxy_image_preview");
+                  removeStorageItem("roxy_products");
+                  removeStorageItem("roxy_cart");
+                  removeStorageItem("roxy_price_history");
+                  removeStorageItem("roxy_restore_points");
+                  removeStorageItem("roxy_image_preview");
                   console.log("🧹 Almacenamiento local limpiado");
                 } catch (error) {
                   console.error("Error limpiando almacenamiento local:", error);
