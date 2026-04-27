@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from './supabaseClient';
 
 // ═══════════════════════════════════════════════════════
 // DATA & CONSTANTS
@@ -52,26 +52,8 @@ const removeStorageItem = (key) => {
 // SUPABASE CONFIGURATION
 // ═══════════════════════════════════════════════════════
 
-// Singleton para evitar múltiples instancias de Supabase
-let supabaseInstance = null;
-
-const getSupabaseClient = () => {
-  const url = process.env.REACT_APP_SUPABASE_URL || localStorage.getItem('supa_url') || '';
-  const key = process.env.REACT_APP_SUPABASE_ANON_KEY || localStorage.getItem('supa_key') || '';
-  
-  console.log('Configuración Supabase:', { url, key: key ? '***CONFIGURADO***' : 'NO CONFIGURADO' });
-  
-  if (!url || !key) return null;
-  
-  // Retornar instancia existente si ya existe
-  if (supabaseInstance) {
-    return supabaseInstance;
-  }
-  
-  // Crear nueva instancia solo si no existe
-  supabaseInstance = createClient(url, key);
-  return supabaseInstance;
-};
+// ⚠️ getSupabaseClient movido a ./supabaseClient.js (singleton pattern)
+// Importado arriba para evitar múltiples instancias de GoTrueClient
 
 // ═══════════════════════════════════════════════════════
 // MAIN APP
@@ -2706,6 +2688,41 @@ function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, se
             <button onClick={() => { setAdminTab("list"); setEditing(false); }} style={{ background:"#F4F4F5", color:"#6B7280", border:"none", borderRadius:12, padding:"14px 20px", cursor:"pointer", fontSize:14, fontFamily:"'Poppins',sans-serif" }}>
               Cancelar
             </button>
+          </div>
+          
+          {/* BOTÓN TEMPORAL DE PRUEBA */}
+          <div style={{ marginTop:20, padding:15, background:"#F0F9FF", borderRadius:8, border:"1px solid #3B82F6" }}>
+            <div style={{ fontSize:12, fontWeight:700, color:"#1E40AF", marginBottom:8 }}>🧪 PRUEBA DE INSERCIÓN</div>
+            <button 
+              onClick={() => {
+                // Llenar formulario con datos de prueba
+                setForm({
+                  id: "",
+                  category: "Frescos",
+                  name: "Producto de Prueba " + Date.now(),
+                  description: "Este es un producto de prueba para verificar upload y persistencia",
+                  price: "10000",
+                  bulkInfo: "Test bulk info",
+                  image_url: ""
+                });
+                setEditing(false);
+              }}
+              style={{ 
+                background:"#3B82F6", 
+                color:"white", 
+                border:"none", 
+                borderRadius:6, 
+                padding:"8px 12px", 
+                cursor:"pointer", 
+                fontSize:12,
+                width:"100%"
+              }}
+            >
+              🧪 Llenar con datos de prueba
+            </button>
+            <div style={{ fontSize:10, color:"#64748B", marginTop:5 }}>
+              Completa el formulario y agrega una imagen para probar el flujo completo
+            </div>
           </div>
         </div>
       )}
