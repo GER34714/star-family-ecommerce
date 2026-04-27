@@ -3,13 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Star Family - Mayorista</title>
+    <title>Star Family - Mayorista Premium</title>
     <link rel="manifest" href="/manifest.json" />
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Star Family">
     <meta name="application-name" content="Star Family">
     <meta name="theme-color" content="#C41E3A">
+    <meta name="description" content="Distribuidor Mayorista de Alimentos Premium - Compra online con delivery">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="apple-touch-icon" href="https://iili.io/B6XgSSI.jpg">
     <style>
         body {
             margin: 0;
@@ -21,5 +24,45 @@
 <body>
     <noscript>Necesitas habilitar JavaScript para ejecutar esta aplicación.</noscript>
     <div id="root"></div>
+    
+    <script>
+        // Registro del Service Worker para PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('SW registrado exitosamente:', registration);
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New content is available
+                                    if (confirm('Nueva versión disponible. ¿Actualizar ahora?')) {
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch((error) => {
+                        console.log('Error registrando SW:', error);
+                    });
+            });
+        }
+
+        // Detectar si es PWA instalada
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevenir el banner automático de instalación
+            e.preventDefault();
+            
+            // Guardar el evento para mostrarlo manualmente
+            window.deferredPrompt = e;
+            
+            // Mostrar botón de instalación personalizado (opcional)
+            console.log('PWA installation prompt available');
+        });
+    </script>
 </body>
 </html>

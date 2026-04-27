@@ -1,21 +1,37 @@
 {
   "short_name": "Star Family",
-  "name": "Star Family - Mayorista",
+  "name": "Star Family - Mayorista Premium",
   "icons": [
     {
       "src": "https://iili.io/B6XgSSI.jpg",
       "sizes": "192x192",
-      "type": "image/jpeg"
+      "type": "image/jpeg",
+      "purpose": "any maskable"
     },
     {
       "src": "https://iili.io/B6XgSSI.jpg",
       "sizes": "512x512",
-      "type": "image/jpeg"
+      "type": "image/jpeg",
+      "purpose": "any maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "theme_color": "#C41E3A",
-  "background_color": "#F4F4F5",
-  "description": "Distribuidor Mayorista de Alimentos Premium"
+  "background_color": "#ffffff",
+  "description": "Distribuidor Mayorista de Alimentos Premium - Compra online con delivery",
+  "categories": ["shopping", "business", "food"],
+  "lang": "es",
+  "scope": "/",
+  "prefer_related_applications": false,
+  "screenshots": [
+    {
+      "src": "https://iili.io/B6XgSSI.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Catálogo de productos mayoristas"
+    }
+  ]
 }
