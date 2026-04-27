@@ -611,6 +611,15 @@ export default function StarFamilyApp() {
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
 
   const filtered = cat === "Todos" ? (products || []) : (products || [])?.filter(p => p && typeof p === 'object' && p?.category && p?.category === cat);
+  
+  // DIAGNÓSTICO: Verificar estado de productos y filtered
+  console.log("🔍 DIAGNÓSTICO DE RENDERIZADO:", {
+    categoriaSeleccionada: cat,
+    totalProducts: products?.length || 0,
+    filteredLength: filtered?.length || 0,
+    products: products,
+    filtered: filtered
+  });
 
   const loadProductsFromSupabase = async () => {
     const supabase = getSupabaseClient();
@@ -716,7 +725,17 @@ export default function StarFamilyApp() {
         
       if (mapped.length > 0) {
         // Guardar productos directamente sin usar caché local
+        console.log(`🔍 ANTES DE setProducts: ${mapped.length} productos mapeados`);
+        console.log("🔍 PRODUCTOS MAPEADOS:", mapped);
+        
         setProducts(mapped);
+        
+        // Verificar inmediatamente después de setProducts
+        setTimeout(() => {
+          console.log("🔍 DESPUÉS DE setProducts - productos en estado:", products);
+          console.log("🔍 Longitud del estado products:", products.length);
+        }, 100);
+        
         console.log(`☁️ ${mapped.length} productos cargados desde Supabase (datos en tiempo real)`);
         
         // Mostrar IDs reales para verificar
@@ -724,7 +743,7 @@ export default function StarFamilyApp() {
         console.log(`🔍 IDs reales de productos: ${realIds.join(', ')}...`);
         
         // DEBUG TOTAL: Log directo de lectura de tabla
-      console.log("Intentando leer tabla 'products'...", await supabase.from('products').select('*'));
+        console.log("Intentando leer tabla 'products'...", await supabase.from('products').select('*'));
       
       return true;
       } else {
