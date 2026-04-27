@@ -87,6 +87,8 @@ export default function StarFamilyApp() {
   const [scrollDirection, setScrollDirection] = useState('up');
   const [lastScrollY, setLastScrollY] = useState(0);
   const [scrollThreshold, setScrollThreshold] = useState(150);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const [showTimer, setShowTimer] = useState(null);
   const [priceHistory, setPriceHistory] = useState([]);
   const [restorePoints, setRestorePoints] = useState([]);
 
@@ -108,6 +110,8 @@ export default function StarFamilyApp() {
 
   // Efecto para manejar la visibilidad de botones flotantes
   useEffect(() => {
+    let debounceTimer;
+    
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
       
@@ -118,47 +122,110 @@ export default function StarFamilyApp() {
         setScrollDirection('up');
       }
       
-      // Lógica de visibilidad con umbral - PRIORIDAD AL FOOTER
+      // Marcar que está scrolleando
+      setIsScrolling(true);
+      
+      // Limpiar timer existente
+      if (showTimer) {
+        clearTimeout(showTimer);
+      }
+      
+      // Lógica de visibilidad con umbral - PRIORIDAD AL FOOTER Y CARRITO
       const footer = document.querySelector('footer');
+      const cartDrawer = document.querySelector('.cart-drawer');
       let shouldHide = false;
       
-      // 1. PRIORITY: Si el footer es visible, ocultar siempre
+      // 1. PRIORIDAD MÁXIMA: Si el footer es visible, ocultar siempre
       if (footer) {
         const footerRect = footer.getBoundingClientRect();
         const windowHeight = window.innerHeight;
-        // Ocultar cuando el footer es visible (prioridad máxima)
+        // Ocultar cuando el footer es visible (para no interferir con carrito)
         if (footerRect.top < windowHeight) {
           shouldHide = true;
         }
       }
       
-      // 2. Si el footer no es visible, aplicar lógica de scroll
+      // 2. PRIORIDAD ALTA: Si el carrito está abierto, ocultar siempre
+      if (cartDrawer && cartDrawer.classList.contains('open')) {
+        shouldHide = true;
+      }
+      
+      // 3. Si no hay prioridades, aplicar lógica de scroll
       if (!shouldHide) {
         // Ocultar por scroll hacia abajo después del umbral
         if (scrollDirection === 'down' && currentScrollY > scrollThreshold) {
           shouldHide = true;
         }
         
-        // Mostrar al scrollear hacia arriba
+        // NO mostrar inmediatamente al scrollear hacia arriba - esperar a que deje de scrollear
         if (scrollDirection === 'up') {
-          shouldHide = false;
+          // Esperar a que deje de scrollear para mostrar
+          // Esto se manejará en el debounce
         }
       }
       
       setHideFloatingButtons(shouldHide);
       setLastScrollY(currentScrollY);
     };
+    
+    const debounceScrollEnd = () => {
+      setIsScrolling(false);
+      
+      // Si el scroll terminó y la dirección es hacia arriba, mostrar botones con retraso
+      if (scrollDirection === 'up') {
+        const footer = document.querySelector('footer');
+        const cartDrawer = document.querySelector('.cart-drawer');
+        
+        // Verificar que no haya prioridades activas
+        let hasPriority = false;
+        if (footer) {
+          const footerRect = footer.getBoundingClientRect();
+          const windowHeight = window.innerHeight;
+          hasPriority = footerRect.top < windowHeight;
+        }
+        if (cartDrawer && cartDrawer.classList.contains('open')) {
+          hasPriority = true;
+        }
+        
+        if (!hasPriority) {
+          // Mostrar botones después de 800ms de retraso
+          const timer = setTimeout(() => {
+            setHideFloatingButtons(false);
+          }, 800);
+          setShowTimer(timer);
+        }
+      }
+    };
 
     // Ocultar botones cuando se abre el carrito o modal
     if (cartOpen || modal) {
       setHideFloatingButtons(true);
     } else {
-      handleScroll(); // Verificar posición del footer y dirección del scroll
+      handleScroll(); // Verificar posición inicial
     }
 
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [cartOpen, modal]);
+    
+    // Debounce para detectar fin del scroll
+    let scrollEndTimer;
+    const debouncedScrollEnd = () => {
+      clearTimeout(scrollEndTimer);
+      scrollEndTimer = setTimeout(debounceScrollEnd, 150);
+    };
+    
+    window.addEventListener('scroll', debouncedScrollEnd);
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', debouncedScrollEnd);
+      if (showTimer) {
+        clearTimeout(showTimer);
+      }
+      if (scrollEndTimer) {
+        clearTimeout(scrollEndTimer);
+      }
+    };
+  }, [cartOpen, modal, scrollDirection, scrollThreshold, lastScrollY, showTimer]);
 
   // Funciones para manejo de imágenes
   const handleImageSelect = (e) => {
