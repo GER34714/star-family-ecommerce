@@ -631,25 +631,10 @@ export default function StarFamilyApp() {
       console.log('🔍 DIAGNÓSTICO INMEDIATO - Consulta a tabla products');
       console.log('🔍 Cliente Supabase disponible:', !!supabase);
       
-      // PRUEBA DE SELECT SIMPLE - SIN FILTROS
-      let { data, error } = await supabase
+      // PRUEBA DE SELECT SIMPLE - SIN FILTROS (tabla confirmada: 'products')
+      const { data, error } = await supabase
         .from('products')
         .select('*');
-      
-      // SI FALLA CON 'products', PROBAR CON 'productos'
-      if (error && error.message?.includes('relation "products" does not exist')) {
-        console.log('🔄 Intentando con tabla "productos" (español)...');
-        const result = await supabase
-          .from('productos')
-          .select('*');
-        data = result.data;
-        error = result.error;
-        
-        if (!error) {
-          console.log('✅ ÉXITO: La tabla se llama "productos"');
-          // TODO: Cambiar permanentemente todas las referencias de 'products' a 'productos'
-        }
-      }
       
       // LOG COMPLETO DE RESPUESTA
       console.log("🔍 RESPUESTA COMPLETA DE SUPABASE:");
