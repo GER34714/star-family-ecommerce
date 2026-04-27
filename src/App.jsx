@@ -321,57 +321,48 @@ export default function StarFamilyApp() {
         } 
       } catch {}
       
+      // Cargar productos con lógica unificada que permita edición
+      let productsLoaded = false;
+      
       // Si hay configuración de Supabase, intentar cargar desde allí primero
       if (supabaseConfig && supabaseConfig.url && supabaseConfig.key) {
         try {
-          const productsLoaded = await loadProductsFromSupabase();
+          productsLoaded = await loadProductsFromSupabase();
           if (productsLoaded) {
             console.log("✅ Productos cargados desde Supabase exitosamente");
           } else {
             console.log("⚠️ No hay productos en Supabase, intentando con almacenamiento local...");
-            // Si no hay productos en Supabase, intentar con locales
-            try { 
-              const r = await window.storage.get("roxy_products"); 
-              if (r?.value) {
-                setProducts(JSON.parse(r.value));
-                console.log("📦 Productos cargados desde almacenamiento local");
-              } else if (products.length === 0) {
-                // Cargar SEED_PRODUCTS como último recurso
-                setProducts(SEED_PRODUCTS);
-                console.log("📦 Cargando productos iniciales (SEED_PRODUCTS)");
-              }
-            } catch {}
           }
         } catch (error) {
           console.error('Error cargando productos desde Supabase:', error);
           console.log("🔄 Intentando con almacenamiento local...");
-          
-          // Cargar locales si hay error de Supabase
-          try { 
-            const r = await window.storage.get("roxy_products"); 
-            if (r?.value) {
-              setProducts(JSON.parse(r.value));
-              console.log("📦 Productos cargados desde almacenamiento local");
-            } else if (products.length === 0) {
-              // Cargar SEED_PRODUCTS como último recurso
-              setProducts(SEED_PRODUCTS);
-              console.log("📦 Cargando productos iniciales (SEED_PRODUCTS)");
-            }
-          } catch {}
         }
-      } else {
-        // Cargar locales si no hay configuración de Supabase
+      }
+      
+      // Si no se cargaron desde Supabase, intentar con locales
+      if (!productsLoaded) {
         try { 
           const r = await window.storage.get("roxy_products"); 
           if (r?.value) {
-            setProducts(JSON.parse(r.value));
-            console.log("📦 Productos cargados desde almacenamiento local (sin configuración Supabase)");
+            const localProducts = JSON.parse(r.value);
+            // Guardar productos locales en el estado SIN omitir sincronización
+            // Esto permite que los cambios se guarden en Supabase
+            await saveProducts(localProducts, false, true); // No sincronizar ahora, pero permitir ediciones
+            console.log("📦 Productos cargados desde almacenamiento local");
+            productsLoaded = true;
           } else if (products.length === 0) {
-            // Cargar SEED_PRODUCTS solo si no hay nada más
-            setProducts(SEED_PRODUCTS);
+            // Cargar SEED_PRODUCTS como último recurso
+            // Guardar SEED_PRODUCTS en el estado SIN omitir sincronización
+            await saveProducts(SEED_PRODUCTS, false, true); // No sincronizar ahora, pero permitir ediciones
             console.log("📦 Cargando productos iniciales (SEED_PRODUCTS)");
+            productsLoaded = true;
           }
-        } catch {}
+        } catch (error) {
+          console.error('Error cargando productos locales:', error);
+          // Como último recurso, cargar SEED_PRODUCTS directamente
+          setProducts(SEED_PRODUCTS);
+          console.log("📦 Cargando productos iniciales (SEED_PRODUCTS) - fallback");
+        }
       }
       
       // Cargar otros datos desde almacenamiento local
