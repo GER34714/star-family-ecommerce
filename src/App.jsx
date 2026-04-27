@@ -1535,113 +1535,180 @@ export default function StarFamilyApp() {
             </div>
           </div>
 
-          {/* INFINITE CATEGORY MARQUEE - CYBERPUNK PREMIUM */}
-          <div 
-            style={{ 
-              background:"rgba(15, 23, 42, 0.95)", 
-              backdropFilter:"blur(20px)", 
-              borderBottom:"1px solid rgba(196, 30, 58, 0.3)", 
-              position:"sticky", 
-              top:62, 
-              zIndex:100,
-              overflow:"hidden",
-              position:"relative"
-            }}
-            onMouseEnter={() => setIsCategoryHovered(true)}
-            onMouseLeave={() => setIsCategoryHovered(false)}
-          >
-            {/* FADING EDGES */}
-            <div 
-              style={{
-                position:"absolute",
-                left:0,
-                top:0,
-                bottom:0,
-                width:80,
-                background:"linear-gradient(to right, rgba(15, 23, 42, 1) 0%, rgba(15, 23, 42, 0.8) 50%, transparent 100%)",
-                zIndex:10,
-                pointerEvents:"none"
-              }}
-            />
-            <div 
-              style={{
-                position:"absolute",
-                right:0,
-                top:0,
-                bottom:0,
-                width:80,
-                background:"linear-gradient(to left, rgba(15, 23, 42, 1) 0%, rgba(15, 23, 42, 0.8) 50%, transparent 100%)",
-                zIndex:10,
-                pointerEvents:"none"
-              }}
-            />
-            
-            {/* INFINITE MARQUEE CONTAINER */}
-            <div 
-              style={{
-                display:"flex",
-                alignItems:"center",
-                padding:"16px 0",
-                animationPlayState: (isCategoryHovered || isVerticalScrolling) ? "paused" : "running"
-              }}
-              className="category-marquee"
-            >
-              {/* DUPLICATE CATEGORIES FOR INFINITE LOOP */}
-              {[...CATS, ...CATS].map((c, index) => (
-                <motion.button
-                  key={`${c}-${index}`}
-                  onClick={() => setCat(c)}
-                  whileHover={{ 
-                    scale: 1.05,
-                    boxShadow: "0 4px 20px rgba(196, 30, 58, 0.4)"
-                  }}
-                  whileTap={{ scale: 0.95 }}
-                  style={{
-                    background: cat===c 
-                      ? "linear-gradient(135deg, rgba(196, 30, 58, 0.9), rgba(196, 30, 58, 0.7))" 
-                      : "rgba(30, 41, 59, 0.6)",
-                    backdropFilter: "blur(10px)",
-                    color: cat===c ? "white" : "rgba(255, 255, 255, 0.8)",
-                    border: cat===c 
-                      ? "1px solid rgba(196, 30, 58, 0.6)" 
-                      : "1px solid rgba(255, 255, 255, 0.1)",
-                    borderRadius:16,
-                    padding:"10px 20px",
-                    cursor:"pointer",
-                    fontSize:14,
-                    fontWeight:600,
-                    whiteSpace:"nowrap",
-                    flexShrink:0,
-                    fontFamily:"'Poppins',sans-serif",
-                    transition:"all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                    margin:"0 12px",
-                    boxShadow: cat===c 
-                      ? "0 2px 10px rgba(196, 30, 58, 0.3)" 
-                      : "0 2px 8px rgba(0, 0, 0, 0.1)",
-                    textShadow: cat===c ? "0 1px 2px rgba(0, 0, 0, 0.3)" : "none"
-                  }}
-                >
-                  <span style={{ marginRight:6 }}>{CAT_EMOJI[c] || "📦"}</span>
+          {/* CATEGORY BAR - ORIGINAL */}
+          <div style={{ background:"white", borderBottom:"1px solid #E5E7EB", position:"sticky", top:62, zIndex:100 }}>
+            <div className="cat-scroll">
+              {CATS.map(c => (
+                <button key={c} onClick={() => setCat(c)} style={{ background: cat===c ? CAT_COLOR[c]||"#C41E3A" : "transparent", color: cat===c ? "white" : "#555", border: cat===c ? "none" : "1.5px solid #E5E7EB", borderRadius:20, padding:"7px 16px", cursor:"pointer", fontSize:13, fontWeight:600, whiteSpace:"nowrap", flexShrink:0, fontFamily:"'Poppins',sans-serif", transition:"all 0.18s" }}>
                   {c}
-                </motion.button>
+                </button>
               ))}
             </div>
           </div>
+
+          {/* INFINITE PRODUCT MARQUEE - CYBERPUNK PREMIUM */}
+          {cat !== "Todos" && (
+            <div 
+              style={{ 
+                background:"rgba(15, 23, 42, 0.95)", 
+                backdropFilter:"blur(20px)", 
+                borderBottom:"1px solid rgba(196, 30, 58, 0.3)", 
+                position:"sticky", 
+                top:106, 
+                zIndex:95,
+                overflow:"hidden",
+                position:"relative"
+              }}
+              onMouseEnter={() => setIsCategoryHovered(true)}
+              onMouseLeave={() => setIsCategoryHovered(false)}
+            >
+              {/* FADING EDGES */}
+              <div 
+                style={{
+                  position:"absolute",
+                  left:0,
+                  top:0,
+                  bottom:0,
+                  width:80,
+                  background:"linear-gradient(to right, rgba(15, 23, 42, 1) 0%, rgba(15, 23, 42, 0.8) 50%, transparent 100%)",
+                  zIndex:10,
+                  pointerEvents:"none"
+                }}
+              />
+              <div 
+                style={{
+                  position:"absolute",
+                  right:0,
+                  top:0,
+                  bottom:0,
+                  width:80,
+                  background:"linear-gradient(to left, rgba(15, 23, 42, 1) 0%, rgba(15, 23, 42, 0.8) 50%, transparent 100%)",
+                  zIndex:10,
+                  pointerEvents:"none"
+                }}
+              />
+              
+              {/* INFINITE PRODUCT MARQUEE CONTAINER */}
+              <div 
+                style={{
+                  display:"flex",
+                  alignItems:"center",
+                  padding:"20px 0",
+                  animationPlayState: (isCategoryHovered || isVerticalScrolling) ? "paused" : "running"
+                }}
+                className="product-marquee"
+              >
+                {/* DUPLICATE PRODUCTS FOR INFINITE LOOP */}
+                {[...(filtered || []), ...(filtered || [])].map((product, index) => (
+                  <motion.div
+                    key={`${product.id}-${index}`}
+                    whileHover={{ 
+                      scale: 1.02,
+                      boxShadow: "0 8px 25px rgba(196, 30, 58, 0.4)"
+                    }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setModal(product)}
+                    style={{
+                      background:"rgba(30, 41, 59, 0.8)",
+                      backdropFilter:"blur(10px)",
+                      border:"1px solid rgba(255, 255, 255, 0.1)",
+                      borderRadius:16,
+                      padding:"16px",
+                      cursor:"pointer",
+                      flexShrink:0,
+                      width:200,
+                      height:280,
+                      display:"flex",
+                      flexDirection:"column",
+                      margin:"0 16px",
+                      transition:"all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                      boxShadow:"0 4px 15px rgba(0, 0, 0, 0.2)"
+                    }}
+                  >
+                    {/* Product Image */}
+                    <div style={{ 
+                      width:"100%", 
+                      height:140, 
+                      borderRadius:12, 
+                      overflow:"hidden", 
+                      marginBottom:12,
+                      background:"rgba(255, 255, 255, 0.05)",
+                      display:"flex",
+                      alignItems:"center",
+                      justifyContent:"center"
+                    }}>
+                      {product.image_url ? (
+                        <img 
+                          src={product.image_url} 
+                          alt={product.name}
+                          style={{ 
+                            width:"100%", 
+                            height:"100%", 
+                            objectFit:"cover" 
+                          }}
+                        />
+                      ) : (
+                        <div style={{ fontSize:48, opacity:0.3 }}>📦</div>
+                      )}
+                    </div>
+                    
+                    {/* Product Info */}
+                    <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                      <div>
+                        <div style={{ 
+                          color:"white", 
+                          fontSize:14, 
+                          fontWeight:600, 
+                          marginBottom:4,
+                          fontFamily:"'Poppins',sans-serif",
+                          lineHeight:1.2
+                        }}>
+                          {product.name}
+                        </div>
+                        {product.description && (
+                          <div style={{ 
+                            color:"rgba(255, 255, 255, 0.6)", 
+                            fontSize:12, 
+                            marginBottom:8,
+                            fontFamily:"'Poppins',sans-serif",
+                            overflow:"hidden",
+                            textOverflow:"ellipsis",
+                            whiteSpace:"nowrap"
+                          }}>
+                            {product.description}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div style={{ 
+                        color:CAT_COLOR[product.category] || "#C41E3A", 
+                        fontSize:18, 
+                        fontWeight:700,
+                        fontFamily:"'Poppins',sans-serif"
+                      }}>
+                        ${product.price}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
           
-          {/* CSS ANIMATION FOR MARQUEE */}
+          {/* CSS ANIMATION FOR PRODUCT MARQUEE */}
           <style jsx>{`
-            @keyframes marquee {
+            @keyframes productMarquee {
               0% { transform: translateX(0); }
               100% { transform: translateX(-50%); }
             }
             
-            .category-marquee {
+            .product-marquee {
               display: flex;
-              animation: marquee 45s linear infinite;
+              animation: productMarquee 40s linear infinite;
               width: fit-content;
             }
             
-            .category-marquee:hover {
+            .product-marquee:hover {
               animation-play-state: paused;
             }
           `}</style>
