@@ -1219,14 +1219,15 @@ export default function StarFamilyApp() {
     if (editing) {
       // Actualizar producto existente
       const updatedProducts = products.map(x => x.id === p.id ? p : x);
-      await saveProducts(updatedProducts);
+      // Guardar localmente SIN sincronizar para evitar duplicados
+      await saveProducts(updatedProducts, true, false); // Omitir sincronización automática
       // Sincronizar individualmente con Supabase
       await saveProductToSupabase(p);
       console.log('✏️ Producto actualizado en la lista y en Supabase');
       showToast("✏️ Producto actualizado", "success");
     } else {
       // Agregar nuevo producto
-      await saveProducts([...products, p]);
+      await saveProducts([...products, p], true, false); // Omitir sincronización automática
       // Sincronizar individualmente con Supabase
       await saveProductToSupabase(p);
       console.log('➕ Producto agregado a la lista y en Supabase');
