@@ -361,51 +361,50 @@ export default function StarFamilyApp() {
         } 
       } catch {}
       
-      // Lógica de carga con Supabase como fuente principal
+      // LÓGICA ACTUALIZADA: Siempre usar Supabase como fuente principal de datos
       let productsLoaded = false;
       
-      // 1. Intentar cargar productos desde Supabase (fuente principal)
+      // 1. SIEMPRE intentar cargar productos directamente desde Supabase (fuente de verdad)
       if (supabaseConfig && supabaseConfig.url && supabaseConfig.key) {
         try {
           productsLoaded = await loadProductsFromSupabase();
           if (productsLoaded) {
-            console.log("✅ Productos cargados desde Supabase (fuente principal)");
+            console.log("☁️ Productos cargados desde Supabase (fuente de datos en tiempo real)");
+            // Limpiar caché local para forzar siempre datos frescos
+            localStorage.removeItem("roxy_products");
           } else {
-            console.log("⚠️ Supabase no devolvió productos, intentando caché local...");
+            console.log("⚠️ Supabase no devolvió productos, inicializando con datos base...");
           }
         } catch (error) {
           console.error('Error cargando desde Supabase:', error);
-          console.log("🔄 Supabase falló, intentando caché local...");
+          console.log("🔄 Error en Supabase, intentando fallback...");
         }
       }
       
-      // 2. Si Supabase falla o devuelve vacío → intentar localStorage como caché
+      // 2. SOLO si Supabase falla completamente → usar SEED_PRODUCTS como fallback inicial
       if (!productsLoaded) {
         try {
-          const localProducts = getStorageItem("roxy_products");
-          if (localProducts) {
-            // Cargar productos locales SIN sincronizar (para no sobreescribir Supabase)
-            await saveProducts(localProducts, true, true); // Omitir sincronización, permitir guardado local
-            console.log("📦 Productos cargados desde caché local");
-            productsLoaded = true;
+          // Cargar SEED_PRODUCTS y sincronizarlos con Supabase (solo como inicialización)
+          await saveProducts(SEED_PRODUCTS, false, true); // Sincronizar con Supabase, guardar en local
+          console.log("🌱 SEED_PRODUCTS inicializados y sincronizados con Supabase");
+          productsLoaded = true;
+          
+          // Intentar cargar de nuevo desde Supabase para tener datos frescos
+          if (supabaseConfig && supabaseConfig.url && supabaseConfig.key) {
+            setTimeout(async () => {
+              try {
+                await loadProductsFromSupabase();
+                console.log("🔄 Recarga desde Supabase completada");
+              } catch (error) {
+                console.error('Error en recarga:', error);
+              }
+            }, 1000);
           }
         } catch (error) {
-          console.error('Error cargando desde caché local:', error);
-        }
-      }
-      
-      // 3. Si localStorage también está vacío → usar SEED_PRODUCTS y subirlos a Supabase
-      if (!productsLoaded) {
-        try {
-          // Cargar SEED_PRODUCTS y sincronizarlos con Supabase (solo si no hay nada allí)
-          await saveProducts(SEED_PRODUCTS, false, true); // Sincronizar con Supabase, guardar en local
-          console.log("📦 SEED_PRODUCTS cargados y sincronizados con Supabase");
-          productsLoaded = true;
-        } catch (error) {
-          console.error('Error cargando SEED_PRODUCTS:', error);
-          // Como último recurso, cargar SEED_PRODUCTS sin sincronizar
+          console.error('Error inicializando SEED_PRODUCTS:', error);
+          // Como último recurso, cargar SEED_PRODUCTS localmente
           await saveProducts(SEED_PRODUCTS, true, true);
-          console.log("📦 SEED_PRODUCTS cargados localmente (fallback)");
+          console.log("📦 SEED_PRODUCTS cargados localmente (último recurso)");
         }
       }
       
@@ -704,20 +703,24 @@ export default function StarFamilyApp() {
   const loadProductsFromSupabase = async () => {
     const supabase = getSupabaseClient();
     if (!supabase) {
-      console.warn('Configuración de Supabase no disponible, usando datos locales');
+      console.warn('Configuración de Supabase no disponible');
       return false;
     }
 
     try {
+      // Limpia caché local para forzar datos frescos
+      localStorage.removeItem("roxy_products");
+      
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('active', true);
+        .eq('active', true)
+        .order('created_at', { ascending: false }); // Ordenar por más recientes
       
       if (error) throw error;
       
       const mapped = (data || []).map(r => ({
-        id: r.id || `prod_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+        id: r.id, // Usar ID real de la base de datos, no generar uno nuevo
         category: r.category || "Frescos",
         name: r.name || "Producto sin nombre",
         description: r.description || "",
@@ -727,11 +730,17 @@ export default function StarFamilyApp() {
       })).filter(r => r.name);
         
       if (mapped.length > 0) {
-        await saveProducts(mapped, true, true); // Omitir sincronización y guardado local
-        console.log(`✅ ${mapped.length} productos cargados desde Supabase al iniciar`);
+        // Guardar productos directamente sin usar caché local
+        setProducts(mapped);
+        console.log(`☁️ ${mapped.length} productos cargados desde Supabase (datos en tiempo real)`);
+        
+        // Mostrar IDs reales para verificar
+        const realIds = mapped.map(p => p.id).slice(0, 3);
+        console.log(`🔍 IDs reales de productos: ${realIds.join(', ')}...`);
+        
         return true;
       } else {
-        console.log("⚠️ No se encontraron productos en Supabase");
+        console.log("⚠️ No se encontraron productos activos en Supabase");
         return false;
       }
     } catch(e) {
@@ -1236,7 +1245,18 @@ export default function StarFamilyApp() {
     setEditing(false);
     setAdminTab("list");
     
-    console.log('🧹 handleFormSubmit - Limpieza completada');
+    // FORZAR RECARGA DESDE SUPABASE: Limpiar caché y recargar datos frescos
+    localStorage.removeItem("roxy_products");
+    setTimeout(async () => {
+      try {
+        await loadProductsFromSupabase();
+        console.log('🔄 Datos recargados desde Supabase después de guardar');
+      } catch (error) {
+        console.error('Error en recarga post-guardado:', error);
+      }
+    }, 500);
+    
+    console.log('🧹 handleFormSubmit - Limpieza y recarga completadas');
   };
 
   const startEdit = (p) => { 
@@ -1268,6 +1288,17 @@ export default function StarFamilyApp() {
           .eq('id', id);
         if (error) throw error;
         console.log('🗑️ Producto eliminado de Supabase');
+        
+        // FORZAR RECARGA DESDE SUPABASE después de eliminar
+        localStorage.removeItem("roxy_products");
+        setTimeout(async () => {
+          try {
+            await loadProductsFromSupabase();
+            console.log('🔄 Datos recargados desde Supabase después de eliminar');
+          } catch (error) {
+            console.error('Error en recarga post-eliminación:', error);
+          }
+        }, 500);
       } catch (error) {
         console.error('Error eliminando producto de Supabase:', error);
         showToast('⚠️ Error eliminando de Supabase', 'error');
