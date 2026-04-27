@@ -628,30 +628,50 @@ export default function StarFamilyApp() {
       // Limpia caché local para forzar datos frescos
       localStorage.removeItem("roxy_products");
       
-      console.log('🔍 DEBUG: Intentando consultar tabla "products"...');
-      console.log('🔍 DEBUG: Cliente Supabase disponible:', !!supabase);
+      console.log('🔍 DIAGNÓSTICO INMEDIATO - Consulta a tabla products');
+      console.log('🔍 Cliente Supabase disponible:', !!supabase);
       
-      const { data, error } = await supabase
+      // PRUEBA DE SELECT SIMPLE - SIN FILTROS
+      let { data, error } = await supabase
         .from('products')
-        .select('*')
-        .eq('active', true)
-        .order('created_at', { ascending: false }); // Ordenar por más recientes
+        .select('*');
       
-      // DEBUG DETALLADO DE ERRORES
-      if (error) {
-        console.error("❌ Error real de Supabase:", error);
-        console.error("❌ Código de error:", error.code);
-        console.error("❌ Mensaje de error:", error.message);
-        console.error("❌ Detalles:", error.details);
-        console.error("❌ Hint:", error.hint);
+      // SI FALLA CON 'products', PROBAR CON 'productos'
+      if (error && error.message?.includes('relation "products" does not exist')) {
+        console.log('🔄 Intentando con tabla "productos" (español)...');
+        const result = await supabase
+          .from('productos')
+          .select('*');
+        data = result.data;
+        error = result.error;
         
-        // Errores comunes y sus soluciones
+        if (!error) {
+          console.log('✅ ÉXITO: La tabla se llama "productos"');
+          // TODO: Cambiar permanentemente todas las referencias de 'products' a 'productos'
+        }
+      }
+      
+      // LOG COMPLETO DE RESPUESTA
+      console.log("🔍 RESPUESTA COMPLETA DE SUPABASE:");
+      console.log("📦 Data:", data);
+      console.log("❌ Error:", error);
+      
+      // DIAGNÓSTICO DETALLADO DEL ERROR
+      if (error) {
+        console.error("🚨 ERROR COMPLETO DE SUPABASE:");
+        console.error("Objeto error completo:", JSON.stringify(error, null, 2));
+        console.error("Código:", error.code);
+        console.error("Mensaje:", error.message);
+        console.error("Detalles:", error.details);
+        console.error("Hint:", error.hint);
+        
+        // SOLUCIONES INMEDIATAS SEGÚN ERROR
         if (error.code === 'PGRST116') {
-          console.error("🔍 SOLUCIÓN: La tabla 'products' no existe. Verifica el nombre en el dashboard de Supabase.");
+          console.error("🔧 SOLUCIÓN: La tabla 'products' no existe. Intenta con 'productos'");
         } else if (error.code === '42501') {
-          console.error("🔍 SOLUCIÓN: Problema de permisos RLS. Ejecuta el script fix-rls-policies.sql");
+          console.error("🔧 SOLUCIÓN: Problema de permisos RLS. Ejecuta: ALTER TABLE products DISABLE ROW LEVEL SECURITY;");
         } else if (error.message?.includes('relation "products" does not exist')) {
-          console.error("🔍 SOLUCIÓN: La tabla se llama 'productos' (español). Cambia .from('products') por .from('productos')");
+          console.error("🔧 SOLUCIÓN: Cambiar .from('products') por .from('productos')");
         }
         
         throw error;
