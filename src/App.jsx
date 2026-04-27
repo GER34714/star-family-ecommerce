@@ -972,7 +972,6 @@ function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, se
             <span style={{ fontWeight:700 }}>{products.length} productos en catálogo</span>
             <div style={{ display:"flex", gap:8 }}>
               <button onClick={() => { setEditing(false); setForm({ id:"", category:"Frescos", name:"", description:"", price:"", bulkInfo:"", image:"" }); setAdminTab("add"); }} className="btn-red" style={{ padding:"8px 14px", fontSize:13 }}>+ Nuevo</button>
-              <button onClick={onReset} style={{ background:"white", border:"1px solid #E5E7EB", borderRadius:9, padding:"8px 14px", cursor:"pointer", fontSize:13, fontWeight:600 }}>↺ Reset</button>
             </div>
           </div>
           <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
@@ -988,7 +987,11 @@ function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, se
                 </div>
                 <div style={{ display:"flex", gap:6, flexShrink:0 }}>
                   <button onClick={() => onEdit(p)} style={{ background:"#EFF6FF", border:"none", borderRadius:8, padding:"7px 11px", cursor:"pointer", fontSize:14 }}>✏️</button>
-                  <button onClick={() => onDelete(p.id)} style={{ background:"#FEE2E2", border:"none", borderRadius:8, padding:"7px 11px", cursor:"pointer", fontSize:14 }}>🗑️</button>
+                  <button onClick={() => {
+                    if (window.confirm(`¿Estás seguro que querés borrar "${p?.name || 'este producto'}"?\n\nEsta acción no se puede deshacer.`)) {
+                      onDelete(p.id);
+                    }
+                  }} style={{ background:"#FEE2E2", border:"none", borderRadius:8, padding:"7px 11px", cursor:"pointer", fontSize:14 }}>🗑️</button>
                 </div>
               </div>
             ))
