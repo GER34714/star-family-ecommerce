@@ -1787,7 +1787,7 @@ export default function StarFamilyApp() {
         </div>
       </footer>
 
-      {/* BOTONES FLOTANTES CON ANIMACIÓN INTELIGENTE */}
+      {/* BOTÓN FLOTANTE DE WHATSAPP CON EFECTO DE VIBRACIÓN */}
       <AnimatePresence>
         {!hideFloatingButtons && (
           <motion.div
@@ -1804,46 +1804,33 @@ export default function StarFamilyApp() {
               position:"fixed", 
               bottom:20, 
               right:20, 
-              display:"flex", 
-              flexDirection:"column", 
-              gap:12, 
               zIndex:400 
             }}
           >
-            {/* Instagram Button */}
-            <motion.a
-              href="https://www.instagram.com/starfamily.oficial/?hl=es"
-              target="_blank"
-              rel="noopener noreferrer"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              style={{ 
-                width:56, 
-                height:56, 
-                background:"linear-gradient(45deg, #E4405F, #C13584)", 
-                borderRadius:"50%", 
-                display:"flex", 
-                alignItems:"center", 
-                justifyContent:"center", 
-                color:"white", 
-                textDecoration:"none", 
-                boxShadow:"0 4px 12px rgba(228, 64, 95, 0.4), 0 0 20px rgba(228, 64, 95, 0.2)",
-                border: "1px solid rgba(228, 64, 95, 0.3)",
-                backdropFilter: "blur(10px)"
-              }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zM5.838 12a6.162 6.162 0 1112.324 0 6.162 6.162 0 01-12.324 0zM12 16a4 4 0 110-8 4 4 0 010 8zm4.965-10.405a1.44 1.44 0 112.881.001 1.44 1.44 0 01-2.881-.001z"/>
-              </svg>
-            </motion.a>
-            
-            {/* WhatsApp Button */}
+            {/* WhatsApp Button con efecto de vibración */}
             <motion.a
               href="https://wa.me/5491124953641"
               target="_blank"
               rel="noopener noreferrer"
-              whileHover={{ scale: 1.1 }}
+              whileHover={{ 
+                scale: 1.1,
+                boxShadow: "0 6px 20px rgba(37, 211, 102, 0.6), 0 0 30px rgba(37, 211, 102, 0.3)"
+              }}
               whileTap={{ scale: 0.95 }}
+              animate={{
+                boxShadow: [
+                  "0 4px 12px rgba(37, 211, 102, 0.4), 0 0 20px rgba(37, 211, 102, 0.2)",
+                  "0 4px 16px rgba(37, 211, 102, 0.5), 0 0 25px rgba(37, 211, 102, 0.3)",
+                  "0 4px 12px rgba(37, 211, 102, 0.4), 0 0 20px rgba(37, 211, 102, 0.2)"
+                ]
+              }}
+              transition={{
+                boxShadow: {
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }
+              }}
               style={{ 
                 width:56, 
                 height:56, 
