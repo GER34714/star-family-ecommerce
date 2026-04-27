@@ -631,7 +631,7 @@ export default function StarFamilyApp() {
       console.log('🔍 DIAGNÓSTICO INMEDIATO - Consulta a tabla products');
       console.log('🔍 Cliente Supabase disponible:', !!supabase);
       
-      // PRUEBA DE SELECT SIMPLE - SIN FILTROS (tabla confirmada: 'products')
+      // PRUEBA DE SELECT SIMPLE - MOSTRAR TODOS LOS PRODUCTOS (incluyendo inactivos)
       const { data, error } = await supabase
         .from('products')
         .select('*');
@@ -667,10 +667,10 @@ export default function StarFamilyApp() {
         console.log('🔍 DEBUG: Muestra de datos recibidos:', data.slice(0, 2));
       }
       
-      // DEBUG: Verificar estructura de datos de la BD
+      // DEBUG: Verificar estructura y estado de datos de la BD
       if (data && data.length > 0) {
         console.log('🔍 DEBUG: Estructura de campos en primer registro:', Object.keys(data[0]));
-        console.log('🔍 DEBUG: Campos importantes:', {
+        console.log('🔍 DEBUG: Campos importantes del primer producto:', {
           id: data[0].id,
           name: data[0].name,
           image_url: data[0].image_url,
@@ -678,6 +678,25 @@ export default function StarFamilyApp() {
           price: data[0].price,
           bulk_info: data[0].bulk_info,
           active: data[0].active
+        });
+        
+        // Mostrar resumen de todos los productos con su estado active
+        console.log('🔍 DEBUG: Resumen de todos los productos:');
+        data.forEach((product, index) => {
+          console.log(`  ${index + 1}. ${product.id} - ${product.name} - active: ${product.active} - image_url: ${product.image_url ? '✅' : '❌ VACÍO'}`);
+        });
+        
+        // Contar productos activos vs inactivos
+        const activeCount = data.filter(p => p.active === true).length;
+        const inactiveCount = data.filter(p => p.active === false).length;
+        const withImageCount = data.filter(p => p.image_url && p.image_url.trim() !== '').length;
+        
+        console.log('🔍 DEBUG: Estadísticas:', {
+          total: data.length,
+          activos: activeCount,
+          inactivos: inactiveCount,
+          con_imagen: withImageCount,
+          sin_imagen: data.length - withImageCount
         });
       }
       
