@@ -342,21 +342,21 @@ export default function StarFamilyApp() {
           const r = await window.storage.get("roxy_products"); 
           if (r?.value) {
             const localProducts = JSON.parse(r.value);
-            // Guardar productos locales en el estado permitiendo sincronización y guardado local
-            await saveProducts(localProducts, false, false); // Permitir sincronización y guardado local
+            // Guardar productos locales en el estado SIN sincronización para evitar sobreescribir datos reales
+            await saveProducts(localProducts, true, false); // Omitir sincronización, permitir guardado local
             console.log("📦 Productos cargados desde almacenamiento local");
             productsLoaded = true;
           } else if (products.length === 0) {
             // Cargar SEED_PRODUCTS como último recurso
-            // Guardar SEED_PRODUCTS en el estado permitiendo sincronización y guardado local
-            await saveProducts(SEED_PRODUCTS, false, false); // Permitir sincronización y guardado local
+            // Guardar SEED_PRODUCTS en el estado SIN sincronización para evitar sobreescribir datos reales
+            await saveProducts(SEED_PRODUCTS, true, false); // Omitir sincronización, permitir guardado local
             console.log("📦 Cargando productos iniciales (SEED_PRODUCTS)");
             productsLoaded = true;
           }
         } catch (error) {
           console.error('Error cargando productos locales:', error);
-          // Como último recurso, cargar SEED_PRODUCTS directamente
-          await saveProducts(SEED_PRODUCTS, false, false); // Permitir sincronización y guardado local
+          // Como último recurso, cargar SEED_PRODUCTS directamente SIN sincronización
+          await saveProducts(SEED_PRODUCTS, true, false); // Omitir sincronización, permitir guardado local
           console.log("📦 Cargando productos iniciales (SEED_PRODUCTS) - fallback");
           productsLoaded = true;
         }
