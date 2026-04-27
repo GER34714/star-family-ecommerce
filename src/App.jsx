@@ -2229,9 +2229,9 @@ function CartDrawer({ cart, onRemove, onClose, total, onClear }) {
 
       {cart.length > 0 && (
         <div style={{ padding:"16px 20px", borderTop:"1px solid #F3F4F6", background:"white" }}>
-          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:14, padding:"12px 14px", background:"#FEF2F2", borderRadius:12 }}>
-            <span style={{ fontWeight:700 }}>Total del pedido</span>
-            <span style={{ fontWeight:900, fontSize:20, color:"#C41E3A" }}>{fmt(total)}</span>
+          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:14, padding:"12px 14px", background:"#1F2937", borderRadius:12 }}>
+            <span style={{ fontWeight:700, color:"white" }}>Total del pedido</span>
+            <span style={{ fontWeight:900, fontSize:20, color:"#10B981" }}>{fmt(total)}</span>
           </div>
           <button onClick={sendWA} style={{ width:"100%", background:"#25D366", color:"white", border:"none", borderRadius:12, padding:14, fontSize:15, fontWeight:700, cursor:"pointer", marginBottom:8, fontFamily:"'Poppins',sans-serif" }}>
             📱 Enviar por WhatsApp
@@ -3215,17 +3215,6 @@ function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, se
             <div style={{ fontSize:13, color:"#9CA3AF", marginTop:4 }}>Formatos: .xlsx · .xls</div>
           </div>
           <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{ display:"none" }} onChange={onExcel} />
-
-          <div style={{ marginTop:20, background:"#F0FDF4", borderRadius:12, padding:16, border:"1px solid #BBF7D0" }}>
-            <div style={{ fontWeight:700, color:"#166534", marginBottom:8, fontSize:14 }}>📋 Columnas requeridas</div>
-            <div style={{ fontFamily:"monospace", fontSize:12, color:"#166534", lineHeight:1.9, background:"white", borderRadius:8, padding:"10px 14px", border:"1px solid #BBF7D0" }}>
-              nombre | categoria | precio | bulto | descripcion | imagen<br/>
-              <span style={{ color:"#9CA3AF" }}>
-                Salchichas x6 | Frescos | 19050 | Bulto x12 | Desc... | https://...<br/>
-                30 Panchos | Panchos Armados | 11700 | 30+30+1 | ... |
-              </span>
-            </div>
-          </div>
 
           <div style={{ marginTop:20, background:"#F0FDF4", borderRadius:12, padding:16, border:"1px solid #BBF7D0" }}>
             <div style={{ fontWeight:700, color:"#166534", marginBottom:8, fontSize:14 }}>📋 Columnas requeridas</div>
