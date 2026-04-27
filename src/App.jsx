@@ -9,38 +9,8 @@ const CATS = ["Todos","Frescos","Completos","Panchos Armados","Hamburguesas","Pi
 const CAT_EMOJI = { "Frescos":"🌭","Completos":"🌭","Panchos Armados":"🌭","Hamburguesas":"🍔","Pizzas y Empanadas":"🍕","Medialunas y Chipas":"🥐","Combos":"📦" };
 const CAT_COLOR = { "Frescos":"#E53E3E","Completos":"#DD6B20","Panchos Armados":"#D97706","Hamburguesas":"#7C3AED","Pizzas y Empanadas":"#2563EB","Medialunas y Chipas":"#059669","Combos":"#C41E3A","Todos":"#C41E3A" };
 
-const SEED_PRODUCTS = [
-  // FRESCOS
-  { id:"f1", category:"Frescos", name:"Salchichas Cortas x6", description:"Salchichas cocidas y ahumadas sin piel. La clásica de siempre.", price:19725, bulkInfo:"Bulto x 24 paquetes", image_url:"" },
-  { id:"f2", category:"Frescos", name:"Salchichas Largas x6", description:"Salchichas largas cocidas y ahumadas sin piel.", price:19050, bulkInfo:"Bulto x 12 paquetes", image_url:"" },
-  { id:"f3", category:"Frescos", name:"Salchichas Largas x18", description:"Salchichas largas cocidas y ahumadas sin piel.", price:19050, bulkInfo:"Bulto x 4 paquetes", image_url:"" },
-  { id:"f4", category:"Frescos", name:"Salchichita 500g", description:"Salchichitas ideales para kioscos y eventos.", price:3437, bulkInfo:"Bulto x 6 paquetes de 500gr", image_url:"" },
-  { id:"f5", category:"Frescos", name:"Premium Alemana x12", description:"Línea premium tipo alemana. Sabor superior.", price:35000, bulkInfo:"Bulto x 4 paquetes", image_url:"" },
-  // COMPLETOS
-  { id:"c1", category:"Completos", name:"Completo Cortas", description:"Kit completo con pan incluido. Listo para vender.", price:19725, bulkInfo:"144 Salchichas + 144 Panes", image_url:"" },
-  { id:"c2", category:"Completos", name:"Completo Largas (x18)", description:"Salchichas largas con pan. Ideal para eventos y locales.", price:34800, bulkInfo:"72 Salchichas + 72 Panes", image_url:"" },
-  { id:"c3", category:"Completos", name:"Completo Largas (x6)", description:"Formato alternativo con salchichas largas y pan.", price:34800, bulkInfo:"72 Salchichas (12paq x6) + 72 Panes", image_url:"" },
-  // PANCHOS ARMADOS
-  { id:"p1", category:"Panchos Armados", name:"30 Panchos Cortos", description:"Kit completo listo para armar. Panes + salchichas + aderezo.", price:11700, bulkInfo:"30 Panes + 30 Salchichas + 1 Aderezo", image_url:"" },
-  { id:"p2", category:"Panchos Armados", name:"60 Panchos Cortos", description:"Kit completo listo para armar. Panes + salchichas + aderezo.", price:22200, bulkInfo:"60 Panes + 60 Salchichas + 1 Aderezo", image_url:"" },
-  { id:"p3", category:"Panchos Armados", name:"36 Panchos Largos", description:"Kit completo listo para armar. Panes + salchichas + aderezo.", price:21600, bulkInfo:"36 Panes + 36 Salchichas + 1 Aderezo", image_url:"" },
-  { id:"p4", category:"Panchos Armados", name:"72 Panchos Largos", description:"Kit completo listo para armar. Panes + salchichas + aderezo.", price:42000, bulkInfo:"72 Panes + 72 Salchichas + 1 Aderezo", image_url:"" },
-  // HAMBURGUESAS
-  { id:"h1", category:"Hamburguesas", name:"24 Hamburguesas Clásicas 69g", description:"24 panes + 24 medallones de carne + 1 aderezo.", price:22900, bulkInfo:"24 Panes + 24 Medallones + 1 Aderezo", image_url:"" },
-  { id:"h2", category:"Hamburguesas", name:"60 Hamburguesas Clásicas 69g", description:"60 panes + 60 medallones de carne + 1 aderezo.", price:55400, bulkInfo:"60 Panes + 60 Medallones + 1 Aderezo", image_url:"" },
-  { id:"h3", category:"Hamburguesas", name:"20 Hamburguesas Gigantes 110g", description:"20 panes + 20 medallones gigantes + 1 aderezo.", price:26800, bulkInfo:"20 Panes + 20 Medallones + 1 Aderezo", image_url:"" },
-  { id:"h4", category:"Hamburguesas", name:"40 Hamburguesas Gigantes 110g", description:"40 panes + 40 medallones gigantes + 1 aderezo.", price:52400, bulkInfo:"40 Panes + 40 Medallones + 1 Aderezo", image_url:"" },
-  // PIZZAS Y EMPANADAS
-  { id:"pe1", category:"Pizzas y Empanadas", name:"Pizzas Mozzarella x11", description:"Pizza congelada con salsa de tomate y mozzarella. Lista para hornear.", price:48125, bulkInfo:"Caja x 11 unidades · $4.375 c/u", image_url:"" },
-  { id:"pe2", category:"Pizzas y Empanadas", name:"Empanadas Premium x42", description:"Carne, pollo, jamón y queso, y verduras. Premium.", price:36540, bulkInfo:"Caja x 42 unidades · $870 c/u", image_url:"" },
-  // MEDIALUNAS Y CHIPAS
-  { id:"m1", category:"Medialunas y Chipas", name:"Chipa x4.5kg", description:"Chipas artesanales premium.", price:46875, bulkInfo:"Caja x 4.5 kg", image_url:"" },
-  { id:"m2", category:"Medialunas y Chipas", name:"Medialunas Crudas x96", description:"Medialunas de manteca premium 55g c/u.", price:40800, bulkInfo:"Caja x 96 unidades (55g c/u)", image_url:"" },
-  // COMBOS
-  { id:"k1", category:"Combos", name:"Combo Pancho Largo", description:"1 salchicha larga + 1 pan + aderezos. El más vendido.", price:3200, bulkInfo:"Caja x 12 combos de 6 (72 panchos)", image_url:"" },
-  { id:"k2", category:"Combos", name:"Combo Hamburguesa 69g", description:"1 medallón clásico + 1 pan + aderezos.", price:3500, bulkInfo:"Caja x 15 combos de 4", image_url:"" },
-  { id:"k3", category:"Combos", name:"Combo Hamburguesa 110g", description:"1 medallón gigante + 1 pan + aderezos.", price:4950, bulkInfo:"Caja x 10 combos de 4", image_url:"" },
-];
+// ⚠️ ELIMINADO: SEED_PRODUCTS - La única fuente de datos es Supabase
+// const SEED_PRODUCTS = [ ... ]; // Eliminado para evitar sobrescribir datos reales
 
 const fmt = (p) => `$${Number(p).toLocaleString("es-AR")}`;
 
@@ -381,15 +351,17 @@ export default function StarFamilyApp() {
         }
       }
       
-      // 2. SOLO si Supabase falla completamente → usar SEED_PRODUCTS como fallback LOCAL (no sincronizar)
+      // 2. Si Supabase falla o no tiene productos → mostrar lista vacía (NO usar SEED_PRODUCTS)
       if (!productsLoaded) {
-        try {
-          // Cargar SEED_PRODUCTS solo LOCALMENTE, sin sincronizar con Supabase
-          await saveProducts(SEED_PRODUCTS, true, true); // Omitir sincronización, guardar solo local
-          console.log("🌱 SEED_PRODUCTS cargados localmente (fallback - NO sobrescribe Supabase)");
-          productsLoaded = true;
-        } catch (error) {
-          console.error('Error cargando SEED_PRODUCTS localmente:', error);
+        console.log("📭 No hay productos en Supabase - Mostrando lista vacía");
+        setProducts([]); // Establecer lista vacía explícitamente
+        productsLoaded = true;
+        
+        // Mostrar mensaje al usuario si es necesario (opcional)
+        if (supabaseConfig && supabaseConfig.url && supabaseConfig.key) {
+          console.log("ℹ️ Para agregar productos, usa el Panel de Administración");
+        } else {
+          console.log("⚠️ Configura Supabase para cargar productos");
         }
       }
       
@@ -1448,8 +1420,8 @@ export default function StarFamilyApp() {
                 setRestorePoints([]);
                 setImagePreview(null);
                 
-                // Cargar SEED_PRODUCTS desde cero
-                await saveProducts(SEED_PRODUCTS, false, false);
+                // Reset completo: limpiar productos y mostrar lista vacía
+                setProducts([]);
                 
                 showToast("🔄 Sistema reiniciado completamente - Productos cargados desde cero");
                 console.log("✅ Reset completo finalizado");
