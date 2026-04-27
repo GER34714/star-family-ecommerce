@@ -335,6 +335,8 @@ export default function StarFamilyApp() {
     try { await window.storage.set("roxy_products", JSON.stringify(p)); } catch {} 
     // Sincronizar carrito automáticamente cuando cambian los productos
     syncCartWithProducts(p);
+    // Sincronizar con Supabase automáticamente
+    await syncProductsWithSupabase();
   };
   const saveCart = async (c) => { setCart(c); try { await window.storage.set("roxy_cart", JSON.stringify(c)); } catch {} };
   const savePriceHistory = async (h) => { setPriceHistory(h); try { await window.storage.set("roxy_price_history", JSON.stringify(h)); } catch {} };
@@ -839,6 +841,12 @@ export default function StarFamilyApp() {
     savePriceHistory(newHistory);
     saveProducts(updatedProducts);
     
+    // Sincronizar producto individual con Supabase
+    const updatedProduct = updatedProducts.find(p => p.id === productId);
+    if (updatedProduct) {
+      await saveProductToSupabase(updatedProduct);
+    }
+    
     // Guardar historial en Supabase
     try {
       await savePriceHistoryToSupabase(historyEntry);
@@ -907,6 +915,18 @@ export default function StarFamilyApp() {
     // Guardar localmente
     savePriceHistory(newHistory);
     saveProducts(updatedProducts);
+    
+    // Sincronizar productos actualizados con Supabase
+    const syncPromises = updatedProducts
+      .filter(p => changes.some(c => c.productId === p.id))
+      .map(p => saveProductToSupabase(p));
+    
+    try {
+      await Promise.allSettled(syncPromises);
+      console.log(`✅ ${updatedCount} productos sincronizados con Supabase`);
+    } catch (error) {
+      console.error('Error sincronizando productos con Supabase:', error);
+    }
     
     // Guardar historial en Supabase
     try {
@@ -1055,13 +1075,17 @@ export default function StarFamilyApp() {
     if (editing) {
       // Actualizar producto existente
       const updatedProducts = products.map(x => x.id === p.id ? p : x);
-      saveProducts(updatedProducts);
-      console.log('✏️ Producto actualizado en la lista');
+      await saveProducts(updatedProducts);
+      // Sincronizar individualmente con Supabase
+      await saveProductToSupabase(p);
+      console.log('✏️ Producto actualizado en la lista y en Supabase');
       showToast("✏️ Producto actualizado", "success");
     } else {
       // Agregar nuevo producto
-      saveProducts([...products, p]);
-      console.log('➕ Producto agregado a la lista');
+      await saveProducts([...products, p]);
+      // Sincronizar individualmente con Supabase
+      await saveProductToSupabase(p);
+      console.log('➕ Producto agregado a la lista y en Supabase');
       showToast("➕ Producto agregado", "success");
     }
     
@@ -1090,9 +1114,24 @@ export default function StarFamilyApp() {
       fileRef.current.value = '';
     }
   };
-  const deleteProduct = (id) => { 
+  const deleteProduct = async (id) => { 
     const updatedProducts = products.filter(p => p.id !== id);
-    saveProducts(updatedProducts); 
+    await saveProducts(updatedProducts);
+    // Eliminar de Supabase
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        const { error } = await supabase
+          .from('products')
+          .update({ active: false })
+          .eq('id', id);
+        if (error) throw error;
+        console.log('🗑️ Producto eliminado de Supabase');
+      } catch (error) {
+        console.error('Error eliminando producto de Supabase:', error);
+        showToast('⚠️ Error eliminando de Supabase', 'error');
+      }
+    }
     showToast("🗑️ Producto eliminado"); 
   };
 
@@ -1232,7 +1271,11 @@ export default function StarFamilyApp() {
             onSaveSupa={async () => {
               try { await window.storage.set("roxy_supa", JSON.stringify({ url:supaUrl, key:supaKey })); showToast("✅ Configuración guardada"); } catch {}
             }}
-            onReset={() => { saveProducts(SEED_PRODUCTS); showToast("✅ Productos restaurados"); }}
+            onReset={async () => { 
+              await saveProducts(SEED_PRODUCTS); 
+              await syncProductsWithSupabase();
+              showToast("✅ Productos restaurados y sincronizados"); 
+            }}
             onImageSelect={handleImageSelect}
             onClearImage={clearImagePreview}
             imagePreview={imagePreview}
