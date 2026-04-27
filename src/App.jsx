@@ -393,7 +393,7 @@ export default function StarFamilyApp() {
     syncCartWithProducts(p);
     // Sincronizar con Supabase automáticamente solo si no se debe omitir
     if (!skipSupabaseSync) {
-      await syncProductsWithSupabase();
+      await syncProductsWithSupabase(p);
     }
   };
   const saveCart = async (c) => { setCart(c); try { await window.storage.set("roxy_cart", JSON.stringify(c)); } catch {} };
@@ -477,7 +477,7 @@ export default function StarFamilyApp() {
     }
   };
 
-  const syncProductsWithSupabase = async () => {
+  const syncProductsWithSupabase = async (productsToSync) => {
     const supabase = getSupabaseClient();
     if (!supabase) {
       console.warn('Configuración de Supabase no disponible');
@@ -486,7 +486,7 @@ export default function StarFamilyApp() {
 
     try {
       // Sincronizar todos los productos locales con Supabase
-      const syncPromises = products.map(product => saveProductToSupabase(product));
+      const syncPromises = (productsToSync || products).map(product => saveProductToSupabase(product));
       const results = await Promise.allSettled(syncPromises);
       
       const successful = results.filter(r => r.status === 'fulfilled').length;
