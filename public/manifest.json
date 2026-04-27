@@ -1,0 +1,21 @@
+{
+  "short_name": "Star Family",
+  "name": "Star Family - Mayorista",
+  "icons": [
+    {
+      "src": "https://iili.io/B6XgSSI.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "https://iili.io/B6XgSSI.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#C41E3A",
+  "background_color": "#F4F4F5",
+  "description": "Distribuidor Mayorista de Alimentos Premium"
+}
