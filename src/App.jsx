@@ -628,23 +628,72 @@ export default function StarFamilyApp() {
       // Limpia caché local para forzar datos frescos
       localStorage.removeItem("roxy_products");
       
+      console.log('🔍 DEBUG: Intentando consultar tabla "products"...');
+      console.log('🔍 DEBUG: Cliente Supabase disponible:', !!supabase);
+      
       const { data, error } = await supabase
         .from('products')
         .select('*')
         .eq('active', true)
         .order('created_at', { ascending: false }); // Ordenar por más recientes
       
-      if (error) throw error;
+      // DEBUG DETALLADO DE ERRORES
+      if (error) {
+        console.error("❌ Error real de Supabase:", error);
+        console.error("❌ Código de error:", error.code);
+        console.error("❌ Mensaje de error:", error.message);
+        console.error("❌ Detalles:", error.details);
+        console.error("❌ Hint:", error.hint);
+        
+        // Errores comunes y sus soluciones
+        if (error.code === 'PGRST116') {
+          console.error("🔍 SOLUCIÓN: La tabla 'products' no existe. Verifica el nombre en el dashboard de Supabase.");
+        } else if (error.code === '42501') {
+          console.error("🔍 SOLUCIÓN: Problema de permisos RLS. Ejecuta el script fix-rls-policies.sql");
+        } else if (error.message?.includes('relation "products" does not exist')) {
+          console.error("🔍 SOLUCIÓN: La tabla se llama 'productos' (español). Cambia .from('products') por .from('productos')");
+        }
+        
+        throw error;
+      }
       
-      const mapped = (data || []).map(r => ({
-        id: r.id, // Usar ID real de la base de datos, no generar uno nuevo
-        category: r.category || "Frescos",
-        name: r.name || "Producto sin nombre",
-        description: r.description || "",
-        price: Number(r.price) || 0,
-        bulkInfo: r.bulk_info || "",
-        image_url: r.image_url || ""
-      })).filter(r => r.name);
+      console.log('✅ DEBUG: Consulta exitosa. Registros encontrados:', data?.length || 0);
+      if (data && data.length > 0) {
+        console.log('🔍 DEBUG: Muestra de datos recibidos:', data.slice(0, 2));
+      }
+      
+      // DEBUG: Verificar estructura de datos de la BD
+      if (data && data.length > 0) {
+        console.log('🔍 DEBUG: Estructura de campos en primer registro:', Object.keys(data[0]));
+        console.log('🔍 DEBUG: Campos importantes:', {
+          id: data[0].id,
+          name: data[0].name,
+          image_url: data[0].image_url,
+          category: data[0].category,
+          price: data[0].price,
+          bulk_info: data[0].bulk_info,
+          active: data[0].active
+        });
+      }
+      
+      const mapped = (data || []).map(r => {
+        // DEBUG: Log individual mapping
+        const mappedItem = {
+          id: r.id, // Usar ID real de la base de datos, no generar uno nuevo
+          category: r.category || "Frescos",
+          name: r.name || "Producto sin nombre",
+          description: r.description || "",
+          price: Number(r.price) || 0,
+          bulkInfo: r.bulk_info || "",
+          image_url: r.image_url || ""
+        };
+        
+        // DEBUG: Verificar campos críticos
+        if (!r.id) console.warn('⚠️ DEBUG: Registro sin ID:', r);
+        if (!r.name) console.warn('⚠️ DEBUG: Registro sin nombre:', r);
+        
+        return mappedItem;
+      }).filter(r => r.name);
         
       if (mapped.length > 0) {
         // Guardar productos directamente sin usar caché local
