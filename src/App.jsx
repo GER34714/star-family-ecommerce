@@ -333,18 +333,13 @@ export default function StarFamilyApp() {
         }
       }
       
-      // 2. Si Supabase falla o no tiene productos → mostrar lista vacía (NO usar SEED_PRODUCTS)
+      // 2. Si Supabase falla, mostrar lista vacía PERO sin bloquear futuros intentos
       if (!productsLoaded) {
-        console.log("📭 No hay productos en Supabase - Mostrando lista vacía");
+        console.log("📭 No se pudieron cargar productos desde Supabase - Mostrando lista vacía temporalmente");
         setProducts([]); // Establecer lista vacía explícitamente
         productsLoaded = true;
         
-        // Mostrar mensaje al usuario si es necesario (opcional)
-        if (supabaseConfig && supabaseConfig.url && supabaseConfig.key) {
-          console.log("ℹ️ Para agregar productos, usa el Panel de Administración");
-        } else {
-          console.log("⚠️ Configura Supabase para cargar productos");
-        }
+        console.log("ℹ️ Para agregar productos, usa el Panel de Administración");
       }
       
       // Cargar otros datos desde almacenamiento local
@@ -728,9 +723,12 @@ export default function StarFamilyApp() {
         const realIds = mapped.map(p => p.id).slice(0, 3);
         console.log(`🔍 IDs reales de productos: ${realIds.join(', ')}...`);
         
-        return true;
+        // DEBUG TOTAL: Log directo de lectura de tabla
+      console.log("Intentando leer tabla 'products'...", await supabase.from('products').select('*'));
+      
+      return true;
       } else {
-        console.log("⚠️ No se encontraron productos activos en Supabase");
+        console.log("⚠️ No se encontraron productos en Supabase");
         return false;
       }
     } catch(e) {
