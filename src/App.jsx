@@ -98,6 +98,8 @@ export default function StarFamilyApp() {
   // Estados para PWA
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstallable, setIsInstallable] = useState(false);
+  const [showInstallPopup, setShowInstallPopup] = useState(false);
+  const [popupPosition, setPopupPosition] = useState('floating'); // 'floating' o 'footer'
   const [priceHistory, setPriceHistory] = useState([]);
   const [restorePoints, setRestorePoints] = useState([]);
 
@@ -243,12 +245,27 @@ export default function StarFamilyApp() {
       e.preventDefault();
       setDeferredPrompt(e);
       setIsInstallable(true);
+      
+      // Mostrar popup temporal al detectar que es instalable
+      setShowInstallPopup(true);
+      setPopupPosition('floating');
+      
+      // Después de 8 segundos, mover al footer
+      setTimeout(() => {
+        setPopupPosition('footer');
+      }, 8000);
+      
+      // Después de 15 segundos totales, ocultar completamente
+      setTimeout(() => {
+        setShowInstallPopup(false);
+      }, 15000);
     };
 
     const handleAppInstalled = () => {
       console.log('📱 PWA: Aplicación instalada exitosamente');
       setDeferredPrompt(null);
       setIsInstallable(false);
+      setShowInstallPopup(false);
       showToast('✅ ¡Aplicación instalada exitosamente!');
     };
 
@@ -2051,51 +2068,133 @@ export default function StarFamilyApp() {
         </div>
       </footer>
 
-      {/* BOTÓN FLOTANTE DE INSTALACIÓN PWA */}
+      {/* POPUP TEMPORAL DE INSTALACIÓN PWA */}
       <AnimatePresence>
-        {isInstallable && (
+        {showInstallPopup && (
           <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            transition={{ 
-              type: "spring", 
-              stiffness: 300, 
-              damping: 30
+            initial={{ 
+              opacity: 0, 
+              scale: 0.8,
+              y: popupPosition === 'floating' ? 100 : 50
             }}
-            style={{ 
-              position:"fixed", 
-              bottom:20, 
-              left:20, 
-              zIndex:400 
+            animate={{ 
+              opacity: 1, 
+              scale: 1,
+              y: 0,
+              transition: {
+                type: "spring",
+                stiffness: 300,
+                damping: 30
+              }
+            }}
+            exit={{ 
+              opacity: 0, 
+              scale: 0.8,
+              y: popupPosition === 'floating' ? 100 : 50,
+              transition: { duration: 0.3 }
+            }}
+            style={{
+              position: popupPosition === 'floating' ? 'fixed' : 'relative',
+              ...(popupPosition === 'floating' ? {
+                bottom: 100,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 500
+              } : {
+                width: '100%',
+                maxWidth: 1200,
+                margin: '0 auto'
+              })
             }}
           >
-            <motion.button
-              onClick={installPWA}
+            <motion.div
               whileHover={{ 
-                scale: 1.05,
-                boxShadow: "0 6px 20px rgba(196, 30, 58, 0.4)"
+                scale: 1.02,
+                boxShadow: "0 8px 25px rgba(196, 30, 58, 0.4)"
               }}
-              whileTap={{ scale: 0.95 }}
-              style={{ 
+              style={{
                 background:"linear-gradient(135deg, #C41E3A, #A01731)",
                 color:"white",
-                border:"none",
-                borderRadius:12,
-                padding:"12px 20px",
-                fontSize:14,
-                fontWeight:600,
-                fontFamily:"'Poppins',sans-serif",
-                cursor:"pointer",
+                borderRadius:16,
+                padding:"16px 24px",
                 display:"flex",
                 alignItems:"center",
-                gap:8,
-                boxShadow:"0 4px 15px rgba(196, 30, 58, 0.3)",
+                gap:16,
+                boxShadow:"0 6px 20px rgba(196, 30, 58, 0.3)",
+                backdropFilter:"blur(10px)",
+                border:"1px solid rgba(255, 255, 255, 0.2)",
+                cursor:"pointer",
+                maxWidth: popupPosition === 'floating' ? 350 : 'none',
+                margin: popupPosition === 'footer' ? '20px 0' : 0
+              }}
+              onClick={installPWA}
+            >
+              <div style={{ 
+                fontSize:32, 
+                flexShrink:0,
+                animation: 'bounce 2s infinite'
+              }}>
+                📱
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ 
+                  fontSize:16, 
+                  fontWeight:700, 
+                  marginBottom:4,
+                  fontFamily:"'Poppins',sans-serif"
+                }}>
+                  ¡Instala Star Family!
+                </div>
+                <div style={{ 
+                  fontSize:13, 
+                  opacity:0.9,
+                  fontFamily:"'Poppins',sans-serif"
+                }}>
+                  Compra más rápido desde tu celular
+                </div>
+              </div>
+              <div style={{ 
+                fontSize:20, 
+                opacity:0.7,
+                flexShrink:0
+              }}>
+                ✨
+              </div>
+            </motion.div>
+            
+            {/* Botón de cerrar */}
+            <motion.button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowInstallPopup(false);
+              }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              style={{
+                position: popupPosition === 'floating' ? 'absolute' : 'relative',
+                ...(popupPosition === 'floating' ? {
+                  top: -8,
+                  right: -8
+                } : {
+                  position: 'absolute',
+                  top: 8,
+                  right: 8
+                }),
+                background:"rgba(255, 255, 255, 0.2)",
+                border:"none",
+                borderRadius:20,
+                width:32,
+                height:32,
+                display:"flex",
+                alignItems:"center",
+                justifyContent:"center",
+                cursor:"pointer",
+                fontSize:16,
+                color:"white",
                 backdropFilter:"blur(10px)"
               }}
             >
-              <span style={{ fontSize:18 }}>&#x1F4F1;</span>
-              Instalar App
+              ✕
             </motion.button>
           </motion.div>
         )}
