@@ -857,40 +857,35 @@ export default function StarFamilyApp() {
   });
 
   const loadProductsFromSupabase = async () => {
-  console.log("🔍 loadProductsFromSupabase: INICIANDO...");
-  const supabase = getSupabaseClient();
-  
-  if (!supabase) {
-    console.error("❌ No se pudo obtener el cliente de Supabase");
-    return null;
-  }
-
   try {
+    console.log("🔍 loadProductsFromSupabase: INICIANDO...");
+    
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      throw new Error("No se pudo obtener el cliente de Supabase");
+    }
+    
     const { data, error } = await supabase
       .from('products')
-      .select('*')
-      .order('name', { ascending: true });
+      .select('*');
 
     if (error) throw error;
 
-    if (data && data.length > 0) {
-      console.log(`✅ ${data.length} productos brutos recuperados`);
+    if (data) {
+      console.log("✅ Datos recibidos:", data.length);
       
-      // IMPORTANTE: Mapear para que el frontend reconozca bulk_info
+      // Mapear para convertir bulk_info a bulkInfo
       const mapped = data.map(p => ({
         ...p,
-        bulkInfo: p.bulk_info || "", // Convierte snake_case de DB a camelCase de tu App
+        bulkInfo: p.bulk_info || "",
       }));
       
-      setProducts(mapped); // <--- ACTUALIZA EL ESTADO AQUÍ
+      setProducts(mapped);
       setStorageItem("roxy_products", mapped);
       return mapped;
     }
-    
-    console.warn("⚠️ La consulta no devolvió errores pero el array está vacío");
-    return [];
   } catch (error) {
-    console.error('❌ Error real en la consulta:', error.message);
+    console.error("❌ Error cargando productos:", error.message);
     return null;
   }
 };
