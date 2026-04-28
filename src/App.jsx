@@ -240,6 +240,11 @@ export default function StarFamilyApp() {
 
   // Efecto para manejar instalación PWA
   useEffect(() => {
+    console.log('🔍 PWA: Iniciando diagnóstico PWA...');
+    console.log('🔍 PWA - HTTPS:', window.location.protocol === 'https:' || window.location.hostname === 'localhost');
+    console.log('🔍 PWA - Service Worker:', 'serviceWorker' in navigator);
+    console.log('🔍 PWA - beforeinstallprompt:', 'onbeforeinstallprompt' in window);
+
     const handleBeforeInstallPrompt = (e) => {
       console.log('📱 PWA: Evento beforeinstallprompt detectado');
       e.preventDefault();
@@ -271,6 +276,28 @@ export default function StarFamilyApp() {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
+
+    // FORZAR POPUP PARA TESTING EN LOCALHOST
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      console.log('🧪 PWA: Forzando popup para testing en localhost...');
+      
+      // Simular evento after de 2 segundos para testing
+      setTimeout(() => {
+        console.log('🧪 PWA: Mostrando popup forzado para testing');
+        setShowInstallPopup(true);
+        setPopupPosition('floating');
+        setIsInstallable(true);
+        
+        // Mismo temporizador que el real
+        setTimeout(() => {
+          setPopupPosition('footer');
+        }, 8000);
+        
+        setTimeout(() => {
+          setShowInstallPopup(false);
+        }, 15000);
+      }, 2000);
+    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
