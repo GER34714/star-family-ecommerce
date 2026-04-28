@@ -94,6 +94,10 @@ export default function StarFamilyApp() {
   const [searchTerm, setSearchTerm] = useState('');
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Estados para PWA
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isInstallable, setIsInstallable] = useState(false);
   const [priceHistory, setPriceHistory] = useState([]);
   const [restorePoints, setRestorePoints] = useState([]);
 
@@ -231,6 +235,58 @@ export default function StarFamilyApp() {
       }
     };
   }, [cartOpen, modal, scrollDirection, scrollThreshold, lastScrollY, showTimer]);
+
+  // Efecto para manejar instalación PWA
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      console.log('📱 PWA: Evento beforeinstallprompt detectado');
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+
+    const handleAppInstalled = () => {
+      console.log('📱 PWA: Aplicación instalada exitosamente');
+      setDeferredPrompt(null);
+      setIsInstallable(false);
+      showToast('✅ ¡Aplicación instalada exitosamente!');
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  // Función para instalar PWA manualmente
+  const installPWA = async () => {
+    if (!deferredPrompt) {
+      showToast('⚠️ La instalación no está disponible en este navegador');
+      return;
+    }
+
+    try {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      
+      if (outcome === 'accepted') {
+        console.log('📱 PWA: Usuario aceptó la instalación');
+        showToast('📱 Instalando aplicación...');
+      } else {
+        console.log('📱 PWA: Usuario rechazó la instalación');
+        showToast('❌ Instalación cancelada');
+      }
+      
+      setDeferredPrompt(null);
+      setIsInstallable(false);
+    } catch (error) {
+      console.error('📱 PWA: Error en instalación:', error);
+      showToast('❌ Error al instalar la aplicación');
+    }
+  };
 
   // Funciones para manejo de imágenes
   const handleImageSelect = (e) => {
@@ -1990,10 +2046,60 @@ export default function StarFamilyApp() {
             </a>
           </div>
           <div style={{ color:"#6B7280", fontSize:12, fontFamily:"'Poppins', sans-serif" }}>
-            © {new Date().getFullYear()} STAR FAMILY. Todos los derechos reservados.
+            &copy; {new Date().getFullYear()} STAR FAMILY. Todos los derechos reservados.
           </div>
         </div>
       </footer>
+
+      {/* BOTÓN FLOTANTE DE INSTALACIÓN PWA */}
+      <AnimatePresence>
+        {isInstallable && (
+          <motion.div
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            transition={{ 
+              type: "spring", 
+              stiffness: 300, 
+              damping: 30
+            }}
+            style={{ 
+              position:"fixed", 
+              bottom:20, 
+              left:20, 
+              zIndex:400 
+            }}
+          >
+            <motion.button
+              onClick={installPWA}
+              whileHover={{ 
+                scale: 1.05,
+                boxShadow: "0 6px 20px rgba(196, 30, 58, 0.4)"
+              }}
+              whileTap={{ scale: 0.95 }}
+              style={{ 
+                background:"linear-gradient(135deg, #C41E3A, #A01731)",
+                color:"white",
+                border:"none",
+                borderRadius:12,
+                padding:"12px 20px",
+                fontSize:14,
+                fontWeight:600,
+                fontFamily:"'Poppins',sans-serif",
+                cursor:"pointer",
+                display:"flex",
+                alignItems:"center",
+                gap:8,
+                boxShadow:"0 4px 15px rgba(196, 30, 58, 0.3)",
+                backdropFilter:"blur(10px)"
+              }}
+            >
+              <span style={{ fontSize:18 }}>&#x1F4F1;</span>
+              Instalar App
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* BOTÓN FLOTANTE DE WHATSAPP CON EFECTO DE VIBRACIÓN */}
       <AnimatePresence>
