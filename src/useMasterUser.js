@@ -240,21 +240,29 @@ export const useMasterUser = () => {
   // Efecto para verificar estado de autenticación al cargar
   useEffect(() => {
     const initializeAuth = async () => {
+      // Si no hay Supabase, no bloquear la aplicación
       if (!supabase) {
+        console.warn('⚠️ Supabase no disponible - Autenticación deshabilitada');
         setLoading(false);
         return;
       }
 
       try {
-        // Obtener usuario actual
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        // Obtener usuario actual con timeout
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout de autenticación')), 3000)
+        );
+        
+        const authPromise = supabase.auth.getUser();
+        const { data: { user: currentUser } } = await Promise.race([authPromise, timeoutPromise]);
         
         if (currentUser) {
           setUser(currentUser);
           await checkMasterStatus(currentUser.id);
         }
       } catch (error) {
-        console.error('Error inicializando autenticación:', error);
+        console.warn('⚠️ Error inicializando autenticación:', error.message);
+        // No bloquear la aplicación si falla la autenticación
       } finally {
         setLoading(false);
       }
@@ -262,22 +270,24 @@ export const useMasterUser = () => {
 
     initializeAuth();
 
-    // Escuchar cambios en la autenticación
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session?.user) {
-          setUser(session.user);
-          await checkMasterStatus(session.user.id);
-        } else {
-          setUser(null);
-          setProfile(null);
-          setIsMaster(false);
+    // Escuchar cambios en la autenticación solo si Supabase está disponible
+    if (supabase) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          if (session?.user) {
+            setUser(session.user);
+            await checkMasterStatus(session.user.id);
+          } else {
+            setUser(null);
+            setProfile(null);
+            setIsMaster(false);
+          }
+          setLoading(false);
         }
-        setLoading(false);
-      }
-    );
+      );
 
-    return () => subscription.unsubscribe();
+      return () => subscription.unsubscribe();
+    }
   }, [supabase]);
 
   return {

@@ -531,73 +531,42 @@ export default function StarFamilyApp() {
   };
 
   useEffect(() => {
-    (async () => {
-      setLoading(true);
+  const initApp = async () => {
+    setLoading(true);
+    console.log("🚀 Arrancando App...");
+
+    try {
+      // Intentar carga de Supabase
+      const loaded = await loadProductsFromSupabase();
       
-      // Cargar configuración de Supabase primero
-      let supabaseConfig = null;
-      try { 
-        const supaConfig = getStorageItem("roxy_supa"); 
-        if (supaConfig) { 
-          setSupaUrl(supaConfig.url||""); 
-          setSupaKey(supaConfig.key||""); 
-          supabaseConfig = supaConfig;
-        } 
-      } catch {}
-      
-      // LÓGICA ACTUALIZADA: Siempre usar Supabase como fuente principal de datos
-      let productsLoaded = false;
-      
-      // 1. FORZAR CARGA DIRECTA DESDE SUPABASE (sin validaciones)
-      console.log("🔍 FORZANDO CARGA DESDE SUPABASE...");
-      
-      try {
-        productsLoaded = await loadProductsFromSupabase();
-        console.log("🔍 RESULTADO loadProductsFromSupabase:", productsLoaded);
-        
-        if (productsLoaded) {
-          console.log("☁️ Productos cargados desde Supabase (fuente de datos en tiempo real)");
-          // Limpiar caché local para forzar siempre datos frescos
-          localStorage.removeItem("roxy_products");
-        } else {
-          console.log("⚠️ Supabase no devolvió productos, mostrando error real...");
+      // Si Supabase falla o devuelve vacío, intentar backup local
+      if (!loaded || loaded.length === 0) {
+        const local = getStorageItem("roxy_products");
+        if (local && local.length > 0) {
+          setProducts(local);
+          console.log("📦 Usando backup de localStorage");
         }
-      } catch (error) {
-        console.error('Error cargando desde Supabase:', error);
-        console.log("🔄 Error en Supabase, mostrando error real...");
+      }
+
+      // Cargar el resto de los estados persistentes
+      const cartData = getStorageItem("roxy_cart");
+      if (cartData) setCart(cartData);
+      
+      const supaConfig = getStorageItem("roxy_supa");
+      if (supaConfig) {
+        setSupaUrl(supaConfig.url || "");
+        setSupaKey(supaConfig.key || "");
       }
       
-      // 2. Si Supabase falla, mostrar error real en lugar de lista vacía
-      if (!productsLoaded) {
-        console.error("🚨 ERROR REAL DE SUPABASE - No se pudieron cargar productos");
-        console.error("🔍 Revisa los logs anteriores para ver el error específico");
-        console.error("🔍 Posibles causas: URL incorrecta, API KEY inválida, tabla no existe, RLS bloqueando");
-        
-        // NO mostrar lista vacía - mostrar el error real
-        setProducts([]); // Lista vacía pero con error claro en consola
-        productsLoaded = true;
-      }
-      
-      // Cargar otros datos desde almacenamiento local
-      try { const cartData = getStorageItem("roxy_cart"); if (cartData) setCart(cartData); } catch {}
-      try { const historyData = getStorageItem("roxy_price_history"); if (historyData) setPriceHistory(historyData); } catch {}
-      try { const restoreData = getStorageItem("roxy_restore_points"); if (restoreData) setRestorePoints(restoreData); } catch {}
-      try { const imageData = getStorageItem("roxy_image_preview"); if (imageData) setImagePreview(imageData); } catch {}
-      
-      // Cargar historial desde Supabase si hay configuración
-      try {
-        await loadPriceHistoryFromSupabase();
-      } catch (error) {
-        console.error('Error cargando historial desde Supabase:', error);
-      }
-      
-      finally {
-        setLoading(false);
-        // Sincronizar carrito con productos cargados
-        syncCartWithProducts(products);
-      }
-    })();
-  }, []);
+    } catch (err) {
+      console.error("❌ Error en la inicialización:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  initApp();
+}, []);
 
   const saveProducts = async (p, skipSupabaseSync = false, skipLocalStorage = false) => { 
     setProducts(p); 
@@ -888,148 +857,43 @@ export default function StarFamilyApp() {
   });
 
   const loadProductsFromSupabase = async () => {
-    console.log("🔍 loadProductsFromSupabase: INICIANDO...");
-    
-    // FORZAR CLIENTE SIN VALIDACIONES
-    const supabase = getSupabaseClient();
-    console.log("🔍 Cliente Supabase obtenido:", !!supabase);
-    console.log("🔍 FORZANDO CONSULTA DIRECTA (sin validaciones de configuración)");
-    
-    // NO VALIDAR CONFIGURACIÓN - INTENTAR CONSULTA DIRECTA
+  console.log("🔍 loadProductsFromSupabase: INICIANDO...");
+  const supabase = getSupabaseClient();
+  
+  if (!supabase) {
+    console.error("❌ No se pudo obtener el cliente de Supabase");
+    return null;
+  }
 
-    try {
-      // Limpia caché local para forzar datos frescos
-      localStorage.removeItem("roxy_products");
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      console.log(`✅ ${data.length} productos brutos recuperados`);
       
-      console.log('🔍 DIAGNÓSTICO INMEDIATO - Consulta a tabla products');
-      console.log('🔍 Cliente Supabase disponible:', !!supabase);
+      // IMPORTANTE: Mapear para que el frontend reconozca bulk_info
+      const mapped = data.map(p => ({
+        ...p,
+        bulkInfo: p.bulk_info || "", // Convierte snake_case de DB a camelCase de tu App
+      }));
       
-      // PRUEBA DE SELECT SIMPLE - MOSTRAR TODOS LOS PRODUCTOS (incluyendo inactivos)
-      const { data, error } = await supabase
-        .from('products')
-        .select('*');
-      
-      // LOG COMPLETO DE RESPUESTA
-      console.log("🔍 RESPUESTA COMPLETA DE SUPABASE:");
-      console.log("📦 Data:", data);
-      console.log("❌ Error:", error);
-      console.log("🔍 Data length:", data?.length);
-      console.log("🔍 Data type:", typeof data);
-      console.log("🔍 Error details:", error ? { message: error.message, code: error.code, details: error.details } : 'No error');
-      
-      // DIAGNÓSTICO DETALLADO DEL ERROR
-      if (error) {
-        console.error("🚨 ERROR COMPLETO DE SUPABASE:");
-        console.error("Objeto error completo:", JSON.stringify(error, null, 2));
-        console.error("Código:", error.code);
-        console.error("Mensaje:", error.message);
-        console.error("Detalles:", error.details);
-        console.error("Hint:", error.hint);
-        
-        // SOLUCIONES INMEDIATAS SEGÚN ERROR
-        if (error.code === 'PGRST116') {
-          console.error("🔧 SOLUCIÓN: La tabla 'products' no existe. Intenta con 'productos'");
-        } else if (error.code === '42501') {
-          console.error("🔧 SOLUCIÓN: Problema de permisos RLS. Ejecuta: ALTER TABLE products DISABLE ROW LEVEL SECURITY;");
-        } else if (error.message?.includes('relation "products" does not exist')) {
-          console.error("🔧 SOLUCIÓN: Cambiar .from('products') por .from('productos')");
-        }
-        
-        throw error;
-      }
-      
-      console.log('✅ DEBUG: Consulta exitosa. Registros encontrados:', data?.length || 0);
-      if (data && data.length > 0) {
-        console.log('🔍 DEBUG: Muestra de datos recibidos:', data.slice(0, 2));
-      }
-      
-      // DEBUG: Verificar estructura y estado de datos de la BD
-      if (data && data.length > 0) {
-        console.log('🔍 DEBUG: Estructura de campos en primer registro:', Object.keys(data[0]));
-        console.log('🔍 DEBUG: Campos importantes del primer producto:', {
-          id: data[0].id,
-          name: data[0].name,
-          image_url: data[0].image_url,
-          category: data[0].category,
-          price: data[0].price,
-          bulk_info: data[0].bulk_info,
-          active: data[0].active
-        });
-        
-        // Mostrar resumen de todos los productos con su estado active
-        console.log('🔍 DEBUG: Resumen de todos los productos:');
-        data.forEach((product, index) => {
-          console.log(`  ${index + 1}. ${product.id} - ${product.name} - active: ${product.active} - image_url: ${product.image_url ? '✅' : '❌ VACÍO'}`);
-        });
-        
-        // Contar productos activos vs inactivos
-        const activeCount = data.filter(p => p.active === true).length;
-        const inactiveCount = data.filter(p => p.active === false).length;
-        const withImageCount = data.filter(p => p.image_url && p.image_url.trim() !== '').length;
-        
-        console.log('🔍 DEBUG: Estadísticas:', {
-          total: data.length,
-          activos: activeCount,
-          inactivos: inactiveCount,
-          con_imagen: withImageCount,
-          sin_imagen: data.length - withImageCount
-        });
-      }
-      
-      const mapped = (data || []).map(r => {
-        // DEBUG: Log individual mapping
-        const mappedItem = {
-          id: r.id, // Usar ID real de la base de datos, no generar uno nuevo
-          category: r.category || "Frescos",
-          name: r.name || "Producto sin nombre",
-          description: r.description || "",
-          price: Number(r.price) || 0,
-          bulkInfo: r.bulk_info || "",
-          image_url: r.image_url || ""
-        };
-        
-        // DEBUG: Verificar campos críticos
-        if (!r.id) console.warn('⚠️ DEBUG: Registro sin ID:', r);
-        if (!r.name) console.warn('⚠️ DEBUG: Registro sin nombre:', r);
-        
-        return mappedItem;
-      }).filter(r => r.name);
-        
-      if (mapped.length > 0) {
-        // Guardar productos directamente sin usar caché local
-        console.log(`🔍 ANTES DE setProducts: ${mapped.length} productos mapeados`);
-        console.log("🔍 PRODUCTOS MAPEADOS:", mapped);
-        
-        setProducts(mapped);
-        
-        // Verificar inmediatamente después de setProducts
-        setTimeout(() => {
-          console.log("🔍 DESPUÉS DE setProducts - productos en estado:", products);
-          console.log("🔍 Longitud del estado products:", products.length);
-        }, 100);
-        
-        console.log(`☁️ ${mapped.length} productos cargados desde Supabase (datos en tiempo real)`);
-        
-        // Mostrar IDs reales para verificar
-        const realIds = mapped.map(p => p.id).slice(0, 3);
-        console.log(`🔍 IDs reales de productos: ${realIds.join(', ')}...`);
-        
-        // DEBUG TOTAL: Log directo de lectura de tabla
-        console.log("Intentando leer tabla 'products'...", await supabase.from('products').select('*'));
-      
-      console.log("🔍 loadProductsFromSupabase: RETORNANDO true");
-      return true;
-      } else {
-        console.log("⚠️ loadProductsFromSupabase: No se encontraron productos en Supabase");
-        console.log("🔍 loadProductsFromSupabase: RETORNANDO false");
-        return false;
-      }
-    } catch(e) {
-      console.error("🔍 loadProductsFromSupabase: ERROR:", e);
-      console.log("🔍 loadProductsFromSupabase: RETORNANDO false por error");
-      return false;
+      setProducts(mapped); // <--- ACTUALIZA EL ESTADO AQUÍ
+      setStorageItem("roxy_products", mapped);
+      return mapped;
     }
-  };
+    
+    console.warn("⚠️ La consulta no devolvió errores pero el array está vacío");
+    return [];
+  } catch (error) {
+    console.error('❌ Error real en la consulta:', error.message);
+    return null;
+  }
+};
 
   const syncSupabase = async () => {
     // Variables de entorno por defecto para producción
@@ -1588,8 +1452,8 @@ export default function StarFamilyApp() {
     showToast("🗑️ Producto eliminado"); 
   };
 
-  // Error Boundary y loading state
-  if (loading) {
+  // Error Boundary y loading state - Solo mostrar loading si es inicialización
+  if (loading && products.length === 0) {
     return (
       <div style={{ minHeight:"100vh", background:"#F4F4F5", fontFamily:"'Poppins', sans-serif", display:"flex", alignItems:"center", justifyContent:"center" }}>
         <style>{CSS}</style>
@@ -1601,19 +1465,8 @@ export default function StarFamilyApp() {
     );
   }
 
-  // Fallback si products es undefined o está vacío
-  if (!products || !Array.isArray(products) || products.length === 0) {
-    return (
-      <div style={{ minHeight:"100vh", background:"#F4F4F5", fontFamily:"'Poppins', sans-serif", display:"flex", alignItems:"center", justifyContent:"center" }}>
-        <style>{CSS}</style>
-        <div style={{ textAlign:"center" }}>
-          <div style={{ fontSize:48, marginBottom:20 }}>�</div>
-          <div style={{ fontSize:18, color:"#6B7280", fontWeight:500 }}>No hay productos disponibles</div>
-          <div style={{ fontSize:14, color:"#9CA3AF", marginTop:8 }}>Por favor, recarga la página o contacta al administrador</div>
-        </div>
-      </div>
-    );
-  }
+  // Si no hay productos pero ya terminó la carga, mostrar la aplicación con catálogo vacío
+  // Esto permite que el usuario pueda acceder al panel de administración para agregar productos
 
   return (
     <div style={{ minHeight:"100vh", background:"#F4F4F5", fontFamily:"'Poppins', sans-serif", position:"relative", maxWidth:"100%", overflowX:"hidden" }}>
@@ -1872,7 +1725,32 @@ export default function StarFamilyApp() {
             {filtered.length === 0 && (
               <div style={{ textAlign:"center", padding:60, color:"#9CA3AF" }}>
                 <div style={{ fontSize:56 }}>📦</div>
-                <div style={{ fontSize:18, fontWeight:700, marginTop:12 }}>Sin productos en esta categoría</div>
+                <div style={{ fontSize:18, fontWeight:700, marginTop:12 }}>
+                  {products.length === 0 ? "No hay productos disponibles" : "Sin productos en esta categoría"}
+                </div>
+                {products.length === 0 && (
+                  <div style={{ marginTop:12 }}>
+                    <div style={{ fontSize:14, marginBottom:16 }}>
+                      Ve al panel de administración para agregar productos
+                    </div>
+                    <button 
+                      onClick={() => setView("admin")}
+                      style={{
+                        background:"#C41E3A",
+                        color:"white",
+                        border:"none",
+                        borderRadius:8,
+                        padding:"10px 20px",
+                        fontSize:14,
+                        fontWeight:600,
+                        cursor:"pointer",
+                        fontFamily:"'Poppins',sans-serif"
+                      }}
+                    >
+                      ⚙️ Ir al Panel de Administración
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
