@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { getSupabaseClient } from './supabaseClient';
+import { useMasterUser } from './useMasterUser';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // ═══════════════════════════════════════════════════════
@@ -103,16 +104,22 @@ export default function StarFamilyApp() {
   const [priceHistory, setPriceHistory] = useState([]);
   const [restorePoints, setRestorePoints] = useState([]);
 
-  // Jerarquía de roles con inicialización segura
-  const [user, setUser] = useState(null);
+  // Usar hook de usuarios maestros
+  const { 
+    user, 
+    isMaster, 
+    loading: authLoading, 
+    signIn, 
+    signOut 
+  } = useMasterUser();
+
+  // Estados para formulario de login
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [authLoading, setAuthLoading] = useState(false);
+  const [localAuthLoading, setLocalAuthLoading] = useState(false);
 
-  // Verificar rol del usuario
-  const isSuperAdmin = user?.email === "ciborg347@gmail.com";
-  const isAdmin = user?.email === "starfamily347@gmail.com";
-  const hasAdminAccess = isSuperAdmin || isAdmin;
+  // Verificar acceso administrativo
+  const hasAdminAccess = isMaster;
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -479,31 +486,48 @@ export default function StarFamilyApp() {
     }
   };
 
-  // Funciones de autenticación
+  // Funciones de autenticación con Supabase
   const handleLogin = async () => {
     if (!email || !password) return showToast("⚠️ Email y contraseña son requeridos", "error");
     
-    setAuthLoading(true);
+    setLocalAuthLoading(true);
     try {
-      // Autenticación simple basada en email para demostración
-      if (email === "admin@starfamily.com" && password === "admin123") {
-        setUser({ email, role: "admin" });
-        showToast("✅ Sesión iniciada como administrador", "success");
+      await signIn(email, password);
+      
+      if (isMaster) {
+        showToast("✅ Sesión iniciada como usuario maestro", "success");
       } else {
-        showToast("❌ Credenciales incorrectas", "error");
+        showToast("✅ Sesión iniciada correctamente", "success");
       }
+      
+      // Limpiar formulario
+      setEmail("");
+      setPassword("");
+      
     } catch (error) {
-      showToast("❌ Error al iniciar sesión", "error");
+      console.error("Error en login:", error);
+      if (error.message?.includes("Invalid login credentials")) {
+        showToast("❌ Email o contraseña incorrectos", "error");
+      } else if (error.message?.includes("Email not confirmed")) {
+        showToast("❌ Por favor confirma tu email antes de iniciar sesión", "error");
+      } else {
+        showToast("❌ Error al iniciar sesión: " + error.message, "error");
+      }
     } finally {
-      setAuthLoading(false);
+      setLocalAuthLoading(false);
     }
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    setEmail("");
-    setPassword("");
-    showToast("👋 Sesión cerrada", "success");
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      setEmail("");
+      setPassword("");
+      showToast("👋 Sesión cerrada", "success");
+    } catch (error) {
+      console.error("Error en logout:", error);
+      showToast("❌ Error al cerrar sesión", "error");
+    }
   };
 
   useEffect(() => {
@@ -1940,6 +1964,15 @@ export default function StarFamilyApp() {
             restorePoints={restorePoints}
             onCreateRestorePoint={createRestorePoint}
             onRestoreFromPoint={restoreFromPoint}
+            user={user}
+            isMaster={isMaster}
+            onLogin={handleLogin}
+            onLogout={handleLogout}
+            email={email}
+            password={password}
+            setEmail={setEmail}
+            setPassword={setPassword}
+            authLoading={localAuthLoading}
           />
       )}
 
@@ -3147,15 +3180,132 @@ function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint
 // ADMIN PANEL
 // ═══════════════════════════════════════════════════════
 
-function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint }) {
+function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading }) {
   const input = { width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" };
   const ADMIN_CATS = CATS.filter(c => c !== "Todos");
 
+  // Si no hay usuario logueado o no es master, mostrar formulario de login
+  if (!user || !isMaster) {
+    return (
+      <div style={{ maxWidth:400, margin:"0 auto", padding:"40px 16px" }}>
+        <div style={{ background:"#111", borderRadius:16, padding:"30px", textAlign:"center" }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", color:"white", fontSize:24, letterSpacing:2, marginBottom:8 }}>🔐 ACCESO ADMIN</div>
+          <div style={{ color:"#9CA3AF", fontSize:13, marginBottom:24 }}>Solo usuarios maestros autorizados</div>
+          
+          <div style={{ background:"white", borderRadius:12, padding:24, textAlign:"left" }}>
+            <div style={{ marginBottom:16 }}>
+              <label style={{ display:"block", fontSize:12, fontWeight:700, color:"#6B7280", marginBottom:6 }}>Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email de usuario maestro"
+                disabled={authLoading}
+                style={{
+                  width:"100%",
+                  padding:"12px 16px",
+                  borderRadius:9,
+                  border:"1px solid #E5E7EB",
+                  fontSize:14,
+                  fontFamily:"'Poppins',sans-serif",
+                  outline:"none",
+                  background: authLoading ? "#F9FAFB" : "white",
+                  opacity: authLoading ? 0.6 : 1
+                }}
+              />
+            </div>
+            
+            <div style={{ marginBottom:20 }}>
+              <label style={{ display:"block", fontSize:12, fontWeight:700, color:"#6B7280", marginBottom:6 }}>Contraseña</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Contraseña"
+                disabled={authLoading}
+                onKeyPress={(e) => e.key === 'Enter' && onLogin()}
+                style={{
+                  width:"100%",
+                  padding:"12px 16px",
+                  borderRadius:9,
+                  border:"1px solid #E5E7EB",
+                  fontSize:14,
+                  fontFamily:"'Poppins',sans-serif",
+                  outline:"none",
+                  background: authLoading ? "#F9FAFB" : "white",
+                  opacity: authLoading ? 0.6 : 1
+                }}
+              />
+            </div>
+            
+            <button
+              onClick={onLogin}
+              disabled={authLoading || !email || !password}
+              style={{
+                width:"100%",
+                background: authLoading || !email || !password ? "#9CA3AF" : "#C41E3A",
+                color:"white",
+                border:"none",
+                borderRadius:9,
+                padding:"12px 16px",
+                fontSize:14,
+                fontWeight:600,
+                fontFamily:"'Poppins',sans-serif",
+                cursor: authLoading || !email || !password ? "not-allowed" : "pointer",
+                transition:"all 0.2s",
+                opacity: authLoading || !email || !password ? 0.6 : 1
+              }}
+            >
+              {authLoading ? "Iniciando sesión..." : "🔐 Iniciar Sesión"}
+            </button>
+            
+            {user && !isMaster && (
+              <div style={{ 
+                marginTop:16, 
+                padding:12, 
+                background:"#FEE2E2", 
+                borderRadius:8, 
+                fontSize:12, 
+                color:"#991B1B",
+                textAlign:"center"
+              }}>
+                ⚠️ Acceso denegado. Este usuario no tiene permisos de administrador.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ maxWidth:900, margin:"0 auto", padding:"16px 12px 48px" }}>
-      <div style={{ background:"#111", borderRadius:16, padding:"20px 24px", margin:"16px 0 20px" }}>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", color:"white", fontSize:26, letterSpacing:3 }}>⚙️ PANEL DE ADMINISTRACIÓN</div>
-        <div style={{ color:"#9CA3AF", fontSize:13, marginTop:4 }}>{products.length} productos · Star Family Mayorista</div>
+      <div style={{ background:"#111", borderRadius:16, padding:"20px 24px", margin:"16px 0 20px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", color:"white", fontSize:26, letterSpacing:3 }}>⚙️ PANEL DE ADMINISTRACIÓN</div>
+          <div style={{ color:"#9CA3AF", fontSize:13, marginTop:4 }}>{products.length} productos · Star Family Mayorista</div>
+        </div>
+        <div style={{ textAlign:"right" }}>
+          <div style={{ color:"white", fontSize:12, marginBottom:4 }}>Usuario: {user?.email}</div>
+          <div style={{ color:"#F5A623", fontSize:11, marginBottom:8 }}>👑 Usuario Master</div>
+          <button
+            onClick={onLogout}
+            style={{
+              background:"#DC2626",
+              color:"white",
+              border:"none",
+              borderRadius:6,
+              padding:"6px 12px",
+              fontSize:12,
+              fontWeight:600,
+              fontFamily:"'Poppins',sans-serif",
+              cursor:"pointer",
+              transition:"all 0.2s"
+            }}
+          >
+            🚪 Cerrar Sesión
+          </button>
+        </div>
       </div>
 
       {/* TABS */}
