@@ -537,31 +537,32 @@ export default function StarFamilyApp() {
 
     try {
       // Intentar carga de Supabase
-      const loaded = await loadProductsFromSupabase();
+      const loadedData = await loadProductsFromSupabase();
       
-      // Si Supabase falla o devuelve vacío, intentar backup local
-      if (!loaded || loaded.length === 0) {
+      if (loadedData && loadedData.length > 0) {
+        setProducts(loadedData);
+        setStorageItem("roxy_products", loadedData);
+        console.log("✅ Datos cargados desde Supabase");
+      } else {
+        // BACKUP: Si Supabase falla o está vacío, cargamos lo que haya en LocalStorage
         const local = getStorageItem("roxy_products");
         if (local && local.length > 0) {
           setProducts(local);
           console.log("📦 Usando backup de localStorage");
+        } else {
+          console.warn("⚠️ No hay datos en Supabase ni en LocalStorage");
         }
       }
 
-      // Cargar el resto de los estados persistentes
+      // Cargar persistencia de carrito y config
       const cartData = getStorageItem("roxy_cart");
       if (cartData) setCart(cartData);
       
-      const supaConfig = getStorageItem("roxy_supa");
-      if (supaConfig) {
-        setSupaUrl(supaConfig.url || "");
-        setSupaKey(supaConfig.key || "");
-      }
-      
     } catch (err) {
-      console.error("❌ Error en la inicialización:", err);
+      console.error("❌ Error crítico en initApp:", err);
     } finally {
-      setLoading(false);
+      // ESTO ES VITAL: Pase lo que pase, quitamos la pantalla de carga
+      setLoading(false); 
     }
   };
 
@@ -859,46 +860,33 @@ export default function StarFamilyApp() {
   const loadProductsFromSupabase = async () => {
   try {
     console.log("🔍 loadProductsFromSupabase: INICIANDO...");
-    console.log("🌍 AMBIENTE:", process.env.NODE_ENV);
-    console.log("🔑 SUPABASE URL:", process.env.REACT_APP_SUPABASE_URL);
-    
     const supabase = getSupabaseClient();
-    if (!supabase) {
-      console.error("❌ No se pudo obtener el cliente de Supabase");
-      throw new Error("No se pudo obtener el cliente de Supabase");
-    }
-    console.log("✅ Cliente Supabase obtenido correctamente");
     
-    const { data, error } = await supabase
-      .from('products')
-      .select('*');
+    if (!supabase) return null;
 
-    console.log("📊 Respuesta Supabase:", { data: data?.length, error });
+    // Creamos una promesa que falla a los 6 segundos para no quedar bloqueados
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Timeout de conexión")), 6000)
+    );
 
-    if (error) {
-      console.error("❌ Error de Supabase:", error);
-      throw error;
-    }
+    const fetchPromise = supabase.from('products').select('*');
+
+    // Race: el primero que termine gana (la carga o el timeout)
+    const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+
+    if (error) throw error;
 
     if (data) {
-      console.log("✅ Datos recibidos:", data.length);
-      console.log("📦 Muestra de datos:", data.slice(0, 2));
-      
-      // Mapear para convertir bulk_info a bulkInfo
       const mapped = data.map(p => ({
         ...p,
         bulkInfo: p.bulk_info || "",
       }));
-      
-      console.log("🔄 Productos mapeados:", mapped.length);
-      setProducts(mapped);
-      setStorageItem("roxy_products", mapped);
       return mapped;
     }
+    return [];
   } catch (error) {
-    console.error("❌ Error cargando productos:", error.message);
-    console.error("📍 Stack completo:", error);
-    return null;
+    console.error("❌ Error en Supabase:", error.message);
+    return null; // Retornamos null para activar el backup local
   }
 };
 
