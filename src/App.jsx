@@ -3069,8 +3069,56 @@ function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, se
   const input = { width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" };
   const ADMIN_CATS = CATS.filter(c => c !== "Todos");
 
-  if (false) {
-    return null;
+  if (!user || !isMaster) {
+    return (
+      <div style={{ maxWidth:400, margin:"0 auto", padding:"40px 16px" }}>
+        <div style={{ background:"#111", borderRadius:16, padding:"30px", textAlign:"center" }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", color:"white", fontSize:24, letterSpacing:2, marginBottom:8 }}>🔐 ACCESO ADMIN</div>
+          <div style={{ color:"#9CA3AF", fontSize:13, marginBottom:24 }}>Solo usuarios maestros autorizados</div>
+          
+          <div style={{ background:"white", borderRadius:12, padding:24, textAlign:"left" }}>
+            <div style={{ marginBottom:16 }}>
+              <label style={{ display:"block", fontSize:12, fontWeight:700, color:"#6B7280", marginBottom:6 }}>Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email de usuario maestro"
+                disabled={authLoading}
+                style={{ width:"100%", padding:"12px 16px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", outline:"none", background: authLoading ? "#F9FAFB" : "white", opacity: authLoading ? 0.6 : 1 }}
+              />
+            </div>
+            
+            <div style={{ marginBottom:20 }}>
+              <label style={{ display:"block", fontSize:12, fontWeight:700, color:"#6B7280", marginBottom:6 }}>Contraseña</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Contraseña"
+                disabled={authLoading}
+                onKeyPress={(e) => e.key === 'Enter' && onLogin()}
+                style={{ width:"100%", padding:"12px 16px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", outline:"none", background: authLoading ? "#F9FAFB" : "white", opacity: authLoading ? 0.6 : 1 }}
+              />
+            </div>
+            
+            <button
+              onClick={onLogin}
+              disabled={authLoading || !email || !password}
+              style={{ width:"100%", background: authLoading || !email || !password ? "#9CA3AF" : "#C41E3A", color:"white", border:"none", borderRadius:9, padding:"12px 16px", fontSize:14, fontWeight:600, fontFamily:"'Poppins',sans-serif", cursor: authLoading || !email || !password ? "not-allowed" : "pointer", transition:"all 0.2s", opacity: authLoading || !email || !password ? 0.6 : 1 }}
+            >
+              {authLoading ? "Iniciando sesión..." : "🔐 Iniciar Sesión"}
+            </button>
+            
+            {user && !isMaster && (
+              <div style={{ marginTop:16, padding:12, background:"#FEE2E2", borderRadius:8, fontSize:12, color:"#991B1B", textAlign:"center" }}>
+                ⚠️ Acceso denegado. Este usuario no tiene permisos de administrador.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
