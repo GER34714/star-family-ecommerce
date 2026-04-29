@@ -881,6 +881,9 @@ export default function StarFamilyApp() {
         ...p,
         bulkInfo: p.bulk_info || "",
       }));
+      
+      setProducts(mapped);
+      setLoading(false); // <--- IMPORTANTE: Asegúrate de apagar el loading aquí
       return mapped;
     }
     return [];
