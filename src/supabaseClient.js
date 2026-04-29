@@ -1,10 +1,11 @@
-// ═══════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════
 // SUPABASE CLIENT - SINGLETON PATTERN
-// ═══════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════
 
 import { createClient } from '@supabase/supabase-js';
 
 let supabaseInstance = null;
+let configLogged = false; // Evitar logs repetidos
 
 export const getSupabaseClient = () => {
   // Variables de entorno por defecto para producción
@@ -26,10 +27,34 @@ export const getSupabaseClient = () => {
     console.warn('Error leyendo configuración de Supabase:', error);
   }
   
+  // Logging solo una vez para diagnóstico
+  if (!configLogged && !supabaseInstance) {
+    console.log('🔍 Supabase Config:', {
+      url: url ? `${url.substring(0, 30)}...` : 'NO URL',
+      hasKey: !!key,
+      keyLength: key?.length || 0,
+      fromLocalStorage: !!localStorage.getItem("roxy_supa")
+    });
+    configLogged = true;
+  }
+  
   // Crear instancia solo si no existe y hay configuración válida
   if (!supabaseInstance && url && key) {
-    supabaseInstance = createClient(url, key);
-    console.log('✅ Cliente Supabase creado (singleton)');
+    try {
+      supabaseInstance = createClient(url, key, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+        },
+        db: {
+          timeout: 10000, // 10 segundos timeout
+        }
+      });
+      console.log('✅ Cliente Supabase creado (singleton)');
+    } catch (error) {
+      console.error('❌ Error creando cliente Supabase:', error);
+      return null;
+    }
   }
   
   return supabaseInstance;

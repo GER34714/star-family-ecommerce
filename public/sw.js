@@ -9,44 +9,47 @@ const ESSENTIAL_ROUTES = [
   'https://iili.io/B6XgSSI.jpg'
 ];
 
-// Instalación del Service Worker
+// Instalación del Service Worker con delay para no saturar red
 self.addEventListener('install', (event) => {
   console.log('SW: Instalando Star Family Service Worker');
   
-  event.waitUntil(
-    caches.open(STATIC_CACHE)
-      .then((cache) => {
-        console.log('SW: Cacheando rutas esenciales');
-        
-        // Validar y cachear cada ruta individualmente
-        return Promise.all(
-          ESSENTIAL_ROUTES.map((url) => {
-            // Validar que la URL sea válida
-            if (!url || typeof url !== 'string') {
-              console.warn('SW: URL inválida ignorada:', url);
-              return Promise.resolve();
-            }
-            
-            // Intentar cachear cada ruta individualmente
-            return cache.add(url)
-              .then(() => {
-                console.log('SW: Recurso cacheado exitosamente:', url);
+  // Delay de 2 segundos antes de cachear para no saturar red al arrancar
+  setTimeout(() => {
+    event.waitUntil(
+      caches.open(STATIC_CACHE)
+        .then((cache) => {
+          console.log('SW: Cacheando rutas esenciales');
+          
+          // Validar y cachear cada ruta individualmente
+          return Promise.all(
+            ESSENTIAL_ROUTES.map((url) => {
+              // Validar que la URL sea válida
+              if (!url || typeof url !== 'string') {
+                console.warn('SW: URL inválida ignorada:', url);
                 return Promise.resolve();
-              })
-              .catch((error) => {
-                console.warn('SW: Error cacheando recurso (continuando):', url, error);
-                // No romper toda la instalación por un recurso fallido
-                return Promise.resolve();
-              });
-          })
-        );
-      })
-      .catch((error) => {
-        console.error('SW: Error general en instalación:', error);
-        // Siempre resolver para no romper el SW
-        return Promise.resolve();
-      })
-  );
+              }
+              
+              // Intentar cachear cada ruta individualmente
+              return cache.add(url)
+                .then(() => {
+                  console.log('SW: Recurso cacheado exitosamente:', url);
+                  return Promise.resolve();
+                })
+                .catch((error) => {
+                  console.warn('SW: Error cacheando recurso (continuando):', url, error);
+                  // No romper toda la instalación por un recurso fallido
+                  return Promise.resolve();
+                });
+            })
+          );
+        })
+        .catch((error) => {
+          console.error('SW: Error general en instalación:', error);
+          // Siempre resolver para no romper el SW
+          return Promise.resolve();
+        })
+    );
+  }, 2000); // 2 segundos delay
 });
 
 // Activación del Service Worker

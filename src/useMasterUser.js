@@ -2,7 +2,7 @@
 // HOOK PERSONALIZADO PARA GESTIÓN DE USUARIOS MAESTROS
 // ═════════════════════════════════════════════════════
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getSupabaseClient } from './supabaseClient';
 
 export const useMasterUser = () => {
@@ -15,35 +15,75 @@ export const useMasterUser = () => {
   const supabase = getSupabaseClient();
 
   // Verificar si el usuario actual es master
-  const checkMasterStatus = async (userId) => {
+  const checkMasterStatus = useCallback(async (userId, retryCount = 0) => {
     if (!supabase || !userId) {
+      console.log('🔍 checkMasterStatus: Sin supabase o userId - seteando isMaster=false');
       setIsMaster(false);
       return false;
     }
+
+    // Evitar múltiples ejecuciones del log
+    if (retryCount === 0) {
+      console.log('🔍 checkMasterStatus: Verificando usuario:', userId);
+    }
+
+    // Crear AbortController para timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 segundos timeout
 
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('is_master, role, email')
         .eq('id', userId)
-        .single();
+        .single()
+        .abortSignal(controller.signal);
+
+      clearTimeout(timeoutId);
+      console.log('📊 Resultado Master Query:', { data, error });
 
       if (error) {
-        console.error('Error verificando estado de master:', error);
+        console.error('❌ Error verificando estado de master:', {
+          message: error.message,
+          hint: error.hint,
+          details: error.details,
+          code: error.code,
+          userId: userId
+        });
         setIsMaster(false);
         return false;
       }
 
       const masterStatus = data?.is_master || false;
+      console.log('✅ Estado master verificado:', {
+        userId: userId,
+        isMaster: masterStatus,
+        profile: data
+      });
       setIsMaster(masterStatus);
       setProfile(data);
       return masterStatus;
     } catch (error) {
-      console.error('Error en checkMasterStatus:', error);
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        console.error('❌ Timeout en consulta master:', userId);
+        
+        // Reintento automático si es timeout
+        if (retryCount < 1) {
+          console.log('🔄 Reintentando consulta master en 2 segundos...');
+          setTimeout(() => checkMasterStatus(userId, retryCount + 1), 2000);
+        }
+      } else {
+        console.error('❌ Error en checkMasterStatus (catch):', {
+          message: error.message,
+          stack: error.stack,
+          userId: userId
+        });
+      }
       setIsMaster(false);
       return false;
     }
-  };
+  }, [supabase]);
 
   // Iniciar sesión con email y contraseña
   const signIn = async (email, password) => {
@@ -251,7 +291,10 @@ export const useMasterUser = () => {
       
       if (session?.user) {
         setUser(session.user);
-        await checkMasterStatus(session.user.id);
+        // Esperar 500ms antes de verificar master para evitar colisión
+        setTimeout(async () => {
+          await checkMasterStatus(session.user.id);
+        }, 500);
       }
     } catch (error) {
       console.warn('⚠️ Error inicializando autenticación:', error.message);
@@ -267,7 +310,10 @@ export const useMasterUser = () => {
       async (event, session) => {
         if (session?.user) {
           setUser(session.user);
-          await checkMasterStatus(session.user.id);
+          // Esperar 500ms antes de verificar master para evitar colisión
+          setTimeout(async () => {
+            await checkMasterStatus(session.user.id);
+          }, 500);
         } else {
           setUser(null);
           setProfile(null);
@@ -279,7 +325,7 @@ export const useMasterUser = () => {
 
     return () => subscription.unsubscribe();
   }
-}, []); // ✅ [] en lugar de [supabase] para evitar re-ejecuciones
+}, [supabase, checkMasterStatus]); // Dependencia correcta: solo cambia cuando supabase o checkMasterStatus cambian
 
   return {
     // Estado
