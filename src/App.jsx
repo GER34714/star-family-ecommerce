@@ -76,7 +76,7 @@ export default function StarFamilyApp() {
   const [supaUrl, setSupaUrl] = useState("");
   const [supaKey, setSupaKey] = useState("");
   const [syncing, setSyncing] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Antes estaba en true
   const [toast, setToast] = useState(null);
   const fileRef = useRef();
   const [hideFloatingButtons, setHideFloatingButtons] = useState(false);
@@ -532,36 +532,25 @@ export default function StarFamilyApp() {
 
   useEffect(() => {
   const initApp = async () => {
-    setLoading(true);
-    console.log("🚀 Arrancando App...");
+    // 1. Intentamos cargar del teléfono primero (INSTANTÁNEO)
+    const localProducts = getStorageItem("roxy_products");
+    if (localProducts && localProducts.length > 0) {
+      setProducts(localProducts);
+      console.log("⚡ Carga instantánea desde LocalStorage");
+    } else {
+      // Solo si el teléfono está vacío, mostramos un loader pequeño o skeleton
+      // setLoading(true); 
+    }
 
     try {
-      // Intentar carga de Supabase
-      const loadedData = await loadProductsFromSupabase();
-      
-      if (loadedData && loadedData.length > 0) {
-        setProducts(loadedData);
-        setStorageItem("roxy_products", loadedData);
-        console.log("✅ Datos cargados desde Supabase");
-      } else {
-        // BACKUP: Si Supabase falla o está vacío, cargamos lo que haya en LocalStorage
-        const local = getStorageItem("roxy_products");
-        if (local && local.length > 0) {
-          setProducts(local);
-          console.log("📦 Usando backup de localStorage");
-        } else {
-          console.warn("⚠️ No hay datos en Supabase ni en LocalStorage");
-        }
+      // 2. Traemos los datos frescos de Supabase en segundo plano
+      const freshData = await loadProductsFromSupabase();
+      if (freshData && freshData.length > 0) {
+        setProducts(freshData); // Actualizamos la lista sin que el usuario lo note
       }
-
-      // Cargar persistencia de carrito y config
-      const cartData = getStorageItem("roxy_cart");
-      if (cartData) setCart(cartData);
-      
     } catch (err) {
-      console.error("❌ Error crítico en initApp:", err);
+      console.error("Error en segundo plano:", err);
     } finally {
-      // ESTO ES VITAL: Pase lo que pase, quitamos la pantalla de carga
       setLoading(false); 
     }
   };
@@ -1460,14 +1449,14 @@ export default function StarFamilyApp() {
     showToast("🗑️ Producto eliminado"); 
   };
 
-  // Error Boundary y loading state - Solo mostrar loading si es inicialización
-  if (loading && products.length === 0) {
+  // Error Boundary y loading state - Solo mostrar loading si es la PRIMERA vez que abren la app
+  if (products.length === 0 && loading) {
     return (
       <div style={{ minHeight:"100vh", background:"#F4F4F5", fontFamily:"'Poppins', sans-serif", display:"flex", alignItems:"center", justifyContent:"center" }}>
         <style>{CSS}</style>
         <div style={{ textAlign:"center" }}>
           <div style={{ fontSize:48, marginBottom:20 }}>🔄</div>
-          <div style={{ fontSize:18, color:"#6B7280", fontWeight:500 }}>Cargando...</div>
+          <div style={{ fontSize:18, color:"#6B7280", fontWeight:500 }}>Cargando productos...</div>
         </div>
       </div>
     );
