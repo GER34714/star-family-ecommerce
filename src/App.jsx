@@ -76,10 +76,9 @@ export default function StarFamilyApp() {
   const [supaUrl, setSupaUrl] = useState("");
   const [supaKey, setSupaKey] = useState("");
   const [syncing, setSyncing] = useState(false);
-  const [loading, setLoading] = useState(false); // Antes estaba en true
+  const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const fileRef = useRef();
-  const isInitialLoad = useRef(false); // Control para evitar doble carga
   const [hideFloatingButtons, setHideFloatingButtons] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
@@ -119,8 +118,8 @@ export default function StarFamilyApp() {
   const [password, setPassword] = useState("");
   const [localAuthLoading, setLocalAuthLoading] = useState(false);
 
-  // Verificar acceso administrativo - BYPASS TEMPORAL SIN AUTH
-  const hasAdminAccess = isMaster || process.env.REACT_APP_BYPASS_AUTH === 'true';
+  // Verificar acceso administrativo
+  const hasAdminAccess = isMaster;
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -246,22 +245,12 @@ export default function StarFamilyApp() {
     };
   }, [cartOpen, modal, scrollDirection, scrollThreshold, lastScrollY, showTimer]);
 
-  // Efecto para manejar instalación PWA - SOLO EN PRODUCCIÓN Y DESPUÉS DE AUTH
+  // Efecto para manejar instalación PWA
   useEffect(() => {
-    // Solo registrar Service Worker en producción para evitar bucles en localhost
-    const isProduction = process.env.NODE_ENV === 'production' || !window.location.hostname.includes('localhost');
-    
-    if (!isProduction) {
-      console.log('🚫 PWA: Omitiendo registro en desarrollo/localhost');
-      return;
-    }
-
-    // Esperar 1 segundo después de montar para no chocar con verificación master
-    setTimeout(() => {
-      // console.log('🔍 PWA: Iniciando diagnóstico PWA...'); // Comentado para evitar bucle
-      // console.log('🔍 PWA - HTTPS:', window.location.protocol === 'https:' || window.location.hostname === 'localhost');
-      // console.log('🔍 PWA - Service Worker:', 'serviceWorker' in navigator);
-      // console.log('🔍 PWA - beforeinstallprompt:', 'onbeforeinstallprompt' in window);
+    console.log('🔍 PWA: Iniciando diagnóstico PWA...');
+    console.log('🔍 PWA - HTTPS:', window.location.protocol === 'https:' || window.location.hostname === 'localhost');
+    console.log('🔍 PWA - Service Worker:', 'serviceWorker' in navigator);
+    console.log('🔍 PWA - beforeinstallprompt:', 'onbeforeinstallprompt' in window);
 
     const handleBeforeInstallPrompt = (e) => {
       console.log('📱 PWA: Evento beforeinstallprompt detectado');
@@ -295,27 +284,27 @@ export default function StarFamilyApp() {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // FORZAR POPUP PARA TESTING EN LOCALHOST - COMENTADO PARA EVITAR BUCLE
-    // if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    //   console.log('🧪 PWA: Forzando popup para testing en localhost...');
+    // FORZAR POPUP PARA TESTING EN LOCALHOST
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      console.log('🧪 PWA: Forzando popup para testing en localhost...');
       
-    //   // Simular evento after de 2 segundos para testing
-    //   setTimeout(() => {
-    //     console.log('🧪 PWA: Mostrando popup forzado para testing');
-    //     setShowInstallPopup(true);
-    //     setPopupPosition('floating');
-    //     setIsInstallable(true);
+      // Simular evento after de 2 segundos para testing
+      setTimeout(() => {
+        console.log('🧪 PWA: Mostrando popup forzado para testing');
+        setShowInstallPopup(true);
+        setPopupPosition('floating');
+        setIsInstallable(true);
         
-    //     // Mismo temporizador que el real
-    //     setTimeout(() => {
-    //       setPopupPosition('footer');
-    //     }, 8000);
+        // Mismo temporizador que el real
+        setTimeout(() => {
+          setPopupPosition('footer');
+        }, 8000);
         
-    //     setTimeout(() => {
-    //       setShowInstallPopup(false);
-    //     }, 15000);
-    //   }, 2000);
-    // }
+        setTimeout(() => {
+          setShowInstallPopup(false);
+        }, 15000);
+      }, 2000);
+    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -543,39 +532,41 @@ export default function StarFamilyApp() {
 
   useEffect(() => {
   const initApp = async () => {
-    // Prevenir doble carga
-    if (isInitialLoad.current) {
-      console.log("🚫 loadProductsFromSupabase ya se ejecutó - omitiendo");
-      return;
-    }
-
-    isInitialLoad.current = true;
-
-    // 1. Intentamos cargar del teléfono primero (INSTANTÁNEO)
-    const localProducts = getStorageItem("roxy_products");
-    if (localProducts && localProducts.length > 0) {
-      setProducts(localProducts);
-      // console.log("⚡ Carga instantánea desde LocalStorage"); // Comentado para evitar bucle
-    } else {
-      // Solo si el teléfono está vacío, mostramos un loader pequeño o skeleton
-      // setLoading(true); 
-    }
+    setLoading(true);
+    console.log("🚀 Arrancando App...");
 
     try {
-      // 2. Traemos los datos frescos de Supabase en segundo plano
-      const freshData = await loadProductsFromSupabase();
-      if (freshData && freshData.length > 0) {
-        setProducts(freshData); // Actualizamos la lista sin que el usuario lo note
+      // Intentar carga de Supabase
+      const loaded = await loadProductsFromSupabase();
+      
+      // Si Supabase falla o devuelve vacío, intentar backup local
+      if (!loaded || loaded.length === 0) {
+        const local = getStorageItem("roxy_products");
+        if (local && local.length > 0) {
+          setProducts(local);
+          console.log("📦 Usando backup de localStorage");
+        }
       }
+
+      // Cargar el resto de los estados persistentes
+      const cartData = getStorageItem("roxy_cart");
+      if (cartData) setCart(cartData);
+      
+      const supaConfig = getStorageItem("roxy_supa");
+      if (supaConfig) {
+        setSupaUrl(supaConfig.url || "");
+        setSupaKey(supaConfig.key || "");
+      }
+      
     } catch (err) {
-      console.error("Error en segundo plano:", err);
+      console.error("❌ Error en la inicialización:", err);
     } finally {
-      setLoading(false); 
+      setLoading(false);
     }
   };
 
   initApp();
-}, []); // ✅ Dependencias vacías - solo se ejecuta una vez
+}, []);
 
   const saveProducts = async (p, skipSupabaseSync = false, skipLocalStorage = false) => { 
     setProducts(p); 
@@ -856,61 +847,60 @@ export default function StarFamilyApp() {
   return result;
 }, [products, cat, searchTerm, priceRange]);
   
-  // DIAGNÓSTICO: Eliminado para evitar bucle infinito y saturación de consola
-  // useEffect(() => {
-  //   console.log("🔍 DIAGNÓSTICO DE RENDERIZADO:", {
-  //     categoriaSeleccionada: cat,
-  //     totalProducts: products?.length || 0,
-  //     filteredLength: filtered?.length || 0,
-  //     products: products,
-  //     filtered: filtered
-  //   });
-  // }, [products, cat]); // Eliminado 'filtered' para evitar bucle circular
+  // DIAGNÓSTICO: Verificar estado de productos y filtered
+  console.log("🔍 DIAGNÓSTICO DE RENDERIZADO:", {
+    categoriaSeleccionada: cat,
+    totalProducts: products?.length || 0,
+    filteredLength: filtered?.length || 0,
+    products: products,
+    filtered: filtered
+  });
 
   const loadProductsFromSupabase = async () => {
-    try {
-      // console.log("🔍 loadProductsFromSupabase: INICIANDO..."); // Eliminado para evitar bucle
-      const supabase = getSupabaseClient();
-      
-      if (!supabase) {
-        setLoading(false);
-        return null;
-      }
-
-      // Creamos una promesa que falla a los 6 segundos para no quedar bloqueados
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout de conexión")), 6000)
-      );
-
-      const fetchPromise = supabase.from('products').select('*');
-
-      // Race: el primero que termine gana (la carga o el timeout)
-      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
-
-      if (error) throw error;
-
-      if (data) {
-        const mapped = data.map(p => ({
-          ...p,
-          bulkInfo: p.bulk_info || "",
-        }));
-
-        setProducts(mapped);
-        
-        // Guardar en Storage de forma asíncrona para no bloquear el render
-        setTimeout(() => {
-          setStorageItem("roxy_products", mapped);
-        }, 100);
-        
-        return mapped;
-      }
-      return [];
-    } catch (error) {
-      console.error("❌ Error en Supabase:", error.message);
-      setLoading(false); // Asegurar que loading se apague incluso con error
-      return null; // Retornamos null para activar el backup local
+  try {
+    console.log("🔍 loadProductsFromSupabase: INICIANDO...");
+    console.log("🌍 AMBIENTE:", process.env.NODE_ENV);
+    console.log("🔑 SUPABASE URL:", process.env.REACT_APP_SUPABASE_URL);
+    
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      console.error("❌ No se pudo obtener el cliente de Supabase");
+      throw new Error("No se pudo obtener el cliente de Supabase");
     }
-  };
+    console.log("✅ Cliente Supabase obtenido correctamente");
+    
+    const { data, error } = await supabase
+      .from('products')
+      .select('*');
+
+    console.log("📊 Respuesta Supabase:", { data: data?.length, error });
+
+    if (error) {
+      console.error("❌ Error de Supabase:", error);
+      throw error;
+    }
+
+    if (data) {
+      console.log("✅ Datos recibidos:", data.length);
+      console.log("📦 Muestra de datos:", data.slice(0, 2));
+      
+      // Mapear para convertir bulk_info a bulkInfo
+      const mapped = data.map(p => ({
+        ...p,
+        bulkInfo: p.bulk_info || "",
+      }));
+      
+      console.log("🔄 Productos mapeados:", mapped.length);
+      setProducts(mapped);
+      setStorageItem("roxy_products", mapped);
+      return mapped;
+    }
+  } catch (error) {
+    console.error("❌ Error cargando productos:", error.message);
+    console.error("📍 Stack completo:", error);
+    return null;
+  }
+};
 
   const syncSupabase = async () => {
     // Variables de entorno por defecto para producción
@@ -1469,14 +1459,14 @@ export default function StarFamilyApp() {
     showToast("🗑️ Producto eliminado"); 
   };
 
-  // Error Boundary y loading state - Solo mostrar loading si es la PRIMERA vez que abren la app
-  if (products.length === 0 && loading) {
+  // Error Boundary y loading state - Solo mostrar loading si es inicialización
+  if (loading && products.length === 0) {
     return (
       <div style={{ minHeight:"100vh", background:"#F4F4F5", fontFamily:"'Poppins', sans-serif", display:"flex", alignItems:"center", justifyContent:"center" }}>
         <style>{CSS}</style>
         <div style={{ textAlign:"center" }}>
           <div style={{ fontSize:48, marginBottom:20 }}>🔄</div>
-          <div style={{ fontSize:18, color:"#6B7280", fontWeight:500 }}>Cargando productos...</div>
+          <div style={{ fontSize:18, color:"#6B7280", fontWeight:500 }}>Cargando...</div>
         </div>
       </div>
     );
@@ -1771,7 +1761,8 @@ export default function StarFamilyApp() {
               </div>
             )}
           </div>
-        ) : (
+        </>
+      ) : (
         <AdminPanel 
             products={products} 
             form={form} 
@@ -1868,8 +1859,6 @@ export default function StarFamilyApp() {
             setPassword={setPassword}
             authLoading={localAuthLoading}
           />
-      )}
-        </>
       )}
 
       {/* FOOTER */}
@@ -2262,8 +2251,8 @@ function ProductCard({ p, onOpen, onAdd }) {
     description = ''
   } = p || {};
   
-  // PARCHE DE SEGURIDAD TOTAL: Log de depuración ELIMINADO para evitar bucle
-  // console.log('Renderizando producto:', p?.id || 'ID NULO');
+  // PARCHE DE SEGURIDAD TOTAL: Log de depuración
+  console.log('Renderizando producto:', p?.id || 'ID NULO');
   
   const color = CAT_COLOR[category] || "#C41E3A";
   const emoji = CAT_EMOJI[category] || "🍖";
@@ -2288,7 +2277,7 @@ function ProductCard({ p, onOpen, onAdd }) {
         </div>
       </div>
     </div>
-  }
+  );
 }
 
 // ═══════════════════════════════════════════════════════
@@ -2400,6 +2389,1110 @@ function CartDrawer({ cart, onRemove, onClose, total, onClear }) {
           <button onClick={onClear} style={{ width:"100%", background:"#F4F4F5", color:"#6B7280", border:"none", borderRadius:12, padding:10, fontSize:13, cursor:"pointer", fontFamily:"'Poppins',sans-serif" }}>
             Vaciar carrito
           </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// PRICE MANAGEMENT COMPONENT
+// ═══════════════════════════════════════════════════════
+
+function PriceManagement({ products, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory }) {
+  const [priceMode, setPriceMode] = useState("individual"); // individual | bulk
+  const [bulkType, setBulkType] = useState("percentage"); // percentage | fixed
+  const [bulkValue, setBulkValue] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [previewData, setPreviewData] = useState(null);
+  const [editingPrice, setEditingPrice] = useState(null);
+  const [tempPrice, setTempPrice] = useState("");
+
+  const input = { width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" };
+
+  const handleBulkPreview = () => {
+    if (!bulkValue || isNaN(bulkValue)) return;
+    const preview = onPreviewBulkPriceChanges(bulkType, bulkValue, selectedCategories);
+    setPreviewData(preview);
+  };
+
+  const handleBulkApply = () => {
+    if (!bulkValue || isNaN(bulkValue)) return;
+    if (!window.confirm(`¿Estás seguro que querés aplicar este ajuste a todos los productos${selectedCategories.length > 0 ? " de las categorías seleccionadas" : ""}?`)) return;
+    
+    const updatedCount = onUpdateBulkPrices(bulkType, bulkValue, selectedCategories);
+    setPreviewData(null);
+    setBulkValue("");
+  };
+
+  const handleSinglePriceUpdate = (productId, newPrice) => {
+    if (!newPrice || isNaN(newPrice) || parseFloat(newPrice) <= 0) return;
+    onUpdateSinglePrice(productId, newPrice);
+    setEditingPrice(null);
+    setTempPrice("");
+  };
+
+  const toggleCategory = (category) => {
+    setSelectedCategories(prev => 
+      prev.includes(category) 
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
+  };
+
+  const changedProducts = previewData?.filter(p => p.changed) || [];
+  const totalProducts = previewData?.length || 0;
+
+  return (
+    <div style={{ background:"white", borderRadius:16, padding:24 }}>
+      <h3 style={{ margin:"0 0 6px", fontWeight:800 }}>💰 Administración de Precios</h3>
+      <p style={{ color:"#6B7280", fontSize:14, marginBottom:20 }}>Modificá precios de forma individual o masiva.</p>
+
+      {/* MODE SELECTOR */}
+      <div style={{ display:"flex", gap:10, marginBottom:24 }}>
+        <button 
+          onClick={() => setPriceMode("individual")}
+          style={{ 
+            flex:1,
+            padding:12,
+            borderRadius:10,
+            border: priceMode === "individual" ? "2px solid #C41E3A" : "1px solid #E5E7EB",
+            background: priceMode === "individual" ? "#C41E3A" : "white",
+            color: priceMode === "individual" ? "white" : "#374151",
+            fontWeight:600,
+            cursor:"pointer",
+            fontSize:14
+          }}
+        >
+          🎯 Individual
+        </button>
+        <button 
+          onClick={() => setPriceMode("bulk")}
+          style={{ 
+            flex:1,
+            padding:12,
+            borderRadius:10,
+            border: priceMode === "bulk" ? "2px solid #C41E3A" : "1px solid #E5E7EB",
+            background: priceMode === "bulk" ? "#C41E3A" : "white",
+            color: priceMode === "bulk" ? "white" : "#374151",
+            fontWeight:600,
+            cursor:"pointer",
+            fontSize:14
+          }}
+        >
+          📊 Masivo
+        </button>
+      </div>
+
+      {/* INDIVIDUAL MODE */}
+      {priceMode === "individual" && (
+        <div>
+          <div style={{ marginBottom:16, fontWeight:600, color:"#374151" }}>
+            Modificación Individual de Precios
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:10, maxHeight:400, overflowY:"auto" }}>
+            {products.map(p => (
+              <div key={p.id} style={{ 
+                display:"flex", 
+                alignItems:"center", 
+                gap:12, 
+                padding:12, 
+                border:"1px solid #E5E7EB", 
+                borderRadius:10,
+                background:"#FAFAFA"
+              }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontWeight:600, fontSize:14, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                    {p.name}
+                  </div>
+                  <div style={{ fontSize:12, color:"#9CA3AF" }}>
+                    {p.category}
+                  </div>
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  {editingPrice === p.id ? (
+                    <>
+                      <input
+                        type="number"
+                        value={tempPrice}
+                        onChange={(e) => setTempPrice(e.target.value)}
+                        placeholder={p.price}
+                        style={{ width:100, padding:"6px 10px", border:"1px solid #C41E3A", borderRadius:6, fontSize:14 }}
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => handleSinglePriceUpdate(p.id, tempPrice)}
+                        style={{ background:"#C41E3A", color:"white", border:"none", borderRadius:6, padding:"6px 10px", cursor:"pointer", fontSize:12 }}
+                      >
+                        ✅
+                      </button>
+                      <button
+                        onClick={() => { setEditingPrice(null); setTempPrice(""); }}
+                        style={{ background:"#6B7280", color:"white", border:"none", borderRadius:6, padding:"6px 10px", cursor:"pointer", fontSize:12 }}
+                      >
+                        ❌
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontWeight:700, color:"#C41E3A", minWidth:80, textAlign:"right" }}>
+                        ${p.price.toLocaleString("es-AR")}
+                      </div>
+                      <button
+                        onClick={() => { setEditingPrice(p.id); setTempPrice(p.price.toString()); }}
+                        style={{ background:"#EFF6FF", border:"none", borderRadius:6, padding:"6px 10px", cursor:"pointer", fontSize:12 }}
+                      >
+                        ✏️
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* BULK MODE */}
+      {priceMode === "bulk" && (
+        <div>
+          <div style={{ marginBottom:16, fontWeight:600, color:"#374151" }}>
+            Ajuste Masivo de Precios
+          </div>
+
+          {/* CATEGORY FILTER */}
+          <div style={{ marginBottom:20 }}>
+            <div style={{ fontSize:13, fontWeight:600, marginBottom:8, color:"#374151" }}>
+              Categorías (opcional - dejá vacío para afectar a todos)
+            </div>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+              {CATS.filter(c => c !== "Todos").map(category => (
+                <button
+                  key={category}
+                  onClick={() => toggleCategory(category)}
+                  style={{
+                    padding:"6px 12px",
+                    borderRadius:8,
+                    border: selectedCategories.includes(category) ? "2px solid #C41E3A" : "1px solid #E5E7EB",
+                    background: selectedCategories.includes(category) ? "#C41E3A" : "white",
+                    color: selectedCategories.includes(category) ? "white" : "#374151",
+                    fontSize:12,
+                    fontWeight:600,
+                    cursor:"pointer"
+                  }}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ADJUSTMENT TYPE */}
+          <div style={{ display:"flex", gap:10, marginBottom:20 }}>
+            <button
+              onClick={() => setBulkType("percentage")}
+              style={{
+                flex:1,
+                padding:10,
+                borderRadius:8,
+                border: bulkType === "percentage" ? "2px solid #C41E3A" : "1px solid #E5E7EB",
+                background: bulkType === "percentage" ? "#C41E3A" : "white",
+                color: bulkType === "percentage" ? "white" : "#374151",
+                fontWeight:600,
+                cursor:"pointer",
+                fontSize:13
+              }}
+            >
+              📈 Porcentaje
+            </button>
+            <button
+              onClick={() => setBulkType("fixed")}
+              style={{
+                flex:1,
+                padding:10,
+                borderRadius:8,
+                border: bulkType === "fixed" ? "2px solid #C41E3A" : "1px solid #E5E7EB",
+                background: bulkType === "fixed" ? "#C41E3A" : "white",
+                color: bulkType === "fixed" ? "white" : "#374151",
+                fontWeight:600,
+                cursor:"pointer",
+                fontSize:13
+              }}
+            >
+              💰 Valor Fijo
+            </button>
+          </div>
+
+          {/* VALUE INPUT */}
+          <div style={{ marginBottom:20 }}>
+            <div style={{ fontSize:13, fontWeight:600, marginBottom:8, color:"#374151" }}>
+              {bulkType === "percentage" ? "Porcentaje de ajuste (%)" : "Valor de ajuste ($)"}
+            </div>
+            <input
+              type="number"
+              value={bulkValue}
+              onChange={(e) => setBulkValue(e.target.value)}
+              placeholder={bulkType === "percentage" ? "Ej: 10 para 10% o -5 para -5%" : "Ej: 100 para agregar $100 o -50 para restar $50"}
+              style={input}
+            />
+          </div>
+
+          {/* ACTION BUTTONS */}
+          <div style={{ display:"flex", gap:10 }}>
+            <button
+              onClick={handleBulkPreview}
+              disabled={!bulkValue || isNaN(bulkValue)}
+              style={{
+                flex:1,
+                padding:12,
+                borderRadius:10,
+                border:"1px solid #2563EB",
+                background:"#2563EB",
+                color:"white",
+                fontWeight:600,
+                cursor: (!bulkValue || isNaN(bulkValue)) ? "not-allowed" : "pointer",
+                fontSize:14,
+                opacity: (!bulkValue || isNaN(bulkValue)) ? 0.5 : 1
+              }}
+            >
+              👁️ Vista Previa
+            </button>
+            <button
+              onClick={handleBulkApply}
+              disabled={!bulkValue || isNaN(bulkValue)}
+              style={{
+                flex:1,
+                padding:12,
+                borderRadius:10,
+                border:"1px solid #C41E3A",
+                background:"#C41E3A",
+                color:"white",
+                fontWeight:600,
+                cursor: (!bulkValue || isNaN(bulkValue)) ? "not-allowed" : "pointer",
+                fontSize:14,
+                opacity: (!bulkValue || isNaN(bulkValue)) ? 0.5 : 1
+              }}
+            >
+              ⚡ Aplicar Cambios
+            </button>
+          </div>
+
+          {/* PREVIEW RESULTS */}
+          {previewData && (
+            <div style={{ marginTop:24, padding:16, background:"#F0FDF4", borderRadius:12, border:"1px solid #BBF7D0" }}>
+              <div style={{ fontWeight:700, color:"#166534", marginBottom:12 }}>
+                📊 Vista Previa de Cambios
+              </div>
+              <div style={{ fontSize:13, color:"#166534", marginBottom:8 }}>
+                • {changedProducts.length} de {totalProducts} productos serán modificados
+              </div>
+              <div style={{ fontSize:13, color:"#166534", marginBottom:16 }}>
+                • {selectedCategories.length > 0 ? `Categorías seleccionadas: ${selectedCategories.join(", ")}` : "Todas las categorías"}
+              </div>
+              
+              {/* SAMPLE OF CHANGES */}
+              <div style={{ maxHeight:200, overflowY:"auto" }}>
+                {changedProducts.slice(0, 5).map(p => (
+                  <div key={p.id} style={{ 
+                    display:"flex", 
+                    justifyContent:"space-between", 
+                    alignItems:"center", 
+                    padding:"8px 12px", 
+                    background:"white", 
+                    borderRadius:8, 
+                    marginBottom:6,
+                    fontSize:12
+                  }}>
+                    <div>
+                      <div style={{ fontWeight:600 }}>{p.name}</div>
+                      <div style={{ color:"#9CA3AF" }}>{p.category}</div>
+                    </div>
+                    <div style={{ textAlign:"right" }}>
+                      <div style={{ textDecoration:"line-through", color:"#9CA3AF" }}>
+                        ${p.price.toLocaleString("es-AR")}
+                      </div>
+                      <div style={{ fontWeight:700, color:"#C41E3A" }}>
+                        ${p.newPrice.toLocaleString("es-AR")}
+                      </div>
+                      <div style={{ fontSize:11, color: p.difference > 0 ? "#059669" : "#DC2626" }}>
+                        {p.difference > 0 ? "+" : ""}{p.percentageChange}%
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {changedProducts.length > 5 && (
+                  <div style={{ textAlign:"center", color:"#9CA3AF", fontSize:11, marginTop:8 }}>
+                    ... y {changedProducts.length - 5} productos más
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// PRICE HISTORY COMPONENT
+// ═══════════════════════════════════════════════════════
+
+function PriceHistory({ priceHistory }) {
+  const formatDate = (timestamp) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+  };
+
+  const formatPrice = (price) => {
+    return `$${Number(price).toLocaleString('es-AR')}`;
+  };
+
+  return (
+    <div style={{ background:"white", borderRadius:16, padding:24 }}>
+      <h3 style={{ margin:"0 0 6px", fontWeight:800 }}>📜 Historial de Cambios de Precios</h3>
+      <p style={{ color:"#6B7280", fontSize:14, marginBottom:20 }}>
+        Registro completo de todos los cambios de precios con fecha y hora.
+      </p>
+
+      {priceHistory.length === 0 ? (
+        <div style={{ textAlign:"center", padding:40, color:"#9CA3AF" }}>
+          <div style={{ fontSize:48, marginBottom:12 }}>📋</div>
+          <div style={{ fontSize:16, fontWeight:600, marginBottom:4 }}>No hay cambios registrados</div>
+          <div style={{ fontSize:13 }}>Los cambios de precios aparecerán aquí cuando los realices</div>
+        </div>
+      ) : (
+        <div style={{ display:"flex", flexDirection:"column", gap:12, maxHeight:500, overflowY:"auto" }}>
+          {priceHistory.map((entry) => (
+            <div key={entry.id} style={{ 
+              background:"#FAFAFA", 
+              borderRadius:12, 
+              padding:16, 
+              border:"1px solid #E5E7EB" 
+            }}>
+              {/* Header */}
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                <div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+                    <span style={{ 
+                      background: entry.type === 'individual' ? "#EFF6FF" : "#F0FDF4", 
+                      color: entry.type === 'individual' ? "#1E40AF" : "#166534",
+                      padding:"4px 8px", 
+                      borderRadius:6, 
+                      fontSize:11, 
+                      fontWeight:600 
+                    }}>
+                      {entry.type === 'individual' ? '🎯 Individual' : '📊 Masivo'}
+                    </span>
+                    <span style={{ fontSize:13, color:"#6B7280", fontWeight:500 }}>
+                      {entry.user}
+                    </span>
+                  </div>
+                  <div style={{ fontSize:12, color:"#9CA3AF", fontFamily:"monospace" }}>
+                    {formatDate(entry.timestamp)}
+                  </div>
+                </div>
+                {entry.type === 'bulk' && (
+                  <div style={{ textAlign:"right" }}>
+                    <div style={{ fontSize:11, color:"#6B7280" }}>
+                      {entry.adjustmentType === 'percentage' ? 'Porcentaje' : 'Valor fijo'}
+                    </div>
+                    <div style={{ fontSize:12, fontWeight:600, color: entry.adjustmentValue > 0 ? "#059669" : "#DC2626" }}>
+                      {entry.adjustmentType === 'percentage' 
+                        ? `${entry.adjustmentValue > 0 ? '+' : ''}${entry.adjustmentValue}%`
+                        : `${entry.adjustmentValue > 0 ? '+' : ''}${formatPrice(entry.adjustmentValue)}`
+                      }
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Content */}
+              {entry.type === 'individual' ? (
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <div>
+                    <div style={{ fontWeight:600, fontSize:14, marginBottom:2 }}>{entry.productName}</div>
+                    <div style={{ fontSize:12, color:"#9CA3AF" }}>{entry.category}</div>
+                  </div>
+                  <div style={{ textAlign:"right" }}>
+                    <div style={{ textDecoration:"line-through", color:"#9CA3AF", fontSize:12 }}>
+                      {formatPrice(entry.oldPrice)}
+                    </div>
+                    <div style={{ fontWeight:700, color:"#C41E3A", fontSize:14 }}>
+                      {formatPrice(entry.newPrice)}
+                    </div>
+                    <div style={{ fontSize:11, color: entry.difference > 0 ? "#059669" : "#DC2626" }}>
+                      {entry.difference > 0 ? '+' : ''}{entry.percentageChange}%
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontSize:12, color:"#6B7280", marginBottom:8 }}>
+                    <strong>{entry.changesCount}</strong> productos afectados
+                    {entry.affectedCategories.length > 0 && (
+                      <span> · Categorías: {entry.affectedCategories.join(', ')}</span>
+                    )}
+                  </div>
+                  
+                  {/* Show first 3 changes as examples */}
+                  {entry.changes.slice(0, 3).map((change, idx) => (
+                    <div key={idx} style={{ 
+                      display:"flex", 
+                      justifyContent:"space-between", 
+                      alignItems:"center", 
+                      padding:"6px 8px", 
+                      background:"white", 
+                      borderRadius:6, 
+                      marginBottom:4,
+                      fontSize:11
+                    }}>
+                      <div>
+                        <span style={{ fontWeight:500 }}>{change.productName}</span>
+                        <span style={{ color:"#9CA3AF", marginLeft:6 }}>{change.category}</span>
+                      </div>
+                      <div style={{ textAlign:"right" }}>
+                        <span style={{ textDecoration:"line-through", color:"#9CA3AF", marginRight:6 }}>
+                          {formatPrice(change.oldPrice)}
+                        </span>
+                        <span style={{ fontWeight:600, color:"#C41E3A" }}>
+                          {formatPrice(change.newPrice)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {entry.changes.length > 3 && (
+                    <div style={{ textAlign:"center", color:"#9CA3AF", fontSize:11, marginTop:4 }}>
+                      ... y {entry.changes.length - 3} productos más
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      
+      {priceHistory.length > 0 && (
+        <div style={{ marginTop:16, padding:12, background:"#FEF3C7", borderRadius:8, border:"1px solid #FDE68A" }}>
+          <div style={{ fontSize:12, color:"#92400E", textAlign:"center" }}>
+            📊 Mostrando los últimos {priceHistory.length} cambios · El historial se guarda permanentemente en Supabase
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// RESTORE POINTS COMPONENT
+// ═══════════════════════════════════════════════════════
+
+function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint }) {
+  const formatDate = (timestamp) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+  };
+
+  const handleCreateRestorePoint = async () => {
+    const reason = prompt("¿Por qué querés crear este punto de restauración?", "Backup manual");
+    if (reason) {
+      await onCreateRestorePoint(reason);
+      showToast("✅ Punto de restauración creado", "success");
+    }
+  };
+
+  return (
+    <div style={{ background:"white", borderRadius:16, padding:24 }}>
+      <h3 style={{ margin:"0 0 6px", fontWeight:800 }}>🔄 Puntos de Restauración</h3>
+      <p style={{ color:"#6B7280", fontSize:14, marginBottom:20 }}>
+        Sistema de backup automático y manual para recuperar estados anteriores.
+      </p>
+
+      {/* Botón para crear punto de restauración manual */}
+      <div style={{ marginBottom:24 }}>
+        <button
+          onClick={handleCreateRestorePoint}
+          style={{
+            width:"100%",
+            padding:12,
+            borderRadius:8,
+            border:"1px solid #059669",
+            background:"#059669",
+            color:"white",
+            fontWeight:600,
+            cursor:"pointer",
+            fontSize:14,
+            transition:"background 0.2s"
+          }}
+          onMouseOver={(e) => e.target.style.background = "#047857"}
+          onMouseOut={(e) => e.target.style.background = "#059669"}
+        >
+          📍 Crear punto de restauración manual
+        </button>
+        <div style={{ fontSize:11, color:"#059669", marginTop:8, textAlign:"center" }}>
+          Crea un backup instantáneo del estado actual
+        </div>
+      </div>
+
+      {/* Lista de puntos de restauración */}
+      {restorePoints.length === 0 ? (
+        <div style={{ textAlign:"center", padding:40, color:"#9CA3AF" }}>
+          <div style={{ fontSize:48, marginBottom:12 }}>📋</div>
+          <div style={{ fontSize:16, fontWeight:600, marginBottom:4 }}>No hay puntos de restauración</div>
+          <div style={{ fontSize:13 }}>Los puntos de restauración se crearán automáticamente cuando hagas cambios importantes</div>
+        </div>
+      ) : (
+        <div style={{ display:"flex", flexDirection:"column", gap:12, maxHeight:500, overflowY:"auto" }}>
+          {restorePoints.map((point, index) => (
+            <div key={point.id} style={{ 
+              background:"#FAFAFA", 
+              borderRadius:12, 
+              padding:16, 
+              border:"1px solid #E5E7EB",
+              position:"relative"
+            }}>
+              {/* Header */}
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                <div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+                    {index === 0 && (
+                      <span style={{ 
+                        background:"#DCFCE7", 
+                        color:"#166534",
+                        padding:"4px 8px", 
+                        borderRadius:6, 
+                        fontSize:11, 
+                        fontWeight:600 
+                      }}>
+                        📍 Más reciente
+                      </span>
+                    )}
+                    <span style={{ fontSize:13, color:"#6B7280", fontWeight:500 }}>
+                      {point.user}
+                    </span>
+                  </div>
+                  <div style={{ fontSize:12, color:"#9CA3AF", fontFamily:"monospace" }}>
+                    {formatDate(point.timestamp)}
+                  </div>
+                </div>
+                <button
+                  onClick={() => onRestoreFromPoint(point.id)}
+                  style={{
+                    padding:"6px 12px",
+                    borderRadius:6,
+                    border:"1px solid #DC2626",
+                    background:"#DC2626",
+                    color:"white",
+                    fontWeight:600,
+                    cursor:"pointer",
+                    fontSize:12,
+                    transition:"background 0.2s"
+                  }}
+                  onMouseOver={(e) => e.target.style.background = "#B91C1C"}
+                  onMouseOut={(e) => e.target.style.background = "#DC2626"}
+                >
+                  🔄 Restaurar
+                </button>
+              </div>
+
+              {/* Content */}
+              <div>
+                <div style={{ fontWeight:600, fontSize:14, marginBottom:8, color:"#374151" }}>
+                  {point.reason}
+                </div>
+                <div style={{ fontSize:12, color:"#6B7280", lineHeight:1.6 }}>
+                  <div>📦 Productos: {point.products?.length || 0}</div>
+                  <div>📊 Historial: {point.priceHistory?.length || 0} cambios</div>
+                </div>
+              </div>
+
+              {/* Indicador visual */}
+              {index === 0 && (
+                <div style={{
+                  position:"absolute",
+                  top:8,
+                  right:8,
+                  width:8,
+                  height:8,
+                  borderRadius:"50%",
+                  background:"#059669",
+                  animation: "pulse 2s infinite"
+                }} />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {restorePoints.length > 0 && (
+        <div style={{ marginTop:16, padding:12, background:"#FEF3C7", borderRadius:8, border:"1px solid #FDE68A" }}>
+          <div style={{ fontSize:12, color:"#92400E", textAlign:"center" }}>
+            📊 {restorePoints.length} puntos de restauración disponibles · Los backups automáticos se crean antes de cambios importantes
+          </div>
+        </div>
+      )}
+
+      {/* Estilos para animación */}
+      <style jsx>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// ADMIN PANEL
+// ═══════════════════════════════════════════════════════
+
+function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading }) {
+  const input = { width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" };
+  const ADMIN_CATS = CATS.filter(c => c !== "Todos");
+
+  // Si no hay usuario logueado o no es master, mostrar formulario de login
+  if (!user || !isMaster) {
+    return (
+      <div style={{ maxWidth:400, margin:"0 auto", padding:"40px 16px" }}>
+        <div style={{ background:"#111", borderRadius:16, padding:"30px", textAlign:"center" }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", color:"white", fontSize:24, letterSpacing:2, marginBottom:8 }}>🔐 ACCESO ADMIN</div>
+          <div style={{ color:"#9CA3AF", fontSize:13, marginBottom:24 }}>Solo usuarios maestros autorizados</div>
+          
+          <div style={{ background:"white", borderRadius:12, padding:24, textAlign:"left" }}>
+            <div style={{ marginBottom:16 }}>
+              <label style={{ display:"block", fontSize:12, fontWeight:700, color:"#6B7280", marginBottom:6 }}>Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email de usuario maestro"
+                disabled={authLoading}
+                style={{
+                  width:"100%",
+                  padding:"12px 16px",
+                  borderRadius:9,
+                  border:"1px solid #E5E7EB",
+                  fontSize:14,
+                  fontFamily:"'Poppins',sans-serif",
+                  outline:"none",
+                  background: authLoading ? "#F9FAFB" : "white",
+                  opacity: authLoading ? 0.6 : 1
+                }}
+              />
+            </div>
+            
+            <div style={{ marginBottom:20 }}>
+              <label style={{ display:"block", fontSize:12, fontWeight:700, color:"#6B7280", marginBottom:6 }}>Contraseña</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Contraseña"
+                disabled={authLoading}
+                onKeyPress={(e) => e.key === 'Enter' && onLogin()}
+                style={{
+                  width:"100%",
+                  padding:"12px 16px",
+                  borderRadius:9,
+                  border:"1px solid #E5E7EB",
+                  fontSize:14,
+                  fontFamily:"'Poppins',sans-serif",
+                  outline:"none",
+                  background: authLoading ? "#F9FAFB" : "white",
+                  opacity: authLoading ? 0.6 : 1
+                }}
+              />
+            </div>
+            
+            <button
+              onClick={onLogin}
+              disabled={authLoading || !email || !password}
+              style={{
+                width:"100%",
+                background: authLoading || !email || !password ? "#9CA3AF" : "#C41E3A",
+                color:"white",
+                border:"none",
+                borderRadius:9,
+                padding:"12px 16px",
+                fontSize:14,
+                fontWeight:600,
+                fontFamily:"'Poppins',sans-serif",
+                cursor: authLoading || !email || !password ? "not-allowed" : "pointer",
+                transition:"all 0.2s",
+                opacity: authLoading || !email || !password ? 0.6 : 1
+              }}
+            >
+              {authLoading ? "Iniciando sesión..." : "🔐 Iniciar Sesión"}
+            </button>
+            
+            {user && !isMaster && (
+              <div style={{ 
+                marginTop:16, 
+                padding:12, 
+                background:"#FEE2E2", 
+                borderRadius:8, 
+                fontSize:12, 
+                color:"#991B1B",
+                textAlign:"center"
+              }}>
+                ⚠️ Acceso denegado. Este usuario no tiene permisos de administrador.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ maxWidth:900, margin:"0 auto", padding:"16px 12px 48px" }}>
+      <div style={{ background:"#111", borderRadius:16, padding:"20px 24px", margin:"16px 0 20px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", color:"white", fontSize:26, letterSpacing:3 }}>⚙️ PANEL DE ADMINISTRACIÓN</div>
+          <div style={{ color:"#9CA3AF", fontSize:13, marginTop:4 }}>{products.length} productos · Star Family Mayorista</div>
+        </div>
+        <div style={{ textAlign:"right" }}>
+          <div style={{ color:"white", fontSize:12, marginBottom:4 }}>Usuario: {user?.email}</div>
+          <div style={{ color:"#F5A623", fontSize:11, marginBottom:8 }}>👑 Usuario Master</div>
+          <button
+            onClick={onLogout}
+            style={{
+              background:"#DC2626",
+              color:"white",
+              border:"none",
+              borderRadius:6,
+              padding:"6px 12px",
+              fontSize:12,
+              fontWeight:600,
+              fontFamily:"'Poppins',sans-serif",
+              cursor:"pointer",
+              transition:"all 0.2s"
+            }}
+          >
+            🚪 Cerrar Sesión
+          </button>
+        </div>
+      </div>
+
+      {/* TABS */}
+      <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
+        {[["list","📋 Productos"],["add", editing?"✏️ Editar":"➕ Agregar"],["prices","💰 Precios"],["history","📜 Historial"],["restore","🔄 Restauración"],["excel","📊 Excel"]].map(([t,label]) => (
+          <button key={t} onClick={() => setAdminTab(t)} style={{ background:adminTab===t?"#C41E3A":"white", color:adminTab===t?"white":"#374151", border:adminTab===t?"none":"1px solid #E5E7EB", borderRadius:10, padding:"8px 16px", cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Poppins',sans-serif" }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* TAB: LIST */}
+      {adminTab === "list" && (
+        <div>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, flexWrap:"wrap", gap:8 }}>
+            <span style={{ fontWeight:700 }}>{products.length} productos en catálogo</span>
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={() => { setEditing(false); setForm({ id:"", category:"Frescos", name:"", description:"", price:"", bulkInfo:"", image:"" }); setAdminTab("add"); }} className="btn-red" style={{ padding:"8px 14px", fontSize:13 }}>+ Nuevo</button>
+            </div>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {products && products.length > 0 ? (
+              products.filter(Boolean).map(p => (
+              <div key={p.id} style={{ background:"white", borderRadius:12, padding:"12px 16px", display:"flex", gap:12, alignItems:"center", boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
+                <div style={{ width:46, height:46, borderRadius:10, background:`${CAT_COLOR[p?.category]||"#C41E3A"}18`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0, overflow:"hidden" }}>
+                  {p?.image_url ? <img src={p?.image_url} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" onError={e => { e.target.src = "https://via.placeholder.com/46x46/f5a623/ffffff?text=SF"; }} /> : (CAT_EMOJI[p?.category]||"🍖")}
+                </div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontWeight:700, fontSize:14, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p?.name || "Sin nombre"}</div>
+                  <div style={{ fontSize:12, color:"#9CA3AF", marginTop:1 }}>{p?.category} · <strong style={{ color:"#C41E3A" }}>{fmt(p?.price || 0)}</strong></div>
+                </div>
+                <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                  <button onClick={() => onEdit(p)} style={{ background:"#EFF6FF", border:"none", borderRadius:8, padding:"7px 11px", cursor:"pointer", fontSize:14 }}>✏️</button>
+                  <button onClick={() => {
+                    if (window.confirm(`¿Estás seguro que querés borrar "${p?.name || 'este producto'}"?\n\nEsta acción no se puede deshacer.`)) {
+                      onDelete(p.id);
+                    }
+                  }} style={{ background:"#FEE2E2", border:"none", borderRadius:8, padding:"7px 11px", cursor:"pointer", fontSize:14 }}>🗑️</button>
+                </div>
+              </div>
+            ))
+            ) : (
+              <div style={{ textAlign:"center", padding:40, color:"#6B7280" }}>
+                <div style={{ fontSize:48, marginBottom:16 }}>📦</div>
+                <div style={{ fontSize:18, fontWeight:600, marginBottom:8 }}>Cargando productos de Star Family...</div>
+                <div style={{ fontSize:14 }}>Por favor, espera mientras se cargan los productos</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB: ADD/EDIT */}
+      {adminTab === "add" && (
+        <div style={{ background:"white", borderRadius:16, padding:24, boxShadow:"0 2px 8px rgba(0,0,0,0.06)" }}>
+          <h3 style={{ margin:"0 0 20px", fontWeight:800, fontSize:18 }}>{editing ? "✏️ Editar producto" : "➕ Nuevo producto"}</h3>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+            <div style={{ gridColumn:"1/-1" }}>
+              <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>NOMBRE *</label>
+              <input value={form.name} onChange={e => setForm({...form,name:e.target.value})} style={input} placeholder="Ej: Salchichas Largas x6" />
+            </div>
+            <div>
+              <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>CATEGORÍA *</label>
+              <select value={form.category} onChange={e => setForm({...form,category:e.target.value})} style={input}>
+                {ADMIN_CATS.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>PRECIO *</label>
+              <input type="number" value={form.price} onChange={e => setForm({...form,price:e.target.value})} style={input} placeholder="19725" />
+            </div>
+            <div style={{ gridColumn:"1/-1" }}>
+              <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>INFO DE BULTO / PRESENTACIÓN</label>
+              <input value={form.bulkInfo} onChange={e => setForm({...form,bulkInfo:e.target.value})} style={input} placeholder="Ej: Bulto x 12 paquetes" />
+            </div>
+            <div style={{ gridColumn:"1/-1" }}>
+              <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>DESCRIPCIÓN</label>
+              <textarea value={form.description} onChange={e => setForm({...form,description:e.target.value})} style={{...input,height:80,resize:"vertical"}} placeholder="Descripción del producto..." />
+            </div>
+            <div style={{ gridColumn:"1/-1" }}>
+              <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>IMAGEN DEL PRODUCTO</label>
+              <input 
+                type="url" 
+                value={form.image_url} 
+                onChange={e => {
+                  setForm({...form, image_url: e.target.value});
+                  if (e.target.value.trim()) {
+                    saveImagePreview(e.target.value);
+                  } else {
+                    saveImagePreview(null);
+                  }
+                }} 
+                style={{...input, marginBottom:10}} 
+                placeholder="https://ejemplo.com/imagen.jpg (opcional)" 
+              />
+              <div style={{ marginTop:5 }}>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display:"none" }}
+                  onChange={onImageSelect}
+                />
+                <div style={{ 
+                  border:"2px dashed #E5E7EB", 
+                  borderRadius:12, 
+                  padding:20, 
+                  textAlign:"center", 
+                  cursor:"pointer", 
+                  transition:"all 0.2s",
+                  background:"#FAFAFA",
+                  position:"relative"
+                }}
+                  onClick={() => fileRef.current?.click()}
+                  onMouseOver={(e) => { e.target.style.borderColor="#C41E3A"; e.target.style.background="#FFF5F5"; }}
+                  onMouseOut={(e) => { e.target.style.borderColor="#E5E7EB"; e.target.style.background="#FAFAFA"; }}
+                >
+                  {imagePreview ? (
+                    <div style={{ position:"relative" }}>
+                      <img 
+                        src={imagePreview} 
+                        alt="Vista previa" 
+                        style={{ 
+                          width: "100%", 
+                          maxWidth:200, 
+                          height:150, 
+                          objectFit:"cover", 
+                          borderRadius:8,
+                          border:"1px solid #E5E7EB"
+                        }} 
+                      />
+                      <div style={{ position:"absolute", top:8, right:8, display:"flex", gap:4 }}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onClearImage();
+                          }}
+                          style={{
+                            background:"rgba(220, 38, 38, 0.9)",
+                            color:"white",
+                            border:"none",
+                            borderRadius:"50%",
+                            width:24,
+                            height:24,
+                            cursor:"pointer",
+                            display:"flex",
+                            alignItems:"center",
+                            justifyContent:"center",
+                            fontSize:12,
+                            fontWeight:"bold"
+                          }}
+                          title="Borrar imagen"
+                        >
+                          ×
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            fileRef.current?.click();
+                          }}
+                          style={{
+                            background:"rgba(59, 130, 246, 0.9)",
+                            color:"white",
+                            border:"none",
+                            borderRadius:"50%",
+                            width:24,
+                            height:24,
+                            cursor:"pointer",
+                            display:"flex",
+                            alignItems:"center",
+                            justifyContent:"center",
+                            fontSize:12,
+                            fontWeight:"bold"
+                          }}
+                          title="Cambiar imagen"
+                        >
+                          📷
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ fontSize:32, marginBottom:8 }}>📷</div>
+                      <div style={{ fontWeight:600, color:"#374151", marginBottom:4 }}>
+                        {uploadingImage ? "Subiendo imagen..." : "Hacé clic para subir imagen"}
+                      </div>
+                      <div style={{ fontSize:12, color:"#9CA3AF" }}>
+                        Formatos: JPG, PNG, GIF (máx. 5MB)
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {uploadingImage && (
+                  <div style={{ 
+                    marginTop:10, 
+                    textAlign:"center", 
+                    color:"#C41E3A", 
+                    fontSize:13, 
+                    fontWeight:500 
+                  }}>
+                    ⏳ Subiendo imagen a Supabase...
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div style={{ display:"flex", gap:10, marginTop:24 }}>
+            <button onClick={onSubmit} className="btn-red" style={{ flex:1, padding:14, fontSize:15, borderRadius:12, justifyContent:"center" }}>
+              {editing ? "💾 Guardar cambios" : "✅ Agregar producto"}
+            </button>
+            <button onClick={() => { setAdminTab("list"); setEditing(false); }} style={{ background:"#F4F4F5", color:"#6B7280", border:"none", borderRadius:12, padding:"14px 20px", cursor:"pointer", fontSize:14, fontFamily:"'Poppins',sans-serif" }}>
+              Cancelar
+            </button>
+          </div>
+          
+          {/* BOTÓN TEMPORAL DE PRUEBA */}
+          <div style={{ marginTop:20, padding:15, background:"#F0F9FF", borderRadius:8, border:"1px solid #3B82F6" }}>
+            <div style={{ fontSize:12, fontWeight:700, color:"#1E40AF", marginBottom:8 }}>🧪 PRUEBA DE INSERCIÓN</div>
+            <button 
+              onClick={() => {
+                // Llenar formulario con datos de prueba
+                setForm({
+                  id: "",
+                  category: "Frescos",
+                  name: "Producto de Prueba " + Date.now(),
+                  description: "Este es un producto de prueba para verificar upload y persistencia",
+                  price: "10000",
+                  bulkInfo: "Test bulk info",
+                  image_url: ""
+                });
+                setEditing(false);
+              }}
+              style={{ 
+                background:"#3B82F6", 
+                color:"white", 
+                border:"none", 
+                borderRadius:6, 
+                padding:"8px 12px", 
+                cursor:"pointer", 
+                fontSize:12,
+                width:"100%"
+              }}
+            >
+              🧪 Llenar con datos de prueba
+            </button>
+            <div style={{ fontSize:10, color:"#64748B", marginTop:5 }}>
+              Completa el formulario y agrega una imagen para probar el flujo completo
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: PRICES */}
+      {adminTab === "prices" && (
+        <PriceManagement 
+          products={products}
+          onUpdateSinglePrice={onUpdateSinglePrice}
+          onUpdateBulkPrices={onUpdateBulkPrices}
+          onPreviewBulkPriceChanges={onPreviewBulkPriceChanges}
+          priceHistory={priceHistory}
+        />
+      )}
+
+      {/* TAB: HISTORY */}
+      {adminTab === "history" && (
+        <PriceHistory priceHistory={priceHistory} />
+      )}
+
+      {/* TAB: RESTORE */}
+      {adminTab === "restore" && (
+        <RestorePoints 
+          restorePoints={restorePoints}
+          onCreateRestorePoint={onCreateRestorePoint}
+          onRestoreFromPoint={onRestoreFromPoint}
+        />
+      )}
+
+      {/* TAB: EXCEL */}
+      {adminTab === "excel" && (
+        <div style={{ background:"white", borderRadius:16, padding:24 }}>
+          <h3 style={{ margin:"0 0 6px", fontWeight:800 }}>📊 Importar desde Excel</h3>
+          <p style={{ color:"#6B7280", fontSize:14, marginBottom:20 }}>Subí tu lista de precios en Excel y los productos se cargan automáticamente.</p>
+          <div style={{ border:"2px dashed #E5E7EB", borderRadius:14, padding:36, textAlign:"center", cursor:"pointer", transition:"border-color 0.2s", background:"#FAFAFA" }}
+            onClick={() => fileRef.current?.click()}
+            onDragOver={e => e.preventDefault()}
+            onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if(f && fileRef.current){ fileRef.current.files = e.dataTransfer.files; fileRef.current.dispatchEvent(new Event("change",{bubbles:true})); } }}>
+            <div style={{ fontSize:52 }}>📁</div>
+            <div style={{ fontWeight:700, fontSize:16, marginTop:10 }}>Hacé clic o arrastrá tu Excel acá</div>
+            <div style={{ fontSize:13, color:"#9CA3AF", marginTop:4 }}>Formatos: .xlsx · .xls</div>
+          </div>
+          <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{ display:"none" }} onChange={onExcel} />
+
+          <div style={{ marginTop:20, background:"#F0FDF4", borderRadius:12, padding:16, border:"1px solid #BBF7D0" }}>
+            <div style={{ fontWeight:700, color:"#166534", marginBottom:8, fontSize:14 }}>📋 Columnas requeridas</div>
+            <div style={{ fontFamily:"monospace", fontSize:12, color:"#166534", lineHeight:1.9, background:"white", borderRadius:8, padding:"10px 14px", border:"1px solid #BBF7D0" }}>
+              nombre | categoria | precio | bulto | descripcion | imagen<br/>
+              <span style={{ color:"#9CA3AF" }}>
+                Salchichas x6 | Frescos | 19050 | Bulto x12 | Desc... | https://...<br/>
+                30 Panchos | Panchos Armados | 11700 | 30+30+1 | ... |
+              </span>
+            </div>
+          </div>
         </div>
       )}
     </div>
