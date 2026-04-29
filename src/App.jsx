@@ -871,7 +871,14 @@ export default function StarFamilyApp() {
     
     const { data, error } = await supabase
       .from('products')
-      .select('*');
+      .select(`
+        *,
+        categories (
+          name,
+          emoji,
+          color
+        )
+      `);
 
     console.log("📊 Respuesta Supabase:", { data: data?.length, error });
 
@@ -884,9 +891,10 @@ export default function StarFamilyApp() {
       console.log("✅ Datos recibidos:", data.length);
       console.log("📦 Muestra de datos:", data.slice(0, 2));
       
-      // Mapear para convertir bulk_info a bulkInfo
+      // Mapear para convertir bulk_info a bulkInfo y obtener categoría
       const mapped = data.map(p => ({
         ...p,
+        category: p.categories?.name || "Frescos",
         bulkInfo: p.bulk_info || "",
       }));
       
