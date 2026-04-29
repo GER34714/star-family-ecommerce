@@ -881,9 +881,19 @@ export default function StarFamilyApp() {
         ...p,
         bulkInfo: p.bulk_info || "",
       }));
-      
+
       setProducts(mapped);
-      setLoading(false); // <--- IMPORTANTE: Asegúrate de apagar el loading aquí
+      
+      // Guardar en Storage de forma asíncrona para no bloquear el render
+      setTimeout(() => {
+        setStorageItem("roxy_products", mapped);
+      }, 100);
+
+      // Apagar el loading al final de la cola de ejecución
+      setTimeout(() => {
+        setLoading(false);
+      }, 50);
+      
       return mapped;
     }
     return [];
