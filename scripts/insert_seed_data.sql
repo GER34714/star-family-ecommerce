@@ -1,0 +1,83 @@
+-- ═════════════════════════════════════════════════════
+-- INSERT DATOS INICIALES - STAR FAMILY E-COMMERCE
+-- ═════════════════════════════════════════════════════
+
+-- =====================================================
+-- 1. INSERTAR CATEGORÍAS (si no existen)
+-- =====================================================
+INSERT INTO categories (name, emoji, color) VALUES
+('Frescos', '🌭', '#E53E3E'),
+('Completos', '🌭', '#DD6B20'),
+('Panchos Armados', '🌭', '#D97706'),
+('Hamburguesas', '🍔', '#7C3AED'),
+('Pizzas y Empanadas', '🍕', '#2563EB'),
+('Medialunas y Chipas', '🥐', '#059669'),
+('Combos', '📦', '#C41E3A')
+ON CONFLICT (name) DO NOTHING;
+
+-- =====================================================
+-- 2. INSERTAR PRODUCTOS DE EJEMPLO
+-- =====================================================
+INSERT INTO products (id, name, description, price, bulk_info, image_url, category_id, active) VALUES
+-- FRESCOS
+(gen_random_uuid(), 'Salchichas Cortas x6', 'Salchichas cocidas y ahumadas sin piel. La clásica de siempre.', 19725.00, 'Bulto x 24 paquetes', '', (SELECT id FROM categories WHERE name = 'Frescos'), true),
+(gen_random_uuid(), 'Salchichas Largas x6', 'Salchichas largas cocidas y ahumadas sin piel.', 19050.00, 'Bulto x 12 paquetes', '', (SELECT id FROM categories WHERE name = 'Frescos'), true),
+(gen_random_uuid(), 'Salchichas Largas x18', 'Salchichas largas cocidas y ahumadas sin piel.', 19050.00, 'Bulto x 4 paquetes', '', (SELECT id FROM categories WHERE name = 'Frescos'), true),
+(gen_random_uuid(), 'Salchichita 500g', 'Salchichitas ideales para kioscos y eventos.', 3437.00, 'Bulto x 6 paquetes de 500gr', '', (SELECT id FROM categories WHERE name = 'Frescos'), true),
+(gen_random_uuid(), 'Premium Alemana x12', 'Línea premium tipo alemana. Sabor superior.', 35000.00, 'Bulto x 4 paquetes', '', (SELECT id FROM categories WHERE name = 'Frescos'), true),
+
+-- COMPLETOS
+(gen_random_uuid(), 'Completo Cortas', 'Kit completo con pan incluido. Listo para vender.', 19725.00, '144 Salchichas + 144 Panes', '', (SELECT id FROM categories WHERE name = 'Completos'), true),
+(gen_random_uuid(), 'Completo Largas (x18)', 'Salchichas largas con pan. Ideal para eventos y locales.', 34800.00, '72 Salchichas + 72 Panes', '', (SELECT id FROM categories WHERE name = 'Completos'), true),
+(gen_random_uuid(), 'Completo Largas (x6)', 'Formato alternativo con salchichas largas y pan.', 34800.00, '72 Salchichas (12paq x6) + 72 Panes', '', (SELECT id FROM categories WHERE name = 'Completos'), true),
+
+-- PANCHOS ARMADOS
+(gen_random_uuid(), '30 Panchos Cortos', 'Kit completo listo para armar. Panes + salchichas + aderezo.', 11700.00, '30 Panes + 30 Salchichas + 1 Aderezo', '', (SELECT id FROM categories WHERE name = 'Panchos Armados'), true),
+(gen_random_uuid(), '60 Panchos Cortos', 'Kit completo listo para armar. Panes + salchichas + aderezo.', 22200.00, '60 Panes + 60 Salchichas + 1 Aderezo', '', (SELECT id FROM categories WHERE name = 'Panchos Armados'), true),
+(gen_random_uuid(), '36 Panchos Largos', 'Kit completo listo para armar. Panes + salchichas + aderezo.', 21600.00, '36 Panes + 36 Salchichas + 1 Aderezo', '', (SELECT id FROM categories WHERE name = 'Panchos Armados'), true),
+(gen_random_uuid(), '72 Panchos Largos', 'Kit completo listo para armar. Panes + salchichas + aderezo.', 42000.00, '72 Panes + 72 Salchichas + 1 Aderezo', '', (SELECT id FROM categories WHERE name = 'Panchos Armados'), true),
+
+-- HAMBURGUESAS
+(gen_random_uuid(), '24 Hamburguesas Clásicas 69g', '24 panes + 24 medallones de carne + 1 aderezo.', 22900.00, '24 Panes + 24 Medallones + 1 Aderezo', '', (SELECT id FROM categories WHERE name = 'Hamburguesas'), true),
+(gen_random_uuid(), '60 Hamburguesas Clásicas 69g', '60 panes + 60 medallones de carne + 1 aderezo.', 55400.00, '60 Panes + 60 Medallones + 1 Aderezo', '', (SELECT id FROM categories WHERE name = 'Hamburguesas'), true),
+(gen_random_uuid(), '20 Hamburguesas Gigantes 110g', '20 panes + 20 medallones gigantes + 1 aderezo.', 26800.00, '20 Panes + 20 Medallones + 1 Aderezo', '', (SELECT id FROM categories WHERE name = 'Hamburguesas'), true),
+(gen_random_uuid(), '40 Hamburguesas Gigantes 110g', '40 panes + 40 medallones gigantes + 1 aderezo.', 52400.00, '40 Panes + 40 Medallones + 1 Aderezo', '', (SELECT id FROM categories WHERE name = 'Hamburguesas'), true),
+
+-- PIZZAS Y EMPANADAS
+(gen_random_uuid(), 'Pizzas Mozzarella x11', 'Pizza congelada con salsa de tomate y mozzarella. Lista para hornear.', 48125.00, 'Caja x 11 unidades · $4.375 c/u', '', (SELECT id FROM categories WHERE name = 'Pizzas y Empanadas'), true),
+(gen_random_uuid(), 'Empanadas Premium x42', 'Carne, pollo, jamón y queso, y verduras. Premium.', 36540.00, 'Caja x 42 unidades · $870 c/u', '', (SELECT id FROM categories WHERE name = 'Pizzas y Empanadas'), true),
+
+-- MEDIALUNAS Y CHIPAS
+(gen_random_uuid(), 'Chipa x4.5kg', 'Chipas artesanales premium.', 46875.00, 'Caja x 4.5 kg', '', (SELECT id FROM categories WHERE name = 'Medialunas y Chipas'), true),
+(gen_random_uuid(), 'Medialunas Crudas x96', 'Medialunas de manteca premium 55g c/u.', 40800.00, 'Caja x 96 unidades (55g c/u)', '', (SELECT id FROM categories WHERE name = 'Medialunas y Chipas'), true),
+
+-- COMBOS
+(gen_random_uuid(), 'Combo Pancho Largo', '1 salchicha larga + 1 pan + aderezos. El más vendido.', 3200.00, 'Caja x 12 combos de 6 (72 panchos)', '', (SELECT id FROM categories WHERE name = 'Combos'), true),
+(gen_random_uuid(), 'Combo Hamburguesa 69g', '1 medallón clásico + 1 pan + aderezos.', 3500.00, 'Caja x 15 combos de 4', '', (SELECT id FROM categories WHERE name = 'Combos'), true),
+(gen_random_uuid(), 'Combo Hamburguesa 110g', '1 medallón gigante + 1 pan + aderezos.', 4950.00, 'Caja x 10 combos de 4', '', (SELECT id FROM categories WHERE name = 'Combos'), true)
+ON CONFLICT DO NOTHING;
+
+-- =====================================================
+-- 3. VERIFICACIÓN DE DATOS INSERTADOS
+-- =====================================================
+SELECT '✅ Datos iniciales insertados exitosamente' as status;
+SELECT 
+    (SELECT COUNT(*) FROM categories) as categorias_insertadas,
+    (SELECT COUNT(*) FROM products) as productos_insertados;
+
+-- =====================================================
+-- 4. MOSTRAR PRODUCTOS INSERTADOS (para verificación)
+-- =====================================================
+SELECT 
+    p.id,
+    p.name,
+    p.description,
+    p.price,
+    p.bulk_info,
+    p.category_id,
+    c.name as category_name,
+    p.active,
+    p.created_at
+FROM products p
+LEFT JOIN categories c ON p.category_id = c.id
+ORDER BY c.name, p.name;
