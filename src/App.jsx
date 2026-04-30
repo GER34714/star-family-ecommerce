@@ -597,26 +597,60 @@ export default function StarFamilyApp() {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .upsert({
-          id: product.id,
-          category: product.category,
-          name: product.name,
-          description: product.description || '',
-          price: product.price,
-          bulk_info: product.bulkInfo || '',
-          image_url: product.image_url || '',
-          active: true
-        }, {
-          onConflict: 'id'
-        });
+      // ✅ FIX PRINCIPAL: Resolver category_id desde el nombre de categoría
+      const categoryId = await getCategoryId(supabase, product.category);
 
-      if (error) throw error;
-      console.log('✅ Producto guardado en Supabase:', product.name);
+      // Construir objeto a guardar según el esquema real de Supabase
+      const productData = {
+        name: product.name,
+        description: product.description || '',
+        price: product.price,
+        bulk_info: product.bulkInfo || '',
+        image_url: product.image_url || '',
+        active: true,
+      };
+
+      // Solo incluir category_id si fue encontrado
+      if (categoryId) {
+        productData.category_id = categoryId;
+      }
+
+      let result;
+
+      // Si el ID parece un UUID real de Supabase (36 chars con guiones), hacer upsert
+      // Si es un ID local generado por la app (prod_XXX, xl_XXX), hacer insert
+      const isSupabaseId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(product.id);
+
+      if (isSupabaseId) {
+        // UPDATE: producto ya existe en Supabase
+        result = await supabase
+          .from('products')
+          .update(productData)
+          .eq('id', product.id)
+          .select()
+          .single();
+      } else {
+        // INSERT: producto nuevo, dejar que Supabase genere el UUID
+        result = await supabase
+          .from('products')
+          .insert(productData)
+          .select()
+          .single();
+      }
+
+      if (result.error) throw result.error;
+
+      console.log('✅ Producto guardado en Supabase:', product.name, result.data);
+
+      // ✅ Si era un producto nuevo, devolver el nuevo ID de Supabase
+      // para que el estado local quede sincronizado
+      if (!isSupabaseId && result.data?.id) {
+        return result.data.id; // nuevo UUID de Supabase
+      }
+
       return true;
     } catch (error) {
-      console.error('Error guardando producto en Supabase:', error);
+      console.error('Error guardando producto en Supabase:', error.message, error);
       return false;
     }
   };
@@ -1387,14 +1421,24 @@ export default function StarFamilyApp() {
       // Guardar localmente SIN sincronizar para evitar duplicados
       await saveProducts(updatedProducts, true, false); // Omitir sincronización automática
       // Sincronizar individualmente con Supabase
-      await saveProductToSupabase(p);
+      const result = await saveProductToSupabase(p);
       console.log('✏️ Producto actualizado en la lista y en Supabase');
       showToast("✏️ Producto actualizado", "success");
     } else {
       // Agregar nuevo producto
       await saveProducts([...products, p], true, false); // Omitir sincronización automática
       // Sincronizar individualmente con Supabase
-      await saveProductToSupabase(p);
+      const newSupabaseId = await saveProductToSupabase(p);
+      
+      // ✅ FIX: Si se creó un nuevo producto, actualizar el ID local con el UUID de Supabase
+      if (newSupabaseId && typeof newSupabaseId === 'string') {
+        const updatedProductsWithSupabaseId = products.map(x => 
+          x.id === p.id ? { ...x, id: newSupabaseId } : x
+        );
+        await saveProducts(updatedProductsWithSupabaseId, true, false);
+        console.log('✅ ID local actualizado con UUID de Supabase:', newSupabaseId);
+      }
+      
       console.log('➕ Producto agregado a la lista y en Supabase');
       showToast("➕ Producto agregado", "success");
     }
