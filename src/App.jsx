@@ -79,6 +79,32 @@ export default function StarFamilyApp() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const fileRef = useRef();
+  
+  // Cache de categorías para no consultar en cada guardado
+  const categoryCacheRef = useRef({});
+
+  // Obtener category_id desde el nombre de categoría
+  const getCategoryId = async (supabase, categoryName) => {
+    if (categoryCacheRef.current[categoryName]) {
+      return categoryCacheRef.current[categoryName];
+    }
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('name', categoryName)
+        .single();
+      if (error || !data) {
+        console.warn('⚠️ Categoría no encontrada en Supabase:', categoryName);
+        return null;
+      }
+      categoryCacheRef.current[categoryName] = data.id;
+      return data.id;
+    } catch (err) {
+      console.error('Error buscando categoría:', err);
+      return null;
+    }
+  };
   const [hideFloatingButtons, setHideFloatingButtons] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
