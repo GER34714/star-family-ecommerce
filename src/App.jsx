@@ -103,6 +103,88 @@ export default function StarFamilyApp() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(12);
   
+  // Estados para filtros del panel admin
+  const [adminFilters, setAdminFilters] = useState({
+    searchTerm: '',
+    category: '',
+    status: 'all'
+  });
+  const [filteredProducts, setFilteredProducts] = useState([]);
+
+  // Función para filtrar productos del panel admin
+  const filterAdminProducts = (products, filters) => {
+    return products.filter(product => {
+      if (!product) return false;
+      
+      // Filtro por nombre
+      if (filters.searchTerm && !product.name?.toLowerCase().includes(filters.searchTerm.toLowerCase())) {
+        return false;
+      }
+      
+      // Filtro por categoría
+      if (filters.category && product.category !== filters.category) {
+        return false;
+      }
+      
+      // Filtro por estado (activo/inactivo)
+      if (filters.status === 'active' && !product.active) {
+        return false;
+      }
+      if (filters.status === 'inactive' && product.active) {
+        return false;
+      }
+      
+      return true;
+    });
+  };
+
+  // Efecto para actualizar productos filtrados
+  useEffect(() => {
+    const filtered = filterAdminProducts(products, adminFilters);
+    setFilteredProducts(filtered);
+  }, [products, adminFilters]);
+
+  // Event listeners para filtros del panel admin
+  useEffect(() => {
+    // Inicializar variables globales
+    window.adminSearchTerm = '';
+    window.adminCategoryFilter = '';
+    window.adminStatusFilter = 'all';
+    
+    const handleSearch = (e) => {
+      setAdminFilters(prev => ({ ...prev, searchTerm: e.detail.searchTerm }));
+    };
+    
+    const handleCategoryFilter = (e) => {
+      setAdminFilters(prev => ({ ...prev, category: e.detail.category }));
+    };
+    
+    const handleStatusFilter = (e) => {
+      setAdminFilters(prev => ({ ...prev, status: e.detail.status }));
+    };
+    
+    const handleClearFilters = () => {
+      setAdminFilters({ searchTerm: '', category: '', status: 'all' });
+      window.adminSearchTerm = '';
+      window.adminCategoryFilter = '';
+      window.adminStatusFilter = 'all';
+    };
+    
+    // Agregar event listeners
+    window.addEventListener('adminSearch', handleSearch);
+    window.addEventListener('adminCategoryFilter', handleCategoryFilter);
+    window.addEventListener('adminStatusFilter', handleStatusFilter);
+    window.addEventListener('adminClearFilters', handleClearFilters);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('adminSearch', handleSearch);
+      window.removeEventListener('adminCategoryFilter', handleCategoryFilter);
+      window.removeEventListener('adminStatusFilter', handleStatusFilter);
+      window.removeEventListener('adminClearFilters', handleClearFilters);
+    };
+  }, []);
+  
   // Cache de categorías para no consultar en cada guardado
   const categoryCacheRef = useRef({});
 
@@ -2145,7 +2227,9 @@ export default function StarFamilyApp() {
         </>
       ) : (
         <AdminPanel 
-            products={products} 
+            products={products}
+            filteredProducts={filteredProducts} 
+            adminFilters={adminFilters}
             form={form} 
             setForm={setForm} 
             editing={editing} 
@@ -2200,6 +2284,7 @@ export default function StarFamilyApp() {
             setEmail={setEmail}
             setPassword={setPassword}
             authLoading={localAuthLoading}
+            saveImagePreview={saveImagePreview}
           />
       )}
 
@@ -3548,7 +3633,7 @@ function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint
 // ADMIN PANEL
 // ═══════════════════════════════════════════════════════
 
-function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading }) {
+function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview }) {
   const input = { width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" };
   const ADMIN_CATS = ['Frescos', 'Completos', 'Panchos Armados', 'Hamburguesas', 'Pizzas y Empanadas', 'Medialunas y Chipas', 'Combos'];
 
@@ -3647,14 +3732,154 @@ function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, se
       {adminTab === "list" && (
         <div>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, flexWrap:"wrap", gap:8 }}>
-            <span style={{ fontWeight:700 }}>{products.length} productos en catálogo</span>
+            <div>
+              <span style={{ fontWeight:700 }}>{filteredProducts.length} de {products.length} productos</span>
+              {(adminFilters.searchTerm || adminFilters.category || adminFilters.status !== 'all') && (
+                <span style={{ fontSize:12, color:"#6B7280", marginLeft:8 }}>
+                  • Filtrando
+                </span>
+              )}
+            </div>
             <div style={{ display:"flex", gap:8 }}>
               <button onClick={() => { setEditing(false); setForm({ id:"", category:"Frescos", name:"", description:"", price:"", bulkInfo:"", image:"", custom_badge:"" }); setAdminTab("add"); }} className="btn-red" style={{ padding:"8px 14px", fontSize:13 }}>+ Nuevo</button>
             </div>
           </div>
+          
+          {/* FILTROS DE BÚSQUEDA */}
+          <div style={{ background:"white", borderRadius:12, padding:16, marginBottom:16, border:"1px solid #E5E7EB" }}>
+            <div style={{ fontWeight:700, marginBottom:12, color:"#374151", fontSize:14 }}>🔍 Filtros de Búsqueda</div>
+            
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+              {/* Búsqueda por nombre */}
+              <div>
+                <label style={{ display:"block", fontSize:12, fontWeight:600, color:"#6B7280", marginBottom:6 }}>Buscar por nombre</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Salchicha, Hamburguesa..."
+                  style={{ width:"100%", padding:"8px 12px", borderRadius:8, border:"1px solid #E5E7EB", fontSize:13, fontFamily:"'Poppins',sans-serif", outline:"none" }}
+                  onChange={(e) => {
+                    const searchTerm = e.target.value.toLowerCase();
+                    window.adminSearchTerm = searchTerm;
+                    const event = new CustomEvent('adminSearch', { detail: { searchTerm } });
+                    window.dispatchEvent(event);
+                  }}
+                />
+              </div>
+              
+              {/* Filtro por categoría */}
+              <div>
+                <label style={{ display:"block", fontSize:12, fontWeight:600, color:"#6B7280", marginBottom:6 }}>Categoría</label>
+                <select
+                  style={{ width:"100%", padding:"8px 12px", borderRadius:8, border:"1px solid #E5E7EB", fontSize:13, fontFamily:"'Poppins',sans-serif", outline:"none", background:"white" }}
+                  onChange={(e) => {
+                    const category = e.target.value;
+                    window.adminCategoryFilter = category;
+                    const event = new CustomEvent('adminCategoryFilter', { detail: { category } });
+                    window.dispatchEvent(event);
+                  }}
+                >
+                  <option value="">Todas las categorías</option>
+                  {['Frescos', 'Completos', 'Panchos Armados', 'Hamburguesas', 'Pizzas y Empanadas', 'Medialunas y Chipas', 'Combos'].map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+            {/* Filtro por estado */}
+            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#6B7280", marginBottom:0 }}>Estado:</label>
+              <div style={{ display:"flex", gap:6 }}>
+                <button
+                  onClick={() => {
+                    window.adminStatusFilter = 'all';
+                    const event = new CustomEvent('adminStatusFilter', { detail: { status: 'all' } });
+                    window.dispatchEvent(event);
+                  }}
+                  style={{
+                    padding:"6px 12px",
+                    borderRadius:6,
+                    border:"1px solid #E5E7EB",
+                    background:window.adminStatusFilter === 'all' ? "#C41E3A" : "white",
+                    color:window.adminStatusFilter === 'all' ? "white" : "#374151",
+                    fontSize:12,
+                    fontWeight:600,
+                    cursor:"pointer"
+                  }}
+                >
+                  Todos
+                </button>
+                <button
+                  onClick={() => {
+                    window.adminStatusFilter = 'active';
+                    const event = new CustomEvent('adminStatusFilter', { detail: { status: 'active' } });
+                    window.dispatchEvent(event);
+                  }}
+                  style={{
+                    padding:"6px 12px",
+                    borderRadius:6,
+                    border:"1px solid #E5E7EB",
+                    background:window.adminStatusFilter === 'active' ? "#059669" : "white",
+                    color:window.adminStatusFilter === 'active' ? "white" : "#374151",
+                    fontSize:12,
+                    fontWeight:600,
+                    cursor:"pointer"
+                  }}
+                >
+                  ✅ Activos
+                </button>
+                <button
+                  onClick={() => {
+                    window.adminStatusFilter = 'inactive';
+                    const event = new CustomEvent('adminStatusFilter', { detail: { status: 'inactive' } });
+                    window.dispatchEvent(event);
+                  }}
+                  style={{
+                    padding:"6px 12px",
+                    borderRadius:6,
+                    border:"1px solid #E5E7EB",
+                    background:window.adminStatusFilter === 'inactive' ? "#DC2626" : "white",
+                    color:window.adminStatusFilter === 'inactive' ? "white" : "#374151",
+                    fontSize:12,
+                    fontWeight:600,
+                    cursor:"pointer"
+                  }}
+                >
+                  ❌ Inactivos
+                </button>
+              </div>
+            </div>
+            
+            {/* Botón para limpiar filtros */}
+            <div style={{ marginTop:12, textAlign:"right" }}>
+              <button
+                onClick={() => {
+                  window.adminSearchTerm = '';
+                  window.adminCategoryFilter = '';
+                  window.adminStatusFilter = 'all';
+                  document.querySelector('input[placeholder="Ej: Salchicha, Hamburguesa..."]').value = '';
+                  document.querySelector('select').value = '';
+                  const event = new CustomEvent('adminClearFilters', {});
+                  window.dispatchEvent(event);
+                }}
+                style={{
+                  padding:"6px 12px",
+                  borderRadius:6,
+                  border:"1px solid #6B7280",
+                  background:"white",
+                  color:"#6B7280",
+                  fontSize:12,
+                  fontWeight:600,
+                  cursor:"pointer"
+                }}
+              >
+                🔄 Limpiar filtros
+              </button>
+            </div>
+          </div>
           <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-            {products && products.length > 0 ? (
-              products.filter(Boolean).map(p => (
+            {filteredProducts && filteredProducts.length > 0 ? (
+              filteredProducts.filter(Boolean).map(p => (
               <div key={p.id} style={{ background:"white", borderRadius:12, padding:"12px 16px", display:"flex", gap:12, alignItems:"center", boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
                 <div style={{ width:46, height:46, borderRadius:10, background:`${CAT_COLOR[p?.category]||"#C41E3A"}18`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0, overflow:"hidden" }}>
                   {p?.image_url ? <img src={p?.image_url} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" onError={e => { e.target.src = "https://via.placeholder.com/46x46/f5a623/ffffff?text=SF"; }} /> : (CAT_EMOJI[p?.category]||"🍖")}
@@ -3673,6 +3898,17 @@ function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, se
                 </div>
               </div>
             ))
+            ) : filteredProducts.length === 0 ? (
+              <div style={{ textAlign:"center", padding:40, color:"#6B7280" }}>
+                <div style={{ fontSize:48, marginBottom:16 }}>🔍</div>
+                <div style={{ fontSize:18, fontWeight:600, marginBottom:8 }}>No se encontraron productos</div>
+                <div style={{ fontSize:14 }}>
+                  {(adminFilters.searchTerm || adminFilters.category || adminFilters.status !== 'all') 
+                    ? "Intenta con otros filtros o limpiar los filtros para ver todos los productos"
+                    : "No hay productos disponibles"
+                  }
+                </div>
+              </div>
             ) : (
               <div style={{ textAlign:"center", padding:40, color:"#6B7280" }}>
                 <div style={{ fontSize:48, marginBottom:16 }}>📦</div>
