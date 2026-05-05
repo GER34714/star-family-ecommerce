@@ -412,6 +412,8 @@ export default function StarFamilyApp() {
   const [showInstallPopup, setShowInstallPopup] = useState(false);
   const [popupPosition, setPopupPosition] = useState('floating'); // 'floating' o 'footer'
   const [priceHistory, setPriceHistory] = useState([]);
+  const [loadingPriceHistory, setLoadingPriceHistory] = useState(false);
+  const [priceHistoryError, setPriceHistoryError] = useState(null);
   const [restorePoints, setRestorePoints] = useState([]);
   const [loadingRestorePoints, setLoadingRestorePoints] = useState(false);
   const [restorePointsError, setRestorePointsError] = useState(null);
@@ -912,6 +914,9 @@ export default function StarFamilyApp() {
       // Cargar puntos de restauración desde Supabase
       await loadRestorePointsFromSupabase();
       
+      // Cargar historial de precios desde Supabase
+      await loadPriceHistoryFromSupabase();
+      
     } catch (err) {
       console.error("❌ Error en la inicialización:", err);
     } finally {
@@ -938,7 +943,7 @@ export default function StarFamilyApp() {
     // }
   };
   const saveCart = async (c) => { setCart(c); setStorageItem("roxy_cart", c); };
-  const savePriceHistory = async (h) => { setPriceHistory(h); setStorageItem("roxy_price_history", h); };
+  const savePriceHistory = async (h) => { setPriceHistory(h); }; // Removed localStorage usage
   const saveRestorePoints = async (rp) => { 
     // Ya no usamos localStorage para restore points, van a Supabase
     setRestorePoints(rp); 
@@ -1022,26 +1027,12 @@ export default function StarFamilyApp() {
 
     try {
       const entryData = {
-        id: historyEntry.id,
         product_id: historyEntry.productId,
         product_name: historyEntry.productName,
-        category: historyEntry.category,
-        type: historyEntry.type,
         old_price: historyEntry.oldPrice,
         new_price: historyEntry.newPrice,
-        difference: historyEntry.difference,
-        percentage_change: historyEntry.percentageChange,
-        user_email: historyEntry.user,
-        timestamp: historyEntry.timestamp
+        changed_by: historyEntry.user || user?.email || 'unknown'
       };
-
-      // Agregar campos específicos para cambios masivos
-      if (historyEntry.type === 'bulk') {
-        entryData.adjustment_type = historyEntry.adjustmentType;
-        entryData.adjustment_value = historyEntry.adjustmentValue;
-        entryData.affected_categories = historyEntry.affectedCategories;
-        entryData.changes_count = historyEntry.changesCount;
-      }
 
       const { data, error } = await supabase
         .from('price_history')
@@ -1052,7 +1043,7 @@ export default function StarFamilyApp() {
       return true;
     } catch (error) {
       console.error('Error guardando historial en Supabase:', error);
-      return false;
+      throw error;
     }
   };
 
@@ -1063,15 +1054,19 @@ export default function StarFamilyApp() {
   const loadPriceHistoryFromSupabase = async () => {
     const supabase = getSupabaseClient();
     if (!supabase) {
-      console.warn('Configuración de Supabase no disponible, usando historial local');
+      console.warn('Configuración de Supabase no disponible para historial de precios');
+      setPriceHistoryError('Configuración de Supabase no disponible');
       return;
     }
+
+    setLoadingPriceHistory(true);
+    setPriceHistoryError(null);
 
     try {
       const { data, error } = await supabase
         .from('price_history')
         .select('*')
-        .order('timestamp', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(100);
 
       if (error) throw error;
@@ -1080,34 +1075,29 @@ export default function StarFamilyApp() {
         // Convertir datos al formato local
         const localHistory = data.map(entry => ({
           id: entry.id,
-          timestamp: entry.timestamp,
-          type: entry.type,
+          timestamp: entry.created_at,
           productId: entry.product_id,
           productName: entry.product_name,
-          category: entry.category,
           oldPrice: entry.old_price,
           newPrice: entry.new_price,
-          difference: entry.difference,
-          percentageChange: entry.percentage_change,
-          user: entry.user_email,
-          // Campos para cambios masivos
-          adjustmentType: entry.adjustment_type,
-          adjustmentValue: entry.adjustment_value,
-          affectedCategories: entry.affected_categories,
-          changesCount: entry.changes_count,
-          changes: [] // Los cambios individuales no se guardan en Supabase por simplicidad
+          user: entry.changed_by,
+          type: 'individual', // Todos los registros son individuales en la nueva tabla
+          category: '', // No se guarda categoría en la nueva tabla
+          difference: entry.new_price - entry.old_price,
+          percentageChange: ((entry.new_price - entry.old_price) / entry.old_price * 100).toFixed(2)
         }));
 
-        // Actualizar historial local
-        const mergedHistory = [...localHistory, ...priceHistory.filter(local => 
-          !localHistory.some(supabase => supabase.id === local.id)
-        )].slice(0, 100);
-
-        await savePriceHistory(mergedHistory);
+        setPriceHistory(localHistory);
         console.log(`📊 Historial cargado desde Supabase: ${data.length} cambios`);
+      } else {
+        setPriceHistory([]);
+        console.log('📊 No hay historial de precios en Supabase');
       }
     } catch (error) {
       console.error('Error cargando historial desde Supabase:', error);
+      setPriceHistoryError('Error al cargar historial de precios');
+    } finally {
+      setLoadingPriceHistory(false);
     }
   };
 
@@ -1581,25 +1571,7 @@ export default function StarFamilyApp() {
       p.id === productId ? { ...p, price: parseFloat(newPrice) } : p
     );
     
-    // Registrar cambio en historial
-    const historyEntry = {
-      id: `hist_${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      type: 'individual',
-      productId: productId,
-      productName: product.name,
-      category: product.category,
-      oldPrice: oldPrice,
-      newPrice: parseFloat(newPrice),
-      difference: parseFloat(newPrice) - oldPrice,
-      percentageChange: ((parseFloat(newPrice) - oldPrice) / oldPrice * 100).toFixed(2),
-      user: user?.email || 'unknown'
-    };
-    
-    const newHistory = [historyEntry, ...priceHistory].slice(0, 100); // Mantener últimos 100 cambios
-    
-    // Guardar localmente
-    savePriceHistory(newHistory);
+    // Guardar productos actualizados
     saveProducts(updatedProducts);
     
     // Sincronizar producto individual con Supabase
@@ -1608,13 +1580,25 @@ export default function StarFamilyApp() {
       await saveProductToSupabase(updatedProduct);
     }
     
-    // Guardar historial en Supabase
+    // Insertar cambio individual en historial de Supabase
     try {
+      const historyEntry = {
+        productId: productId,
+        productName: product.name,
+        oldPrice: oldPrice,
+        newPrice: parseFloat(newPrice),
+        user: user?.email || 'unknown'
+      };
+      
       await savePriceHistoryToSupabase(historyEntry);
+      
+      // Recargar historial desde Supabase para mantener sincronización
+      await loadPriceHistoryFromSupabase();
+      
       showToast("✅ Precio actualizado e historial guardado", "success");
     } catch (error) {
       console.error('Error guardando historial en Supabase:', error);
-      showToast("✅ Precio actualizado localmente", "success");
+      showToast("✅ Precio actualizado (error guardando historial)", "warning");
     }
   };
 
@@ -1623,8 +1607,6 @@ export default function StarFamilyApp() {
     await createRestorePoint(`Antes de ajuste masivo (${adjustmentType} ${value})`);
     
     let updatedCount = 0;
-    const changes = [];
-    
     const updatedProducts = products.map(p => {
       // Si hay categorías seleccionadas, solo afectar a esas
       if (selectedCategories.length > 0 && !selectedCategories.includes(p.category)) {
@@ -1644,42 +1626,17 @@ export default function StarFamilyApp() {
       
       if (newPrice !== p.price) {
         updatedCount++;
-        changes.push({
-          productId: p.id,
-          productName: p.name,
-          category: p.category,
-          oldPrice: p.price,
-          newPrice: newPrice,
-          difference: newPrice - p.price,
-          percentageChange: ((newPrice - p.price) / p.price * 100).toFixed(2)
-        });
         return { ...p, price: newPrice };
       }
       return p;
     });
     
-    // Registrar cambios en historial
-    const historyEntry = {
-      id: `hist_${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      type: 'bulk',
-      adjustmentType: adjustmentType,
-      adjustmentValue: parseFloat(value),
-      affectedCategories: selectedCategories.length > 0 ? selectedCategories : ['Todas'],
-      changesCount: updatedCount,
-      changes: changes,
-      user: user?.email || 'unknown'
-    };
-    
-    const newHistory = [historyEntry, ...priceHistory].slice(0, 100); // Mantener últimos 100 cambios
-    
-    // Guardar localmente
-    savePriceHistory(newHistory);
+    // Guardar productos actualizados
     saveProducts(updatedProducts);
     
     // Sincronizar productos actualizados con Supabase
     const syncPromises = updatedProducts
-      .filter(p => changes.some(c => c.productId === p.id))
+      .filter(p => p.price !== products.find(orig => orig.id === p.id)?.price)
       .map(p => saveProductToSupabase(p));
     
     try {
@@ -1689,13 +1646,34 @@ export default function StarFamilyApp() {
       console.error('Error sincronizando productos con Supabase:', error);
     }
     
-    // Guardar historial en Supabase
+    // Insertar cambios individuales en historial de Supabase
     try {
-      await savePriceHistoryToSupabase(historyEntry);
+      const changes = [];
+      updatedProducts.forEach(p => {
+        const originalProduct = products.find(orig => orig.id === p.id);
+        if (originalProduct && p.price !== originalProduct.price) {
+          changes.push({
+            productId: p.id,
+            productName: p.name,
+            oldPrice: originalProduct.price,
+            newPrice: p.price,
+            user: user?.email || 'unknown'
+          });
+        }
+      });
+      
+      // Insertar cada cambio individualmente en Supabase
+      for (const change of changes) {
+        await savePriceHistoryToSupabase(change);
+      }
+      
+      // Recargar historial desde Supabase para mantener sincronización
+      await loadPriceHistoryFromSupabase();
+      
       showToast(`✅ ${updatedCount} precios actualizados e historial guardado`, "success");
     } catch (error) {
       console.error('Error guardando historial en Supabase:', error);
-      showToast(`✅ ${updatedCount} precios actualizados localmente`, "success");
+      showToast(`✅ ${updatedCount} precios actualizados (error guardando historial)`, "warning");
     }
     
     return updatedCount;
@@ -2409,6 +2387,8 @@ export default function StarFamilyApp() {
             onUpdateBulkPrices={updateBulkPrices}
             onPreviewBulkPriceChanges={previewBulkPriceChanges}
             priceHistory={priceHistory}
+            loadingPriceHistory={loadingPriceHistory}
+            priceHistoryError={priceHistoryError}
             onMigrateImages={migrateExistingImagesToSupabase}
             restorePoints={restorePoints}
             onCreateRestorePoint={createRestorePoint}
@@ -2526,7 +2506,7 @@ export default function StarFamilyApp() {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
                 </svg>
-                <div>🕙 10 a 21hs</div>
+                <div>10 a 21hs</div>
               </div>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                 <a
@@ -3447,7 +3427,7 @@ function PriceManagement({ products, onUpdateSinglePrice, onUpdateBulkPrices, on
 // PRICE HISTORY COMPONENT
 // ═══════════════════════════════════════════════════════
 
-function PriceHistory({ priceHistory }) {
+function PriceHistory({ priceHistory, loading, error }) {
   const formatDate = (timestamp) => {
     const date = new Date(timestamp);
     return date.toLocaleString('es-AR', {
@@ -3464,6 +3444,40 @@ function PriceHistory({ priceHistory }) {
   const formatPrice = (price) => {
     return `$${Number(price).toLocaleString('es-AR')}`;
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div style={{ background:"white", borderRadius:16, padding:24 }}>
+        <h3 style={{ margin:"0 0 6px", fontWeight:800 }}>📜 Historial de Cambios de Precios</h3>
+        <p style={{ color:"#6B7280", fontSize:14, marginBottom:20 }}>
+          Registro completo de todos los cambios de precios con fecha y hora.
+        </p>
+        <div style={{ textAlign:"center", padding:40, color:"#9CA3AF" }}>
+          <div style={{ fontSize:48, marginBottom:12 }}>⏳</div>
+          <div style={{ fontSize:16, fontWeight:600, marginBottom:4 }}>Cargando historial...</div>
+          <div style={{ fontSize:13 }}>Obteniendo datos desde Supabase</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div style={{ background:"white", borderRadius:16, padding:24 }}>
+        <h3 style={{ margin:"0 0 6px", fontWeight:800 }}>📜 Historial de Cambios de Precios</h3>
+        <p style={{ color:"#6B7280", fontSize:14, marginBottom:20 }}>
+          Registro completo de todos los cambios de precios con fecha y hora.
+        </p>
+        <div style={{ textAlign:"center", padding:40, color:"#DC2626" }}>
+          <div style={{ fontSize:48, marginBottom:12 }}>⚠️</div>
+          <div style={{ fontSize:16, fontWeight:600, marginBottom:4 }}>Error al cargar historial</div>
+          <div style={{ fontSize:13 }}>{error}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ background:"white", borderRadius:16, padding:24 }}>
@@ -3837,7 +3851,7 @@ function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint
 // ADMIN PANEL
 // ═══════════════════════════════════════════════════════
 
-function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint, onDeleteRestorePoint, loadingRestorePoints, restorePointsError, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview }) {
+function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint, onDeleteRestorePoint, loadingRestorePoints, restorePointsError, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview, loadingPriceHistory, priceHistoryError }) {
   const input = { width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" };
   const ADMIN_CATS = ['Frescos', 'Completos', 'Panchos Armados', 'Hamburguesas', 'Pizzas y Empanadas', 'Medialunas y Chipas', 'Combos'];
 
@@ -4449,7 +4463,11 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
 
       {/* TAB: HISTORY */}
       {adminTab === "history" && (
-        <PriceHistory priceHistory={priceHistory} />
+        <PriceHistory 
+          priceHistory={priceHistory} 
+          loading={loadingPriceHistory}
+          error={priceHistoryError}
+        />
       )}
 
       {/* TAB: RESTORE */}
