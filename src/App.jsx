@@ -99,6 +99,10 @@ export default function StarFamilyApp() {
   const [toast, setToast] = useState(null);
   const fileRef = useRef();
   
+  // Estados de paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(12);
+  
   // Cache de categorías para no consultar en cada guardado
   const categoryCacheRef = useRef({});
 
@@ -349,6 +353,42 @@ export default function StarFamilyApp() {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
+
+  // Memos para cálculos dinámicos
+  const filtered = useMemo(() => {
+    let filtered = products.filter(p => 
+      p && typeof p === 'object' && p.id && (
+        cat === "Todos" || p.category === cat
+      )
+    );
+
+    // Aplicar filtros de búsqueda
+    if (searchTerm) {
+      filtered = filtered.filter(p => 
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.category?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Aplicar filtros de precio
+    if (priceRange.min) {
+      filtered = filtered.filter(p => p.price >= parseFloat(priceRange.min));
+    }
+    if (priceRange.max) {
+      filtered = filtered.filter(p => p.price <= parseFloat(priceRange.max));
+    }
+
+    return filtered;
+  }, [products, cat, searchTerm, priceRange]);
+
+  const totalPages = useMemo(() => Math.ceil(filtered.length / itemsPerPage), [filtered.length, itemsPerPage]);
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filtered.slice(startIndex, endIndex);
+  }, [filtered, currentPage, itemsPerPage]);
 
   // Efecto para manejar la visibilidad de botones flotantes
   useEffect(() => {
@@ -1067,48 +1107,24 @@ export default function StarFamilyApp() {
     }
   };
 
-  const addToCart = (product, q = 1) => {
-    const ex = cart.find(i => i.id === product.id);
-    saveCart(ex ? cart.map(i => i.id === product.id ? {...i, qty: i.qty + q} : i) : [...cart, {...product, qty: q}]);
-    setModal(null);
-    showToast(`✅ ${product.name} agregado al carrito`);
+  const addToCart = (p, qty) => {
+    const existing = cart.find(i => i.id === p.id);
+    if (existing) {
+      saveCart(cart.map(i => i.id === p.id ? {...i, qty: i.qty + qty} : i));
+    } else {
+      saveCart([...cart, {...p, qty}]);
+    }
+    showToast("🛒 " + p.name + " agregado", "success");
   };
-  const removeFromCart = (id) => saveCart(cart.filter(i => i.id !== id));
-  const cartTotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
-  const cartCount = cart.reduce((s, i) => s + i.qty, 0);
+  const removeFromCart = (id) => { saveCart(cart.filter(i => i.id !== id)); };
+  const cartCount = useMemo(() => cart.reduce((sum, i) => sum + i.qty, 0), [cart]);
+  const cartTotal = useMemo(() => cart.reduce((sum, i) => sum + (i.price * i.qty), 0), [cart]);
 
-  const filtered = useMemo(() => {
-  let result = products || [];
   
-  // Filtrar por categoría
-  if (cat !== "Todos") {
-    result = result.filter(p => p && typeof p === 'object' && p?.category && p?.category === cat);
-  }
-  // "Todos" incluye productos con y sin categoría
-  
-  // Filtrar por término de búsqueda
-  if (searchTerm.trim()) {
-    result = result.filter(p => 
-      p && typeof p === 'object' && (
-        (p.name && p.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
-    );
-  }
-  
-  // Filtrar por rango de precios
-  const minPrice = priceRange.min ? parseFloat(priceRange.min) : 0;
-  const maxPrice = priceRange.max ? parseFloat(priceRange.max) : Infinity;
-  
-  result = result.filter(p => 
-    p && typeof p === 'object' && 
-    p.price && 
-    p.price >= minPrice && 
-    p.price <= maxPrice
-  );
-  
-  return result;
-}, [products, cat, searchTerm, priceRange]);
+  // Resetear página actual cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [cat, searchTerm, priceRange]);
   
   
   // Verificar si la categoría seleccionada aún existe en availableCategories
@@ -1116,26 +1132,6 @@ export default function StarFamilyApp() {
     console.log('⚠️ Categoría seleccionada ya no existe, cambiando a "Todos":', cat);
     setCat("Todos");
   }
-
-  // DIAGNÓSTICO: Verificar estado de productos y filtered
-  console.log("🔍 DIAGNÓSTICO DE RENDERIZADO:", {
-    categoriaSeleccionada: cat,
-    totalProducts: products?.length || 0,
-    filteredLength: filtered?.length || 0,
-    availableCategories: availableCategories,
-    products: products?.map(p => ({
-      id: p?.id,
-      name: p?.name,
-      category: p?.category,
-      price: p?.price
-    })),
-    filtered: filtered?.map(p => ({
-      id: p?.id,
-      name: p?.name,
-      category: p?.category,
-      price: p?.price
-    }))
-  });
 
   const loadProductsFromSupabase = async () => {
   try {
@@ -1717,20 +1713,7 @@ export default function StarFamilyApp() {
     setEditing(false);
     setAdminTab("list");
     
-    // FORZAR RECARGA DESDE SUPABASE: Limpiar caché y recargar datos frescos
-    localStorage.removeItem("roxy_products");
-    setTimeout(async () => {
-      try {
-        await loadProductsFromSupabase();
-        // También recargar categorías por si hubo cambios
-        await loadAvailableCategories();
-        console.log('🔄 Datos y categorías recargados desde Supabase después de guardar');
-      } catch (error) {
-        console.error('Error en recarga post-guardado:', error);
-      }
-    }, 100);
-    
-    console.log('🧹 handleFormSubmit - Limpieza y recarga completadas');
+    console.log('✅ Producto guardado y contador actualizado dinámicamente');
   };
 
   const startEdit = (p) => { 
@@ -1773,20 +1756,11 @@ export default function StarFamilyApp() {
         if (error) throw error;
         console.log('🗑️ Producto eliminado permanentemente de Supabase');
         
-        // Eliminar del estado local
+        // Eliminar del estado local inmediatamente
         const updatedProducts = products.filter(p => p.id !== id);
         await saveProducts(updatedProducts);
         
-        // FORZAR RECARGA DESDE SUPABASE después de eliminar
-        localStorage.removeItem("roxy_products");
-        setTimeout(async () => {
-          try {
-            await loadProductsFromSupabase();
-            console.log('🔄 Datos recargados desde Supabase después de eliminar');
-          } catch (error) {
-            console.error('Error en recarga post-eliminación:', error);
-          }
-        }, 500);
+        console.log('✅ Producto eliminado y contador actualizado dinámicamente');
       } catch (error) {
         console.error('Error eliminando producto de Supabase:', error);
         showToast('⚠️ Error eliminando de Supabase', 'error');
@@ -2035,64 +2009,100 @@ export default function StarFamilyApp() {
                   color:"#6B7280",
                   fontFamily:"'Poppins',sans-serif"
                 }}>
-                  {filtered.length} productos encontrados
-                  {searchTerm && ` • "${searchTerm}"`}
+                  {searchTerm && `Buscando: "${searchTerm}"`}
                   {(priceRange.min || priceRange.max) && 
-                    ` • $${priceRange.min || '0'} - $${priceRange.max || '∞'}`
+                    ` • Precio: $${priceRange.min || '0'} - $${priceRange.max || '∞'}`
                   }
                 </div>
               )}
             </div>
           </div>
 
-          {/* PRODUCT GRID */}
+          {/* PRODUCT GRID CON PAGINACIÓN */}
           <div style={{ maxWidth:1200, margin:"0 auto", padding:"20px 12px 48px" }}>
-            {availableCategories.filter(c => c !== "Todos").map(c => {
-              const prods = (filtered || [])?.filter(p => p && typeof p === 'object' && p?.category && p?.category === c);
-              if ((cat !== "Todos" && cat !== c) || prods.length === 0) return null;
-              return (
-                <div key={c} style={{ marginBottom:32 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, paddingLeft:4 }}>
-                    <div style={{ background:CAT_COLOR[c], width:4, height:26, borderRadius:2 }} />
-                    <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:2, color:"#111" }}>{c.toUpperCase()}</span>
-                    <span style={{ background:"#F4F4F5", color:"#888", fontSize:11, borderRadius:12, padding:"2px 10px", fontWeight:600 }}>{prods.length}</span>
+            {/* Mostrar productos agrupados por categoría o paginados */}
+            {cat === "Todos" ? (
+              // Vista "Todos" con productos paginados
+              <>
+                {/* Productos con categoría */}
+                {(() => {
+                  const groupedProducts = {};
+                  paginatedData.forEach(p => {
+                    if (p && typeof p === 'object' && p.category && p.category.trim() && p.category !== 'null' && p.category !== null) {
+                      const category = p.category;
+                      if (!groupedProducts[category]) {
+                        groupedProducts[category] = [];
+                      }
+                      groupedProducts[category].push(p);
+                    }
+                  });
+
+                  return Object.entries(groupedProducts).map(([category, products]) => (
+                    <div key={category} style={{ marginBottom:32 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, paddingLeft:4 }}>
+                        <div style={{ background:CAT_COLOR[category] || "#C41E3A", width:4, height:26, borderRadius:2 }} />
+                        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:2, color:"#111" }}>{category.toUpperCase()}</span>
+                      </div>
+                      <div className="product-grid">
+                        {products?.filter(p => p && typeof p === 'object' && p.id).map((product) => (
+                          <ProductCard key={product.id} p={product} onOpen={() => { setModal(product); setQty(1); }} onAdd={() => addToCart(product, 1)} />
+                        ))}
+                      </div>
+                    </div>
+                  ));
+                })()}
+
+                {/* Productos sin categoría */}
+                {(() => {
+                  const prodsWithoutCategory = paginatedData.filter(p => 
+                    p && typeof p === 'object' && (
+                      !p.category || 
+                      p.category.trim() === '' || 
+                      p.category === 'null' ||
+                      p.category === null
+                    )
+                  );
+                  if (prodsWithoutCategory.length === 0) return null;
+                  
+                  return (
+                    <div key="sin-categoria" style={{ marginBottom:32 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, paddingLeft:4 }}>
+                        <div style={{ background:"#6B7280", width:4, height:26, borderRadius:2 }} />
+                        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:2, color:"#111" }}>SIN CATEGORÍA</span>
+                      </div>
+                      <div className="product-grid">
+                        {prodsWithoutCategory?.filter(p => p && typeof p === 'object' && p.id).map((product) => (
+                          <ProductCard key={product.id} p={product} onOpen={() => { setModal(product); setQty(1); }} onAdd={() => addToCart(product, 1)} />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </>
+            ) : (
+              // Vista de categoría específica con productos paginados
+              (() => {
+                const categoryProducts = paginatedData.filter(p => 
+                  p && typeof p === 'object' && p?.category && p?.category === cat
+                );
+                
+                if (categoryProducts.length === 0) return null;
+                
+                return (
+                  <div style={{ marginBottom:32 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, paddingLeft:4 }}>
+                      <div style={{ background:CAT_COLOR[cat] || "#C41E3A", width:4, height:26, borderRadius:2 }} />
+                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:2, color:"#111" }}>{cat.toUpperCase()}</span>
+                    </div>
+                    <div className="product-grid">
+                      {categoryProducts?.filter(p => p && typeof p === 'object' && p.id).map((product) => (
+                        <ProductCard key={product.id} p={product} onOpen={() => { setModal(product); setQty(1); }} onAdd={() => addToCart(product, 1)} />
+                      ))}
+                    </div>
                   </div>
-                  <div className="product-grid">
-                    {prods?.filter(p => p && typeof p === 'object' && p.id).map((product) => (
-                    <ProductCard key={product.id} p={product} onOpen={() => { setModal(product); setQty(1); }} onAdd={() => addToCart(product, 1)} />
-                  ))}
-                  </div>
-                </div>
-              );
-            })}
-            
-            {/* SECCIÓN PARA PRODUCTOS SIN CATEGORÍA */}
-            {cat === "Todos" && (() => {
-              const prodsWithoutCategory = (filtered || [])?.filter(p => 
-                p && typeof p === 'object' && (
-                  !p.category || 
-                  p.category.trim() === '' || 
-                  p.category === 'null' ||
-                  p.category === null
-                )
-              );
-              if (prodsWithoutCategory.length === 0) return null;
-              
-              return (
-                <div key="sin-categoria" style={{ marginBottom:32 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, paddingLeft:4 }}>
-                    <div style={{ background:"#6B7280", width:4, height:26, borderRadius:2 }} />
-                    <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:2, color:"#111" }}>SIN CATEGORÍA</span>
-                    <span style={{ background:"#F4F4F5", color:"#888", fontSize:11, borderRadius:12, padding:"2px 10px", fontWeight:600 }}>{prodsWithoutCategory.length}</span>
-                  </div>
-                  <div className="product-grid">
-                    {prodsWithoutCategory?.filter(p => p && typeof p === 'object' && p.id).map((product) => (
-                      <ProductCard key={product.id} p={product} onOpen={() => { setModal(product); setQty(1); }} onAdd={() => addToCart(product, 1)} />
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
+                );
+              })()
+            )}
             
             {filtered.length === 0 && (
               <div style={{ textAlign:"center", padding:60, color:"#9CA3AF" }}>
@@ -2124,6 +2134,16 @@ export default function StarFamilyApp() {
                   </div>
                 )}
               </div>
+            )}
+
+            {/* CONTROLES DE PAGINACIÓN */}
+            {filtered.length > 0 && (
+              <PaginationControls 
+                currentPage={currentPage}
+                totalPages={totalPages}
+                setCurrentPage={setCurrentPage}
+                totalItems={filtered.length}
+              />
             )}
           </div>
         </>
@@ -2552,6 +2572,136 @@ export default function StarFamilyApp() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// PAGINATION CONTROLS
+// ═══════════════════════════════════════════════════════
+
+function PaginationControls({ currentPage, totalPages, setCurrentPage, totalItems }) {
+  if (totalPages <= 1) return null;
+  
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+  
+  const renderPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        pages.push(1);
+        pages.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
+  };
+  
+  return (
+    <div style={{ 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      gap: '8px', 
+      margin: '32px 0',
+      flexWrap: 'wrap'
+    }}>
+      {/* Botón Anterior */}
+      <button
+        onClick={() => handlePageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        style={{
+          padding: '8px 12px',
+          border: '1px solid #E5E7EB',
+          borderRadius: '8px',
+          background: currentPage === 1 ? '#F9FAFB' : 'white',
+          color: currentPage === 1 ? '#9CA3AF' : '#374151',
+          cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+          fontSize: '14px',
+          fontWeight: '500',
+          fontFamily: "'Poppins', sans-serif"
+        }}
+      >
+        ← Anterior
+      </button>
+      
+      {/* Números de página */}
+      {renderPageNumbers().map((page, index) => (
+        page === '...' ? (
+          <span key={`ellipsis-${index}`} style={{ 
+            padding: '8px 4px', 
+            color: '#9CA3AF',
+            fontSize: '14px'
+          }}>
+            ...
+          </span>
+        ) : (
+          <button
+            key={page}
+            onClick={() => handlePageChange(page)}
+            style={{
+              padding: '8px 12px',
+              border: currentPage === page ? '1px solid #C41E3A' : '1px solid #E5E7EB',
+              borderRadius: '8px',
+              background: currentPage === page ? '#C41E3A' : 'white',
+              color: currentPage === page ? 'white' : '#374151',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: currentPage === page ? '600' : '500',
+              fontFamily: "'Poppins', sans-serif"
+            }}
+          >
+            {page}
+          </button>
+        )
+      ))}
+      
+      {/* Botón Siguiente */}
+      <button
+        onClick={() => handlePageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        style={{
+          padding: '8px 12px',
+          border: '1px solid #E5E7EB',
+          borderRadius: '8px',
+          background: currentPage === totalPages ? '#F9FAFB' : 'white',
+          color: currentPage === totalPages ? '#9CA3AF' : '#374151',
+          cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+          fontSize: '14px',
+          fontWeight: '500',
+          fontFamily: "'Poppins', sans-serif"
+        }}
+      >
+        Siguiente →
+      </button>
     </div>
   );
 }
