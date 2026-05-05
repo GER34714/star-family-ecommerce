@@ -4229,41 +4229,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
             </button>
           </div>
           
-          {/* BOTÓN TEMPORAL DE PRUEBA */}
-          <div style={{ marginTop:20, padding:15, background:"#F0F9FF", borderRadius:8, border:"1px solid #3B82F6" }}>
-            <div style={{ fontSize:12, fontWeight:700, color:"#1E40AF", marginBottom:8 }}>🧪 PRUEBA DE INSERCIÓN</div>
-            <button 
-              onClick={() => {
-                // Llenar formulario con datos de prueba
-                setForm({
-                  id: "",
-                  category: "Frescos",
-                  name: "Producto de Prueba " + Date.now(),
-                  description: "Este es un producto de prueba para verificar upload y persistencia",
-                  price: "10000",
-                  bulkInfo: "Test bulk info",
-                  image_url: ""
-                });
-                setEditing(false);
-              }}
-              style={{ 
-                background:"#3B82F6", 
-                color:"white", 
-                border:"none", 
-                borderRadius:6, 
-                padding:"8px 12px", 
-                cursor:"pointer", 
-                fontSize:12,
-                width:"100%"
-              }}
-            >
-              🧪 Llenar con datos de prueba
-            </button>
-            <div style={{ fontSize:10, color:"#64748B", marginTop:5 }}>
-              Completa el formulario y agrega una imagen para probar el flujo completo
-            </div>
-          </div>
-        </div>
+                  </div>
       )}
 
       {/* TAB: PRICES */}
