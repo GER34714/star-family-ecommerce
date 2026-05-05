@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { getSupabaseClient } from './supabaseClient';
 import { useMasterUser } from './useMasterUser';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -92,6 +92,18 @@ export default function StarFamilyApp() {
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [categoryError, setCategoryError] = useState('');
   const [loadingCategories, setLoadingCategories] = useState(false);
+  
+  // Estados para configuración de pago
+  const [paymentSettings, setPaymentSettings] = useState({
+    id: null, // ← agregar esto
+    account_name: '',
+    bank_name: '',
+    cbu: '',
+    alias: '',
+    extra_message: 'Una vez pagado, enviá el comprobante por mensaje 📩'
+  });
+  const [loadingPaymentSettings, setLoadingPaymentSettings] = useState(false);
+  
   const [supaUrl, setSupaUrl] = useState("");
   const [supaKey, setSupaKey] = useState("");
   const [syncing, setSyncing] = useState(false);
@@ -188,6 +200,12 @@ export default function StarFamilyApp() {
     });
   };
 
+  // Efecto para cargar categorías y configuración de pago
+  useEffect(() => {
+    loadAvailableCategories();
+    loadPaymentSettings();
+  }, []);
+
   // Efecto para actualizar productos filtrados
   useEffect(() => {
     const filtered = filterAdminProducts(products, adminFilters);
@@ -258,6 +276,93 @@ export default function StarFamilyApp() {
     } catch (err) {
       console.error('Error buscando categoría:', err);
       return null;
+    }
+  };
+
+  // Cargar configuración de pago desde Supabase
+  const loadPaymentSettings = useCallback(async () => {
+    try {
+      setLoadingPaymentSettings(true);
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        console.error('Cliente de Supabase no disponible');
+        return;
+      }
+      const { data, error } = await supabase
+        .from('payment_settings')
+        .select('*')
+        .single();
+      if (error) {
+        console.error('Error cargando configuración de pago:', error);
+        return;
+      }
+      if (data) {
+        setPaymentSettings({
+          id: data.id,
+          account_name: data.account_name || '',
+          bank_name: data.bank_name || '',
+          cbu: data.cbu || '',
+          alias: data.alias || '',
+          extra_message: data.extra_message || 'Una vez pagado, enviá el comprobante por mensaje 📩'
+        });
+      }
+    } catch (error) {
+      console.error('Error cargando configuración de pago:', error);
+    } finally {
+      setLoadingPaymentSettings(false);
+    }
+  }, []); // Empty dependency array to prevent recreation
+
+  const savePaymentSettings = async () => {
+  try {
+    console.log('Guardando...', paymentSettings);
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      alert('❌ Error: Cliente de Supabase no disponible');
+      return;
+    }
+    const { error } = await supabase
+      .from('payment_settings')
+      .update({
+        account_name: paymentSettings.account_name,
+        bank_name: paymentSettings.bank_name,
+        cbu: paymentSettings.cbu,
+        alias: paymentSettings.alias,
+        extra_message: paymentSettings.extra_message
+      })
+      .neq('id', '00000000-0000-0000-0000-000000000000'); // actualiza la única fila existente
+
+    if (error) throw error;
+    alert('✅ Guardado correctamente');
+  } catch (error) {
+    console.error('Error guardando:', error.message);
+    alert('❌ Error: ' + error.message);
+  }
+};
+
+  // Función para copiar al portapapeles
+  const copyToClipboard = async (text, type) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast(`¡Copiaste el ${type}! ✅`, 'success');
+      
+      // Auto-ocultar el toast después de 3 segundos
+      setTimeout(() => {
+        setToast(null);
+      }, 3000);
+    } catch (error) {
+      // Fallback para navegadores que no soportan clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      showToast(`¡Copiaste el ${type}! ✅`, 'success');
+      
+      setTimeout(() => {
+        setToast(null);
+      }, 3000);
     }
   };
 
@@ -492,11 +597,20 @@ export default function StarFamilyApp() {
 
   // Memos para cálculos dinámicos
   const filtered = useMemo(() => {
+    console.log("🔍 Debug - products.length:", products.length);
+    console.log("🔍 Debug - products sample:", products.slice(0, 3));
+    console.log("🔍 Debug - cat:", cat);
+    console.log("🔍 Debug - searchTerm:", searchTerm);
+    console.log("🔍 Debug - priceRange:", priceRange);
+    
     let filtered = products.filter(p => 
       p && typeof p === 'object' && p.id && (
         cat === "Todos" || p.category === cat
       ) && !p.suspended // Filtrar productos suspendidos en tienda pública
     );
+    
+    console.log("🔍 Debug - filtered after basic filter:", filtered.length);
+    console.log("🔍 Debug - suspended products:", products.filter(p => p.suspended).length);
 
     // Aplicar filtros de búsqueda
     if (searchTerm) {
@@ -505,16 +619,20 @@ export default function StarFamilyApp() {
         p.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.category?.toLowerCase().includes(searchTerm.toLowerCase())
       );
+      console.log("🔍 Debug - filtered after search:", filtered.length);
     }
 
     // Aplicar filtros de precio
     if (priceRange.min) {
       filtered = filtered.filter(p => p.price >= parseFloat(priceRange.min));
+      console.log("🔍 Debug - filtered after min price:", filtered.length);
     }
     if (priceRange.max) {
       filtered = filtered.filter(p => p.price <= parseFloat(priceRange.max));
+      console.log("🔍 Debug - filtered after max price:", filtered.length);
     }
 
+    console.log("🔍 Debug - final filtered result:", filtered.length);
     return filtered;
   }, [products, cat, searchTerm, priceRange]);
 
@@ -1378,6 +1496,13 @@ export default function StarFamilyApp() {
     showToast("🛒 " + p.name + " agregado", "success");
   };
   const removeFromCart = (id) => { saveCart(cart.filter(i => i.id !== id)); };
+  const updateCartQuantity = (id, newQty) => {
+    if (newQty <= 0) {
+      saveCart(cart.filter(i => i.id !== id));
+    } else {
+      saveCart(cart.map(i => i.id === id ? {...i, qty: newQty} : i));
+    }
+  };
   const cartCount = useMemo(() => cart.reduce((sum, i) => sum + i.qty, 0), [cart]);
   const cartTotal = useMemo(() => cart.reduce((sum, i) => sum + (i.price * i.qty), 0), [cart]);
 
@@ -2459,7 +2584,11 @@ export default function StarFamilyApp() {
             authLoading={localAuthLoading}
             saveImagePreview={saveImagePreview}
             onToggleSuspension={toggleProductSuspension}
-          />
+            paymentSettings={paymentSettings}
+            setPaymentSettings={setPaymentSettings}
+            loadingPaymentSettings={loadingPaymentSettings}
+            setLoadingPaymentSettings={setLoadingPaymentSettings}
+                      />
       )}
 
       {/* FOOTER */}
@@ -2816,7 +2945,7 @@ export default function StarFamilyApp() {
       {/* CART OVERLAY */}
       <div className={`overlay ${cartOpen?"show":""}`} onClick={() => setCartOpen(false)} />
       <div className={`cart-drawer ${cartOpen?"open":""}`}>
-        <CartDrawer cart={cart} onRemove={removeFromCart} onClose={() => setCartOpen(false)} total={cartTotal} onClear={() => saveCart([])} />
+        <CartDrawer cart={cart} onRemove={removeFromCart} onUpdateQuantity={updateCartQuantity} onClose={() => setCartOpen(false)} total={cartTotal} onClear={() => saveCart([])} paymentSettings={paymentSettings} />
       </div>
 
       {/* PRODUCT MODAL */}
@@ -3075,11 +3204,80 @@ function ProductModal({ p, qty, setQty, onAdd, onClose }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════
 // CART DRAWER
 // ═══════════════════════════════════════════════════════
 
-function CartDrawer({ cart, onRemove, onClose, total, onClear }) {
+function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear, paymentSettings }) {
+    
+  // Función para copiar al portapapeles
+  const copyToClipboard = async (text, type) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      // Crear toast temporal
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        position: fixed;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999;
+        background: #DCFCE7;
+        color: #166534;
+        padding: 10px 20px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 14px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        white-space: nowrap;
+        font-family: 'Poppins', sans-serif;
+      `;
+      toast.textContent = `¡Copiaste el ${type}! ✅`;
+      document.body.appendChild(toast);
+      
+      // Auto-ocultar después de 3 segundos
+      setTimeout(() => {
+        if (document.body.contains(toast)) {
+          document.body.removeChild(toast);
+        }
+      }, 3000);
+    } catch (error) {
+      // Fallback para navegadores que no soportan clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      // Mostrar toast de fallback
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        position: fixed;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999;
+        background: #DCFCE7;
+        color: #166534;
+        padding: 10px 20px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 14px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        white-space: nowrap;
+        font-family: 'Poppins', sans-serif;
+      `;
+      toast.textContent = `¡Copiaste el ${type}! ✅`;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        if (document.body.contains(toast)) {
+          document.body.removeChild(toast);
+        }
+      }, 3000);
+    }
+  };
+  
   const sendWA = () => {
     const lines = cart.map(i => `• ${i.qty}x ${i.name}: ${fmt(i.price * i.qty)}`).join("\n");
     const msg = encodeURIComponent(`Hola! Quisiera hacer un pedido 👋\n\n${lines}\n\n*TOTAL: ${fmt(total)}*\n\nEspero su confirmación, gracias!`);
@@ -3109,11 +3307,102 @@ function CartDrawer({ cart, onRemove, onClose, total, onClear }) {
             </div>
             <div style={{ flex:1 }}>
               <div style={{ fontWeight:700, fontSize:13, lineHeight:1.3 }}>{item?.name || "Sin nombre"}</div>
-              <div style={{ fontSize:12, color:"#9CA3AF", marginTop:2 }}>{item?.qty || 0} × {fmt(item?.price || 0)}</div>
+              <div style={{ fontSize:12, color:"#9CA3AF", marginTop:2 }}>{fmt(item?.price || 0)} c/u</div>
             </div>
             <div style={{ textAlign:"right", flexShrink:0 }}>
-              <div style={{ fontWeight:800, color:"#C41E3A", fontSize:15 }}>{fmt((item?.price || 0) * (item?.qty || 0))}</div>
-              <button onClick={() => onRemove(item.id)} style={{ background:"none", border:"none", color:"#D1D5DB", cursor:"pointer", fontSize:11, marginTop:3, padding:0 }}>✕ quitar</button>
+              <div style={{ fontWeight:800, color:"#C41E3A", fontSize:15, marginBottom:4 }}>{fmt((item?.price || 0) * (item?.qty || 0))}</div>
+              <div style={{ display:"flex", alignItems:"center", gap:6, justifyContent:"flex-end" }}>
+                <button 
+                  onClick={() => onUpdateQuantity(item.id, (item?.qty || 1) - 1)}
+                  style={{
+                    width:24,
+                    height:24,
+                    borderRadius:4,
+                    border:"1px solid #E5E7EB",
+                    background:"white",
+                    color:"#374151",
+                    cursor:"pointer",
+                    fontSize:14,
+                    fontWeight:"600",
+                    display:"flex",
+                    alignItems:"center",
+                    justifyContent:"center",
+                    transition:"all 0.2s"
+                  }}
+                  onMouseOver={(e) => {
+                    e.target.style.background = "#F3F4F6";
+                    e.target.style.borderColor = "#D1D5DB";
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.style.background = "white";
+                    e.target.style.borderColor = "#E5E7EB";
+                  }}
+                >
+                  −
+                </button>
+                <span style={{ 
+                  minWidth:20, 
+                  textAlign:"center", 
+                  fontSize:13, 
+                  fontWeight:"700", 
+                  color:"#1F2937" 
+                }}>
+                  {item?.qty || 0}
+                </span>
+                <button 
+                  onClick={() => onUpdateQuantity(item.id, (item?.qty || 1) + 1)}
+                  style={{
+                    width:24,
+                    height:24,
+                    borderRadius:4,
+                    border:"1px solid #E5E7EB",
+                    background:"white",
+                    color:"#374151",
+                    cursor:"pointer",
+                    fontSize:14,
+                    fontWeight:"600",
+                    display:"flex",
+                    alignItems:"center",
+                    justifyContent:"center",
+                    transition:"all 0.2s"
+                  }}
+                  onMouseOver={(e) => {
+                    e.target.style.background = "#F3F4F6";
+                    e.target.style.borderColor = "#D1D5DB";
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.style.background = "white";
+                    e.target.style.borderColor = "#E5E7EB";
+                  }}
+                >
+                  +
+                </button>
+                <button 
+                  onClick={() => onRemove(item.id)} 
+                  style={{ 
+                    background:"#FEE2E2", 
+                    border:"1px solid #FECACA", 
+                    color:"#DC2626", 
+                    cursor:"pointer", 
+                    fontSize:11, 
+                    padding:"3px 6px", 
+                    borderRadius:"4px",
+                    fontWeight:"600",
+                    transition:"all 0.2s",
+                    marginLeft:4
+                  }}
+                  onMouseOver={(e) => {
+                    e.target.style.background = "#FEE2E2";
+                    e.target.style.borderColor = "#F87171";
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.style.background = "#FEE2E2";
+                    e.target.style.borderColor = "#FECACA";
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -3121,6 +3410,131 @@ function CartDrawer({ cart, onRemove, onClose, total, onClear }) {
 
       {cart.length > 0 && (
         <div style={{ padding:"16px 20px", borderTop:"1px solid #F3F4F6", background:"white" }}>
+          {/* ORDER SUMMARY SECTION */}
+          <div style={{ marginBottom:16, padding:"14px", background:"#FDF4FF", borderRadius:12, border:"1px solid #E9D5FF" }}>
+            <div style={{ fontWeight:700, fontSize:13, color:"#7C3AED", marginBottom:10 }}>📋 Resumen del pedido</div>
+            
+            {/* Product list summary */}
+            <div style={{ marginBottom:12 }}>
+              {cart.filter(Boolean).map((item, index) => (
+                <div key={item.id} style={{ 
+                  display:"flex", 
+                  justifyContent:"space-between", 
+                  alignItems:"center", 
+                  padding:"6px 0", 
+                  fontSize:12,
+                  borderBottom: index < cart.length - 1 ? "1px solid #FAE8FF" : "none"
+                }}>
+                  <div style={{ color:"#4B5563", fontWeight:500, flex:1 }}>
+                    {item.qty}x {item.name}
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ color:"#1F2937", fontWeight:600 }}>
+                      {fmt(item.price * item.qty)}
+                    </div>
+                    <button 
+                      onClick={() => onRemove(item.id)}
+                      style={{
+                        background:"#FEE2E2",
+                        border:"1px solid #FECACA",
+                        color:"#DC2626",
+                        cursor:"pointer",
+                        fontSize:10,
+                        padding:"2px 6px",
+                        borderRadius:"4px",
+                        fontWeight:"600",
+                        transition:"all 0.2s",
+                        display:"flex",
+                        alignItems:"center",
+                        justifyContent:"center"
+                      }}
+                      onMouseOver={(e) => {
+                        e.target.style.background = "#FEE2E2";
+                        e.target.style.borderColor = "#F87171";
+                      }}
+                      onMouseOut={(e) => {
+                        e.target.style.background = "#FEE2E2";
+                        e.target.style.borderColor = "#FECACA";
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {/* Subtotal */}
+            <div style={{ 
+              display:"flex", 
+              justifyContent:"space-between", 
+              alignItems:"center", 
+              paddingTop:"8px", 
+              borderTop:"1px solid #E9D5FF",
+              marginBottom:"8px"
+            }}>
+              <div style={{ fontSize:12, color:"#6B7280", fontWeight:600 }}>Subtotal</div>
+              <div style={{ fontSize:13, color:"#374151", fontWeight:600 }}>
+                {fmt(cart.reduce((sum, item) => sum + (item.price * item.qty), 0))}
+              </div>
+            </div>
+          </div>
+          
+          {/* PAYMENT DATA SECTION */}
+          {paymentSettings && (paymentSettings.account_name || paymentSettings.bank_name || paymentSettings.cbu || paymentSettings.alias) && (
+            <div style={{ marginBottom:16, padding:"14px", background:"#F9FAFB", borderRadius:12, border:"1px solid #E5E7EB" }}>
+              <div style={{ fontWeight:700, fontSize:13, color:"#374151", marginBottom:10 }}>📱 Datos para transferencia</div>
+              
+              {paymentSettings.account_name && (
+                <div style={{ marginBottom:8 }}>
+                  <div style={{ fontSize:11, color:"#6B7280", fontWeight:600, textTransform:"uppercase", letterSpacing:0.5 }}>Titular</div>
+                  <div style={{ fontSize:13, color:"#1F2937", fontWeight:500 }}>{paymentSettings.account_name}</div>
+                </div>
+              )}
+              
+              {paymentSettings.bank_name && (
+                <div style={{ marginBottom:8 }}>
+                  <div style={{ fontSize:11, color:"#6B7280", fontWeight:600, textTransform:"uppercase", letterSpacing:0.5 }}>Banco</div>
+                  <div style={{ fontSize:13, color:"#1F2937", fontWeight:500 }}>{paymentSettings.bank_name}</div>
+                </div>
+              )}
+              
+              <div style={{ display:"flex", gap:12, marginBottom:8 }}>
+                {paymentSettings.cbu && (
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:11, color:"#6B7280", fontWeight:600, textTransform:"uppercase", letterSpacing:0.5 }}>CBU</div>
+                    <div style={{ fontSize:13, color:"#1F2937", fontWeight:500, fontFamily:"monospace" }}>{paymentSettings.cbu}</div>
+                    <button 
+                      onClick={() => copyToClipboard(paymentSettings.cbu, 'CBU')}
+                      style={{ marginTop:4, fontSize:10, color:"#C41E3A", background:"none", border:"none", cursor:"pointer", fontWeight:600 }}
+                    >
+                      📋 Copiar CBU
+                    </button>
+                  </div>
+                )}
+                
+                {paymentSettings.alias && (
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:11, color:"#6B7280", fontWeight:600, textTransform:"uppercase", letterSpacing:0.5 }}>Alias</div>
+                    <div style={{ fontSize:13, color:"#1F2937", fontWeight:500, fontFamily:"monospace" }}>{paymentSettings.alias}</div>
+                    <button 
+                      onClick={() => copyToClipboard(paymentSettings.alias, 'Alias')}
+                      style={{ marginTop:4, fontSize:10, color:"#C41E3A", background:"none", border:"none", cursor:"pointer", fontWeight:600 }}
+                    >
+                      📋 Copiar Alias
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              {paymentSettings.extra_message && (
+                <div style={{ marginTop:10, paddingTop:10, borderTop:"1px solid #E5E7EB" }}>
+                  <div style={{ fontSize:12, color:"#6B7280", fontStyle:"italic" }}>{paymentSettings.extra_message}</div>
+                </div>
+              )}
+            </div>
+          )}
+                    
           <div style={{ display:"flex", justifyContent:"space-between", marginBottom:14, padding:"12px 14px", background:"#1F2937", borderRadius:12 }}>
             <span style={{ fontWeight:700, color:"white" }}>Total del pedido</span>
             <span style={{ fontWeight:900, fontSize:20, color:"#10B981" }}>{fmt(total)}</span>
@@ -3906,7 +4320,88 @@ function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint
 // ADMIN PANEL
 // ═══════════════════════════════════════════════════════
 
-function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint, onDeleteRestorePoint, loadingRestorePoints, restorePointsError, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview, loadingPriceHistory, priceHistoryError, onToggleSuspension }) {
+function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint, onDeleteRestorePoint, loadingRestorePoints, restorePointsError, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview, loadingPriceHistory, priceHistoryError, onToggleSuspension, paymentSettings, setPaymentSettings, loadingPaymentSettings, setLoadingPaymentSettings }) {
+  const supabase = getSupabaseClient();
+  
+  // Cargar configuración de pago desde Supabase
+  const loadPaymentSettings = useCallback(async () => {
+    try {
+      setLoadingPaymentSettings(true);
+      const { data, error } = await supabase
+        .from('payment_settings')
+        .select('*')
+        .single();
+      if (error) {
+        console.error('Error cargando configuración de pago:', error);
+        return;
+      }
+      if (data) {
+        setPaymentSettings({
+          id: data.id, // ← esto faltaba
+          account_name: data.account_name || '',
+          bank_name: data.bank_name || '',
+          cbu: data.cbu || '',
+          alias: data.alias || '',
+          extra_message: data.extra_message || 'Una vez pagado, enviá el comprobante por mensaje 📩'
+        });
+      }
+    } catch (error) {
+      console.error('Error cargando configuración de pago:', error);
+    } finally {
+      setLoadingPaymentSettings(false);
+    }
+  }, []);
+
+  // Guardar configuración de pago en Supabase
+  const savePaymentSettings = async () => {
+  try {
+    console.log('Guardando...', paymentSettings);
+    const { error } = await supabase
+      .from('payment_settings')
+      .update({
+        account_name: paymentSettings.account_name,
+        bank_name: paymentSettings.bank_name,
+        cbu: paymentSettings.cbu,
+        alias: paymentSettings.alias,
+        extra_message: paymentSettings.extra_message
+      })
+      .eq('id', paymentSettings.id); // ← usar el id del estado, no hardcodeado
+
+    if (error) throw error;
+
+    await loadPaymentSettings(); // ← refrescar estado después de guardar
+    alert('✅ Guardado correctamente');
+  } catch (error) {
+    console.error('Error guardando:', error.message);
+    alert('❌ Error: ' + error.message);
+  }
+};
+
+  // Cargar datos al montar el componente
+  useEffect(() => {
+    const load = async () => {
+      const { getSupabaseClient } = await import('./supabaseClient');
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        console.warn('Configuración de Supabase no disponible');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('payment_settings')
+        .select('*')
+        .single();
+      if (data && !error) setPaymentSettings(data);
+    };
+    load();
+  }, []);
+
+  useEffect(() => {
+    if (adminTab === "payment") {
+      loadPaymentSettings();
+    }
+  }, [adminTab]);
+
   const input = { width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" };
   const ADMIN_CATS = ['Frescos', 'Completos', 'Panchos Armados', 'Hamburguesas', 'Pizzas y Empanadas', 'Medialunas y Chipas', 'Combos'];
 
@@ -3994,7 +4489,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
 
       {/* TABS */}
       <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
-        {[["list","📋 Productos"],["add", editing?"✏️ Editar":"➕ Agregar"],["prices","💰 Precios"],["history","📜 Historial"],["restore","🔄 Restauración"],["excel","📊 Excel"]].map(([t,label]) => (
+        {[["list","📋 Productos"],["add", editing?"✏️ Editar":"➕ Agregar"],["prices","💰 Precios"],["payment","💳 Datos de Pago"],["history","📜 Historial"],["restore","🔄 Restauración"],["excel","📊 Excel"]].map(([t,label]) => (
           <button key={t} onClick={() => setAdminTab(t)} style={{ background:adminTab===t?"#C41E3A":"white", color:adminTab===t?"white":"#374151", border:adminTab===t?"none":"1px solid #E5E7EB", borderRadius:10, padding:"8px 16px", cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Poppins',sans-serif" }}>
             {label}
           </button>
@@ -4545,6 +5040,94 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                   </div>
       )}
 
+      {/* TAB: PAYMENT SETTINGS */}
+      {adminTab === "payment" && (
+        <div style={{ background:"white", borderRadius:16, padding:24 }}>
+          <h3 style={{ margin:"0 0 6px", fontWeight:800 }}>💳 Datos de Pago</h3>
+          <p style={{ color:"#6B7280", fontSize:14, marginBottom:20 }}>Configurá los datos para transferencias bancarias.</p>
+          
+          <div style={{ display:"grid", gridTemplateColumns:"1fr", gap:16 }}>
+            <div>
+              <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>NOMBRE DEL TITULAR *</label>
+              <input
+                type="text"
+                value={paymentSettings.account_name}
+                onChange={(e) => setPaymentSettings({...paymentSettings, account_name: e.target.value})}
+                style={{ width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" }}
+                placeholder="Ej: Star Family S.A."
+              />
+            </div>
+            
+            <div>
+              <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>NOMBRE DEL BANCO *</label>
+              <input
+                type="text"
+                value={paymentSettings.bank_name}
+                onChange={(e) => setPaymentSettings({...paymentSettings, bank_name: e.target.value})}
+                style={{ width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" }}
+                placeholder="Ej: Banco Galicia"
+              />
+            </div>
+            
+            <div>
+              <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>CBU *</label>
+              <input
+                type="text"
+                value={paymentSettings.cbu}
+                onChange={(e) => setPaymentSettings({...paymentSettings, cbu: e.target.value})}
+                style={{ width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" }}
+                placeholder="Ej: 0070052630000001234567"
+              />
+            </div>
+            
+            <div>
+              <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>ALIAS *</label>
+              <input
+                type="text"
+                value={paymentSettings.alias}
+                onChange={(e) => setPaymentSettings({...paymentSettings, alias: e.target.value})}
+                style={{ width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" }}
+                placeholder="Ej: starfamily.pagos"
+              />
+            </div>
+            
+            <div>
+              <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>MENSAJE PERSONALIZADO</label>
+              <textarea
+                value={paymentSettings.extra_message}
+                onChange={(e) => setPaymentSettings({...paymentSettings, extra_message: e.target.value})}
+                style={{ width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none", height:80, resize:"vertical" }}
+                placeholder="Mensaje que se mostrará en el carrito después de los datos de transferencia"
+              />
+              <div style={{ fontSize:11, color:"#9CA3AF", marginTop:4 }}>Este mensaje se mostrará en el carrito debajo de los datos de transferencia</div>
+            </div>
+          </div>
+          
+          <div style={{ display:"flex", gap:10, marginTop:24 }}>
+            <button
+              onClick={() => savePaymentSettings(paymentSettings)}
+              disabled={loadingPaymentSettings || !paymentSettings.account_name || !paymentSettings.bank_name || !paymentSettings.cbu || !paymentSettings.alias}
+              style={{
+                flex:1,
+                padding:14,
+                fontSize:15,
+                borderRadius:12,
+                justifyContent:"center",
+                background: loadingPaymentSettings || !paymentSettings.account_name || !paymentSettings.bank_name || !paymentSettings.cbu || !paymentSettings.alias ? "#9CA3AF" : "#C41E3A",
+                color: "white",
+                border: "none",
+                cursor: loadingPaymentSettings || !paymentSettings.account_name || !paymentSettings.bank_name || !paymentSettings.cbu || !paymentSettings.alias ? "not-allowed" : "pointer",
+                fontFamily: "'Poppins',sans-serif",
+                fontWeight: 600,
+                transition: "all 0.2s"
+              }}
+            >
+              {loadingPaymentSettings ? "⏳ Guardando..." : "💾 Guardar cambios"}
+            </button>
+          </div>
+        </div>
+      )}
+      
       {/* TAB: PRICES */}
       {adminTab === "prices" && (
         <PriceManagement 
@@ -4619,7 +5202,7 @@ const CSS = `
   .overlay { position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:400; opacity:0; pointer-events:none; transition:opacity 0.25s; }
   .overlay.show { opacity:1; pointer-events:all; }
 
-  .cart-drawer { position:fixed; top:0; right:0; width:380px; max-width:100vw; height:100vh; background:white; z-index:450; box-shadow:-6px 0 32px rgba(0,0,0,0.15); transform:translateX(100%); transition:transform 0.3s cubic-bezier(0.4,0,0.2,1); overflow-y:auto; }
+  .cart-drawer { position:fixed; top:62px; right:0; width:380px; max-width:100vw; height:calc(100vh - 62px); background:white; z-index:450; box-shadow:-6px 0 32px rgba(0,0,0,0.15); transform:translateX(100%); transition:transform 0.3s cubic-bezier(0.4,0,0.2,1); overflow-y:auto; }
   .cart-drawer.open { transform:translateX(0); }
 
   .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:600; display:flex; align-items:center; justify-content:center; padding:16px; }
