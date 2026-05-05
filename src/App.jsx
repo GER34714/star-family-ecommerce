@@ -111,6 +111,53 @@ export default function StarFamilyApp() {
   });
   const [filteredProducts, setFilteredProducts] = useState([]);
 
+  // Función para manejar suspensión/activación de productos
+  const toggleProductSuspension = async (productId) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+    
+    const newSuspendedState = !product.suspended;
+    const action = newSuspendedState ? 'suspender' : 'activar';
+    
+    // Confirmación del usuario
+    const confirmed = window.confirm(
+      `¿Estás seguro que querés ${action} el producto "${product.name}"?\n\n` +
+      `${newSuspendedState ? '⚠️ El producto no será visible en la tienda pública' : '✅ El producto volverá a estar disponible en la tienda'}`
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      const supabase = getSupabaseClient();
+      
+      // Actualizar en Supabase
+      if (supabase) {
+        const { error } = await supabase
+          .from('products')
+          .update({ suspended: newSuspendedState })
+          .eq('id', productId);
+        
+        if (error) throw error;
+      }
+      
+      // Actualizar estado local
+      const updatedProducts = products.map(p => 
+        p.id === productId ? { ...p, suspended: newSuspendedState } : p
+      );
+      await saveProducts(updatedProducts);
+      
+      showToast(
+        newSuspendedState 
+          ? `⏸️ Producto "${product.name}" suspendido`
+          : `✅ Producto "${product.name}" activado`,
+        'success'
+      );
+    } catch (error) {
+      console.error('Error al cambiar estado de suspensión:', error);
+      showToast('❌ Error al cambiar estado del producto', 'error');
+    }
+  };
+
   // Función para filtrar productos del panel admin
   const filterAdminProducts = (products, filters) => {
     return products.filter(product => {
@@ -126,11 +173,14 @@ export default function StarFamilyApp() {
         return false;
       }
       
-      // Filtro por estado (activo/inactivo)
-      if (filters.status === 'active' && !product.active) {
+      // Filtro por estado (activo/inactivo/suspendido)
+      if (filters.status === 'active' && (product.suspended || !product.active)) {
         return false;
       }
-      if (filters.status === 'inactive' && product.active) {
+      if (filters.status === 'inactive' && (!product.suspended && product.active)) {
+        return false;
+      }
+      if (filters.status === 'suspended' && !product.suspended) {
         return false;
       }
       
@@ -445,7 +495,7 @@ export default function StarFamilyApp() {
     let filtered = products.filter(p => 
       p && typeof p === 'object' && p.id && (
         cat === "Todos" || p.category === cat
-      )
+      ) && !p.suspended // Filtrar productos suspendidos en tienda pública
     );
 
     // Aplicar filtros de búsqueda
@@ -971,6 +1021,7 @@ export default function StarFamilyApp() {
         image_url: product.image_url || '',
         custom_badge: product.custom_badge || '',
         active: true,
+        suspended: false,
       };
 
       // Solo incluir category_id si fue encontrado
@@ -1384,6 +1435,7 @@ export default function StarFamilyApp() {
         category: p.categories?.name || "Frescos",
         bulkInfo: p.bulk_info || "",
         custom_badge: p.custom_badge || "",
+        suspended: p.suspended || false,
       }));
       
       console.log("🔄 Productos mapeados:", mapped.length);
@@ -2406,6 +2458,7 @@ export default function StarFamilyApp() {
             setPassword={setPassword}
             authLoading={localAuthLoading}
             saveImagePreview={saveImagePreview}
+            onToggleSuspension={toggleProductSuspension}
           />
       )}
 
@@ -2459,7 +2512,7 @@ export default function StarFamilyApp() {
             >
               <div style={{ width:44, height:44, background:"linear-gradient(45deg, #E4405F, #C13584)", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zM5.838 12a6.162 6.162 0 1112.324 0 6.162 6.162 0 01-12.324 0zM12 16a4 4 0 110-8 4 4 0 010 8zm4.965-10.405a1.44 1.44 0 112.881.001 1.44 1.44 0 01-2.881-.001z"/>
+                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266-.058-1.644-.069-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.782 6.98 6.979 2.206.242.487.501.669.51l.57.01c.198 0 .52-.074.792-.372s1.04-1.016 1.04-2.479-1.065-2.876-1.213-3.074-.149-.198-2.095-3.2-5.076-4.487-.709-.306-1.263-.489-1.694-.626-.712-.226-1.36-.194-1.872-.118-.571.085-1.758.719-2.006 1.413-.248.695-.248 1.29-.173 1.414.074.123.272.198.57.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
                 </svg>
               </div>
               <span style={{ fontSize:14, fontWeight:600, fontFamily:"'Poppins', sans-serif" }}>@starfamily.oficial</span>
@@ -2504,7 +2557,7 @@ export default function StarFamilyApp() {
               </a>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                  <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm0 0c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/>
                 </svg>
                 <div>10 a 21hs</div>
               </div>
@@ -3135,7 +3188,9 @@ function PriceManagement({ products, onUpdateSinglePrice, onUpdateBulkPrices, on
   return (
     <div style={{ background:"white", borderRadius:16, padding:24 }}>
       <h3 style={{ margin:"0 0 6px", fontWeight:800 }}>💰 Administración de Precios</h3>
-      <p style={{ color:"#6B7280", fontSize:14, marginBottom:20 }}>Modificá precios de forma individual o masiva.</p>
+      <p style={{ color:"#6B7280", fontSize:14, marginBottom:20 }}>
+        Modificá precios de forma individual o masiva.
+      </p>
 
       {/* MODE SELECTOR */}
       <div style={{ display:"flex", gap:10, marginBottom:24 }}>
@@ -3471,7 +3526,7 @@ function PriceHistory({ priceHistory, loading, error }) {
           Registro completo de todos los cambios de precios con fecha y hora.
         </p>
         <div style={{ textAlign:"center", padding:40, color:"#DC2626" }}>
-          <div style={{ fontSize:48, marginBottom:12 }}>⚠️</div>
+          <div style={{ fontSize:48, marginBottom:12 }}>❌</div>
           <div style={{ fontSize:16, fontWeight:600, marginBottom:4 }}>Error al cargar historial</div>
           <div style={{ fontSize:13 }}>{error}</div>
         </div>
@@ -3851,7 +3906,7 @@ function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint
 // ADMIN PANEL
 // ═══════════════════════════════════════════════════════
 
-function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint, onDeleteRestorePoint, loadingRestorePoints, restorePointsError, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview, loadingPriceHistory, priceHistoryError }) {
+function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint, onDeleteRestorePoint, loadingRestorePoints, restorePointsError, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview, loadingPriceHistory, priceHistoryError, onToggleSuspension }) {
   const input = { width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" };
   const ADMIN_CATS = ['Frescos', 'Completos', 'Panchos Armados', 'Hamburguesas', 'Pizzas y Empanadas', 'Medialunas y Chipas', 'Combos'];
 
@@ -4048,22 +4103,22 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                 </button>
                 <button
                   onClick={() => {
-                    window.adminStatusFilter = 'inactive';
-                    const event = new CustomEvent('adminStatusFilter', { detail: { status: 'inactive' } });
+                    window.adminStatusFilter = 'suspended';
+                    const event = new CustomEvent('adminStatusFilter', { detail: { status: 'suspended' } });
                     window.dispatchEvent(event);
                   }}
                   style={{
                     padding:"6px 12px",
                     borderRadius:6,
                     border:"1px solid #E5E7EB",
-                    background:window.adminStatusFilter === 'inactive' ? "#DC2626" : "white",
-                    color:window.adminStatusFilter === 'inactive' ? "white" : "#374151",
+                    background:window.adminStatusFilter === 'suspended' ? "#F59E0B" : "white",
+                    color:window.adminStatusFilter === 'suspended' ? "white" : "#374151",
                     fontSize:12,
                     fontWeight:600,
                     cursor:"pointer"
                   }}
                 >
-                  ❌ Inactivos
+                  ⏸️ Suspendidos
                 </button>
               </div>
             </div>
@@ -4098,15 +4153,55 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
           <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
             {filteredProducts && filteredProducts.length > 0 ? (
               filteredProducts.filter(Boolean).map(p => (
-              <div key={p.id} style={{ background:"white", borderRadius:12, padding:"12px 16px", display:"flex", gap:12, alignItems:"center", boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
+              <div key={p.id} style={{ 
+                background:"white", 
+                borderRadius:12, 
+                padding:"12px 16px", 
+                display:"flex", 
+                gap:12, 
+                alignItems:"center", 
+                boxShadow:"0 1px 3px rgba(0,0,0,0.06)",
+                opacity: p?.suspended ? 0.7 : 1,
+                border: p?.suspended ? "2px dashed #F59E0B" : "none"
+              }}>
                 <div style={{ width:46, height:46, borderRadius:10, background:`${CAT_COLOR[p?.category]||"#C41E3A"}18`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0, overflow:"hidden" }}>
                   {p?.image_url ? <img src={p?.image_url} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" onError={e => { e.target.src = "https://via.placeholder.com/46x46/f5a623/ffffff?text=SF"; }} /> : (CAT_EMOJI[p?.category]||"🍖")}
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontWeight:700, fontSize:14, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p?.name || "Sin nombre"}</div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:2 }}>
+                    <div style={{ fontWeight:700, fontSize:14, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p?.name || "Sin nombre"}</div>
+                    {p?.suspended && (
+                      <span style={{
+                        background:"#F59E0B",
+                        color:"white",
+                        fontSize:10,
+                        fontWeight:700,
+                        borderRadius:4,
+                        padding:"2px 6px",
+                        whiteSpace:"nowrap"
+                      }}>
+                        ⏸️ SUSPENDIDO
+                      </span>
+                    )}
+                  </div>
                   <div style={{ fontSize:12, color:"#9CA3AF", marginTop:1 }}>{p?.category} · <strong style={{ color:"#C41E3A" }}>{fmt(p?.price || 0)}</strong></div>
                 </div>
                 <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                  <button 
+                    onClick={() => onToggleSuspension(p.id)} 
+                    style={{ 
+                      background: p?.suspended ? "#D1FAE5" : "#FEF3C7", 
+                      border:"none", 
+                      borderRadius:8, 
+                      padding:"7px 11px", 
+                      cursor:"pointer", 
+                      fontSize:12,
+                      color: p?.suspended ? "#059669" : "#D97706"
+                    }}
+                    title={p?.suspended ? "Activar producto" : "Suspender producto"}
+                  >
+                    {p?.suspended ? "✅ Activar" : "⏸️ Suspender"}
+                  </button>
                   <button onClick={() => onEdit(p)} style={{ background:"#EFF6FF", border:"none", borderRadius:8, padding:"7px 11px", cursor:"pointer", fontSize:14 }}>✏️</button>
                   <button onClick={() => {
                     if (window.confirm(`¿Estás seguro que querés borrar "${p?.name || 'este producto'}"?\n\nEsta acción no se puede deshacer.`)) {
