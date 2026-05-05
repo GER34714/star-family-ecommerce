@@ -75,9 +75,9 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   
-  // Solo interceptar peticiones HTTP(S) y del mismo origen
-  if (!request.url.startsWith('http')) {
-    return;
+  // Solo interceptar peticiones del mismo origen (ignorar externas como placeholder.com)
+  if (url.origin !== self.location.origin) {
+    return; // Dejar que el navegador maneje peticiones externas normalmente
   }
   
   // Para rutas esenciales: Network First con fallback a cache
@@ -115,7 +115,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // Para otras peticiones: Network Only (no cachear para evitar problemas)
+  // Para otras peticiones locales: Network Only (no cachear para evitar problemas)
   event.respondWith(fetch(request));
 });
 

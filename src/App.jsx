@@ -19,6 +19,7 @@ import {
 // ═══════════════════════════════════════════════════════
 
 const CATS = ["Todos","Frescos","Completos","Panchos Armados","Hamburguesas","Pizzas y Empanadas","Medialunas y Chipas","Combos"];
+const ADMIN_CATS = CATS.filter(c => c !== "Todos");
 const CAT_EMOJI = { "Frescos":"🌭","Completos":"🌭","Panchos Armados":"🌭","Hamburguesas":"🍔","Pizzas y Empanadas":"🍕","Medialunas y Chipas":"🥐","Combos":"📦" };
 const CAT_COLOR = { "Frescos":"#E53E3E","Completos":"#DD6B20","Panchos Armados":"#D97706","Hamburguesas":"#7C3AED","Pizzas y Empanadas":"#2563EB","Medialunas y Chipas":"#059669","Combos":"#C41E3A","Todos":"#C41E3A" };
 
@@ -371,11 +372,8 @@ export default function StarFamilyApp() {
     setLoadingCategories(true);
     try {
       const supabase = getSupabaseClient();
-      console.log('📥 Cargando categorías desde Supabase...');
       const categories = await getAvailableCategories(supabase);
-      console.log('📋 Categorías recibidas desde Supabase:', categories);
       setAvailableCategories(categories);
-      console.log('🔄 availableCategories actualizado a:', categories);
       
       // Si no hay categoría seleccionada y hay categorías disponibles, seleccionar la primera
       if (!form.category && categories.length > 0) {
@@ -4401,7 +4399,6 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
   }, [adminTab]);
 
   const input = { width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" };
-  const ADMIN_CATS = ['Frescos', 'Completos', 'Panchos Armados', 'Hamburguesas', 'Pizzas y Empanadas', 'Medialunas y Chipas', 'Combos'];
 
   if (!user || !isMaster) {
     return (
@@ -4545,7 +4542,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                   }}
                 >
                   <option value="">Todas las categorías</option>
-                  {['Frescos', 'Completos', 'Panchos Armados', 'Hamburguesas', 'Pizzas y Empanadas', 'Medialunas y Chipas', 'Combos'].map(cat => (
+                  {availableCategories.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
