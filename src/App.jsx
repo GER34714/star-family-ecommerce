@@ -413,6 +413,8 @@ export default function StarFamilyApp() {
   const [popupPosition, setPopupPosition] = useState('floating'); // 'floating' o 'footer'
   const [priceHistory, setPriceHistory] = useState([]);
   const [restorePoints, setRestorePoints] = useState([]);
+  const [loadingRestorePoints, setLoadingRestorePoints] = useState(false);
+  const [restorePointsError, setRestorePointsError] = useState(null);
 
   // Usar hook de usuarios maestros
   const { 
@@ -907,6 +909,9 @@ export default function StarFamilyApp() {
         setSupaKey(supaConfig.key || "");
       }
       
+      // Cargar puntos de restauración desde Supabase
+      await loadRestorePointsFromSupabase();
+      
     } catch (err) {
       console.error("❌ Error en la inicialización:", err);
     } finally {
@@ -934,7 +939,10 @@ export default function StarFamilyApp() {
   };
   const saveCart = async (c) => { setCart(c); setStorageItem("roxy_cart", c); };
   const savePriceHistory = async (h) => { setPriceHistory(h); setStorageItem("roxy_price_history", h); };
-  const saveRestorePoints = async (rp) => { setRestorePoints(rp); setStorageItem("roxy_restore_points", rp); };
+  const saveRestorePoints = async (rp) => { 
+    // Ya no usamos localStorage para restore points, van a Supabase
+    setRestorePoints(rp); 
+  };
   const saveImagePreview = async (preview) => { setImagePreview(preview); setStorageItem("roxy_image_preview", preview); };
 
   // Funciones para persistir en Supabase
@@ -1104,19 +1112,145 @@ export default function StarFamilyApp() {
   };
 
   // Sistema de Backup y Restauración
-  const createRestorePoint = async (reason = "Backup automático") => {
-    const restorePoint = {
-      id: `restore_${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      reason: reason,
-      products: JSON.parse(JSON.stringify(products)), // Deep copy
-      priceHistory: JSON.parse(JSON.stringify(priceHistory)), // Deep copy
-      user: user?.email || 'unknown'
-    };
+  // Cargar puntos de restauración desde Supabase
+  const loadRestorePointsFromSupabase = async () => {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      console.warn('Configuración de Supabase no disponible para restore points');
+      return;
+    }
 
-    const newRestorePoints = [restorePoint, ...restorePoints].slice(0, 10); // Mantener últimos 10 puntos
-    saveRestorePoints(newRestorePoints);
-    console.log('📍 Punto de restauración creado:', reason);
+    setLoadingRestorePoints(true);
+    setRestorePointsError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('restoration_points')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error cargando puntos de restauración:', error);
+        setRestorePointsError('Error al cargar puntos de restauración');
+        return;
+      }
+
+      // Transformar datos de Supabase al formato esperado
+      const transformedPoints = data.map(point => ({
+        id: point.id,
+        timestamp: point.created_at,
+        reason: point.name,
+        description: point.description,
+        products: point.snapshot?.products || [],
+        priceHistory: point.snapshot?.priceHistory || [],
+        user: point.snapshot?.user || 'unknown'
+      }));
+
+      setRestorePoints(transformedPoints);
+      console.log(`✅ Cargados ${transformedPoints.length} puntos de restauración desde Supabase`);
+
+    } catch (error) {
+      console.error('Error inesperado cargando restore points:', error);
+      setRestorePointsError('Error inesperado al cargar puntos de restauración');
+    } finally {
+      setLoadingRestorePoints(false);
+    }
+  };
+
+  // Crear punto de restauración en Supabase
+  const createRestorePoint = async (reason) => {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      console.warn('Configuración de Supabase no disponible para restore points');
+      showToast('❌ Error: Supabase no disponible', 'error');
+      return;
+    }
+
+    if (!user) {
+      showToast('❌ Error: Usuario no autenticado', 'error');
+      return;
+    }
+
+    try {
+      // Crear snapshot del estado actual
+      const snapshot = {
+        products: JSON.parse(JSON.stringify(products)), // Deep copy
+        priceHistory: JSON.parse(JSON.stringify(priceHistory)), // Deep copy
+        user: user?.email || 'unknown'
+      };
+
+      // Insertar en Supabase
+      const { data, error } = await supabase
+        .from('restoration_points')
+        .insert({
+          name: reason,
+          description: `Backup automático - ${reason}`,
+          snapshot: snapshot,
+          created_by: user.id
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creando punto de restauración:', error);
+        showToast('❌ Error al crear punto de restauración', 'error');
+        return;
+      }
+
+      // Transformar y agregar a la lista local
+      const newPoint = {
+        id: data.id,
+        timestamp: data.created_at,
+        reason: data.name,
+        description: data.description,
+        products: data.snapshot?.products || [],
+        priceHistory: data.snapshot?.priceHistory || [],
+        user: data.snapshot?.user || 'unknown'
+      };
+
+      const newRestorePoints = [newPoint, ...restorePoints];
+      setRestorePoints(newRestorePoints);
+      
+      console.log('📍 Punto de restauración creado en Supabase:', reason);
+      showToast('✅ Punto de restauración creado', 'success');
+
+    } catch (error) {
+      console.error('Error inesperado creando restore point:', error);
+      showToast('❌ Error inesperado al crear punto de restauración', 'error');
+    }
+  };
+
+  // Eliminar punto de restauración de Supabase
+  const deleteRestorePoint = async (pointId) => {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      showToast('❌ Error: Supabase no disponible', 'error');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('restoration_points')
+        .delete()
+        .eq('id', pointId);
+
+      if (error) {
+        console.error('Error eliminando punto de restauración:', error);
+        showToast('❌ Error al eliminar punto de restauración', 'error');
+        return;
+      }
+
+      // Eliminar de la lista local
+      const newRestorePoints = restorePoints.filter(rp => rp.id !== pointId);
+      setRestorePoints(newRestorePoints);
+      
+      console.log('🗑️ Punto de restauración eliminado:', pointId);
+      showToast('✅ Punto de restauración eliminado', 'success');
+
+    } catch (error) {
+      console.error('Error inesperado eliminando restore point:', error);
+      showToast('❌ Error inesperado al eliminar punto de restauración', 'error');
+    }
   };
 
   const restoreFromPoint = async (restorePointId) => {
@@ -2275,6 +2409,9 @@ export default function StarFamilyApp() {
             restorePoints={restorePoints}
             onCreateRestorePoint={createRestorePoint}
             onRestoreFromPoint={restoreFromPoint}
+            onDeleteRestorePoint={deleteRestorePoint}
+            loadingRestorePoints={loadingRestorePoints}
+            restorePointsError={restorePointsError}
             user={user}
             isMaster={isMaster}
             onLogin={handleLogin}
@@ -3465,7 +3602,7 @@ function PriceHistory({ priceHistory }) {
 // RESTORE POINTS COMPONENT
 // ═══════════════════════════════════════════════════════
 
-function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint }) {
+function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint, onDeleteRestorePoint, loadingRestorePoints, restorePointsError }) {
   const formatDate = (timestamp) => {
     const date = new Date(timestamp);
     return date.toLocaleString('es-AR', {
@@ -3483,7 +3620,13 @@ function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint
     const reason = prompt("¿Por qué querés crear este punto de restauración?", "Backup manual");
     if (reason) {
       await onCreateRestorePoint(reason);
-      showToast("✅ Punto de restauración creado", "success");
+    }
+  };
+
+  const handleDeleteRestorePoint = async (pointId) => {
+    const confirmed = window.confirm("¿Estás seguro que querés eliminar este punto de restauración?");
+    if (confirmed) {
+      await onDeleteRestorePoint(pointId);
     }
   };
 
@@ -3520,14 +3663,50 @@ function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint
         </div>
       </div>
 
-      {/* Lista de puntos de restauración */}
-      {restorePoints.length === 0 ? (
+      {/* Loading state */}
+      {loadingRestorePoints && (
+        <div style={{ textAlign:"center", padding:40, color:"#6B7280" }}>
+          <div style={{ fontSize:24, marginBottom:12 }}>⏳</div>
+          <div style={{ fontSize:16, fontWeight:600, marginBottom:4 }}>Cargando puntos de restauración...</div>
+          <div style={{ fontSize:13 }}>Obteniendo datos desde Supabase</div>
+        </div>
+      )}
+
+      {/* Error state */}
+      {restorePointsError && !loadingRestorePoints && (
+        <div style={{ textAlign:"center", padding:40, color:"#DC2626" }}>
+          <div style={{ fontSize:24, marginBottom:12 }}>❌</div>
+          <div style={{ fontSize:16, fontWeight:600, marginBottom:4 }}>Error al cargar puntos</div>
+          <div style={{ fontSize:13 }}>{restorePointsError}</div>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              marginTop:12,
+              padding:"8px 16px",
+              background:"#DC2626",
+              color:"white",
+              border:"none",
+              borderRadius:6,
+              cursor:"pointer",
+              fontSize:12
+            }}
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loadingRestorePoints && !restorePointsError && restorePoints.length === 0 ? (
         <div style={{ textAlign:"center", padding:40, color:"#9CA3AF" }}>
           <div style={{ fontSize:48, marginBottom:12 }}>📋</div>
           <div style={{ fontSize:16, fontWeight:600, marginBottom:4 }}>No hay puntos de restauración</div>
           <div style={{ fontSize:13 }}>Los puntos de restauración se crearán automáticamente cuando hagas cambios importantes</div>
         </div>
-      ) : (
+      ) : null}
+      
+      {/* Lista de puntos de restauración */}
+      {!loadingRestorePoints && !restorePointsError && restorePoints.length > 0 && (
         <div style={{ display:"flex", flexDirection:"column", gap:12, maxHeight:500, overflowY:"auto" }}>
           {restorePoints.map((point, index) => (
             <div key={point.id} style={{ 
@@ -3561,24 +3740,45 @@ function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint
                     {formatDate(point.timestamp)}
                   </div>
                 </div>
-                <button
-                  onClick={() => onRestoreFromPoint(point.id)}
-                  style={{
-                    padding:"6px 12px",
-                    borderRadius:6,
-                    border:"1px solid #DC2626",
-                    background:"#DC2626",
-                    color:"white",
-                    fontWeight:600,
-                    cursor:"pointer",
-                    fontSize:12,
-                    transition:"background 0.2s"
-                  }}
-                  onMouseOver={(e) => e.target.style.background = "#B91C1C"}
-                  onMouseOut={(e) => e.target.style.background = "#DC2626"}
-                >
-                  🔄 Restaurar
-                </button>
+                <div style={{ display:"flex", gap:6 }}>
+                  <button
+                    onClick={() => handleDeleteRestorePoint(point.id)}
+                    style={{
+                      padding:"6px 12px",
+                      borderRadius:6,
+                      border:"1px solid #6B7280",
+                      background:"#6B7280",
+                      color:"white",
+                      fontWeight:600,
+                      cursor:"pointer",
+                      fontSize:12,
+                      transition:"background 0.2s"
+                    }}
+                    onMouseOver={(e) => e.target.style.background = "#4B5563"}
+                    onMouseOut={(e) => e.target.style.background = "#6B7280"}
+                    title="Eliminar punto de restauración"
+                  >
+                    🗑️ Eliminar
+                  </button>
+                  <button
+                    onClick={() => onRestoreFromPoint(point.id)}
+                    style={{
+                      padding:"6px 12px",
+                      borderRadius:6,
+                      border:"1px solid #DC2626",
+                      background:"#DC2626",
+                      color:"white",
+                      fontWeight:600,
+                      cursor:"pointer",
+                      fontSize:12,
+                      transition:"background 0.2s"
+                    }}
+                    onMouseOver={(e) => e.target.style.background = "#B91C1C"}
+                    onMouseOut={(e) => e.target.style.background = "#DC2626"}
+                  >
+                    🔄 Restaurar
+                  </button>
+                </div>
               </div>
 
               {/* Content */}
@@ -3633,7 +3833,7 @@ function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint
 // ADMIN PANEL
 // ═══════════════════════════════════════════════════════
 
-function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview }) {
+function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint, onDeleteRestorePoint, loadingRestorePoints, restorePointsError, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview }) {
   const input = { width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" };
   const ADMIN_CATS = ['Frescos', 'Completos', 'Panchos Armados', 'Hamburguesas', 'Pizzas y Empanadas', 'Medialunas y Chipas', 'Combos'];
 
@@ -4254,6 +4454,9 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
           restorePoints={restorePoints}
           onCreateRestorePoint={onCreateRestorePoint}
           onRestoreFromPoint={onRestoreFromPoint}
+          onDeleteRestorePoint={onDeleteRestorePoint}
+          loadingRestorePoints={loadingRestorePoints}
+          restorePointsError={restorePointsError}
         />
       )}
 
