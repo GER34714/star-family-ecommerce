@@ -2082,11 +2082,7 @@ export default function StarFamilyApp() {
             ) : (
               // Vista de categoría específica con productos paginados
               (() => {
-                const categoryProducts = paginatedData.filter(p => 
-                  p && typeof p === 'object' && p?.category && p?.category === cat
-                );
-                
-                if (categoryProducts.length === 0) return null;
+                if (paginatedData.length === 0) return null;
                 
                 return (
                   <div style={{ marginBottom:32 }}>
@@ -2095,7 +2091,7 @@ export default function StarFamilyApp() {
                       <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:2, color:"#111" }}>{cat.toUpperCase()}</span>
                     </div>
                     <div className="product-grid">
-                      {categoryProducts?.filter(p => p && typeof p === 'object' && p.id).map((product) => (
+                      {paginatedData?.filter(p => p && typeof p === 'object' && p.id).map((product) => (
                         <ProductCard key={product.id} p={product} onOpen={() => { setModal(product); setQty(1); }} onAdd={() => addToCart(product, 1)} />
                       ))}
                     </div>
