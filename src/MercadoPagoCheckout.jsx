@@ -44,22 +44,15 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
           binary_mode: true,
           statement_descriptor: 'Star Family Mayorista',
           external_reference: `order_${Date.now()}_${cartItems.length}_items`,
-          // Habilitar métodos de pago incluyendo dinero en cuenta
+          // Habilitar métodos de pago - NO excluir dinero en cuenta
           payment_methods: {
+            // No excluir tipos de pago para permitir account_money
             excluded_payment_types: [],
-            excluded_payment_methods: [],
-            default_payment_method_id: null
+            // No excluir métodos específicos
+            excluded_payment_methods: []
           },
-          // Configuración para permitir dinero en cuenta
-          purpose: 'wallet_purchase',
-          // Habilitar todos los métodos de pago disponibles
-          payment_methods_allowed: {
-            payment_types: [
-              { id: 'credit_card' },
-              { id: 'debit_card' },
-              { id: 'account_money' }
-            ]
-          }
+          // Configuración para wallet purchase (habilita dinero en cuenta)
+          purpose: 'wallet_purchase'
         })
       });
 
