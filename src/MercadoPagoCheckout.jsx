@@ -4,7 +4,7 @@ import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 // Inicializar Mercado Pago con la clave pública proporcionada
 initMercadoPago('APP_USR-2601bd12-3a55-4f18-a4d2-b907a571537c');
 
-const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentError }) => {
+const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentError, onClose }) => {
   const [preferenceId, setPreferenceId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -54,6 +54,8 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
       }
 
       setPreferenceId(data.id);
+      // Cerrar el carrito cuando se crea la preferencia y se abre el checkout
+      onClose?.();
     } catch (error) {
       console.error('Error creating Mercado Pago preference:', error);
       setErrorMessage(error.message || 'No se pudo cargar el método de pago');
