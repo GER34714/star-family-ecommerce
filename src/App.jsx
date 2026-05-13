@@ -3631,7 +3631,13 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
         <button onClick={onClose} style={{ background:"#F4F4F5", border:"none", borderRadius:8, width:36, height:36, cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
       </div>
 
-      <div style={{ flex:1, overflowY:"auto", padding:"14px 20px" }}>
+      <div style={{ 
+        flex:1, 
+        overflowY:"auto", 
+        padding:"14px 20px",
+        maxHeight: "calc(100vh - 280px)", // Altura máxima para permitir scroll
+        scrollBehavior: "smooth" // Scroll suave
+      }}>
         {cart.length === 0 ? (
           <div style={{ textAlign:"center", padding:"48px 0", color:"#9CA3AF" }}>
             <div style={{ fontSize:52 }}>🛒</div>
