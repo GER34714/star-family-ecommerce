@@ -75,7 +75,18 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
             body: JSON.stringify(preferencePayload)
           });
 
-      const data = await response.json();
+      let data;
+      try {
+        const text = await response.text();
+        if (!text) {
+          throw new Error('Respuesta vacía del servidor');
+        }
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error('Error parsing response:', e);
+        throw new Error('Respuesta inválida del servidor. Verifica la configuración de Mercado Pago.');
+      }
+      
       if (!response.ok || !data.id) {
         console.error('Error de Mercado Pago al crear preferencia:', data);
         throw new Error(data.message || data.error || 'No se pudo crear la preferencia de Mercado Pago');
