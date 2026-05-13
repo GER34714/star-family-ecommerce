@@ -1088,14 +1088,13 @@ export default function StarFamilyApp() {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error cargando banners:', error);
-        // Si la tabla no existe o no hay permisos, mostrar mensaje pero no romper la app
-        if (error.code === 'PGRST116') {
-          console.log('ℹ️ La tabla banners no existe aún. Se creará al agregar el primer banner.');
-        } else if (error.code === '42501') {
-          console.log('⚠️ Permisos de banners no configurados. Ejecutá el script SQL en Supabase.');
+        // Manejo graceful de errores de banners - sin logs ni warnings
+        if (error.code === 'PGRST116' || error.code === '42501') {
+          // Tabla no existe o permisos denegados - setear array vacío silenciosamente
+          setBanners([]);
         } else {
-          console.log('⚠️ Error general cargando banners. La app continuará funcionando.');
+          // Otros errores - también setear array vacío silenciosamente
+          setBanners([]);
         }
         return;
       }
@@ -1105,8 +1104,8 @@ export default function StarFamilyApp() {
         console.log(`✅ ${data.length} banners cargados desde Supabase`);
       }
     } catch (error) {
-      console.error('Error inesperado cargando banners:', error);
-      console.log('ℹ️ La aplicación continuará funcionando sin banners.');
+      // Manejo graceful de errores inesperados - sin logs
+      setBanners([]);
     } finally {
       setLoadingBanners(false);
     }
@@ -3272,7 +3271,17 @@ export default function StarFamilyApp() {
       {/* CART OVERLAY */}
       <div className={`overlay ${cartOpen?"show":""}`} onClick={() => setCartOpen(false)} />
       <div className={`cart-drawer ${cartOpen?"open":""}`}>
-        <CartDrawer cart={cart} onRemove={removeFromCart} onUpdateQuantity={updateCartQuantity} onClose={() => setCartOpen(false)} total={cartTotal} onClear={() => saveCart([])} paymentSettings={paymentSettings} />
+        <CartDrawer 
+          cart={cart} 
+          onRemove={removeFromCart} 
+          onUpdateQuantity={updateCartQuantity} 
+          onClose={() => setCartOpen(false)} 
+          total={cartTotal} 
+          onClear={() => saveCart([])} 
+          paymentSettings={paymentSettings}
+          paymentCompleted={paymentCompleted}
+          paymentProcessing={paymentProcessing}
+        />
       </div>
 
       {/* PRODUCT MODAL */}
@@ -3534,7 +3543,7 @@ function ProductModal({ p, qty, setQty, onAdd, onClose }) {
 // CART DRAWER
 // ═══════════════════════════════════════════════════════
 
-function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear, paymentSettings }) {
+function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear, paymentSettings, paymentCompleted, paymentProcessing }) {
     
   // Función para copiar al portapapeles
   const copyToClipboard = async (text, type) => {
