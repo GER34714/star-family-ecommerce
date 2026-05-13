@@ -3281,6 +3281,8 @@ export default function StarFamilyApp() {
           paymentSettings={paymentSettings}
           paymentCompleted={paymentCompleted}
           paymentProcessing={paymentProcessing}
+          onPaymentSuccess={handleMercadoPagoSuccess}
+          onPaymentError={handleMercadoPagoError}
         />
       </div>
 
@@ -3543,7 +3545,7 @@ function ProductModal({ p, qty, setQty, onAdd, onClose }) {
 // CART DRAWER
 // ═══════════════════════════════════════════════════════
 
-function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear, paymentSettings, paymentCompleted, paymentProcessing }) {
+function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear, paymentSettings, paymentCompleted, paymentProcessing, onPaymentSuccess, onPaymentError }) {
     
   // Función para copiar al portapapeles
   const copyToClipboard = async (text, type) => {
