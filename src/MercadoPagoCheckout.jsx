@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 
 // Inicializar Mercado Pago con la clave pública proporcionada
-initMercadoPago('APP_USR-a2e4a0f8-def4-4280-b8ce-353ff2a793f5');
+initMercadoPago('APP_USR-2601bd12-3a55-4f18-a4d2-b907a571537c');
 
 const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentError }) => {
   const [preferenceId, setPreferenceId] = useState(null);
@@ -32,7 +32,7 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer APP_USR-7043807513085545-051112-7b1305ae5c53b7f50955585fcce7b325-153608124`
+          'Authorization': `Bearer ${process.env.REACT_APP_MERCADO_PAGO_ACCESS_TOKEN}`
         },
         body: JSON.stringify({
           items,
