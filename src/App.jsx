@@ -3,6 +3,7 @@ import { getSupabaseClient } from './supabaseClient';
 import { useMasterUser } from './useMasterUser';
 import { AnimatePresence, motion } from 'framer-motion';
 import BannerSection from './BannerSection';
+import MercadoPagoCheckout from './MercadoPagoCheckout';
 import { 
   toTitleCase, 
   suggestCategory, 
@@ -120,6 +121,10 @@ export default function StarFamilyApp() {
   const [editingBanner, setEditingBanner] = useState(false);
   const [bannerImagePreview, setBannerImagePreview] = useState(null);
   const [uploadingBannerImage, setUploadingBannerImage] = useState(false);
+  
+  // Estados para Mercado Pago
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
   
   const [supaUrl, setSupaUrl] = useState("");
   const [supaKey, setSupaKey] = useState("");
@@ -1314,6 +1319,41 @@ export default function StarFamilyApp() {
     });
     setEditingBanner(true);
     setBannerImagePreview(banner.image_url || null);
+  };
+
+  // ═══════════════════════════════════════════════════════
+  // FUNCIONES PARA MERCADO PAGO
+  // ═══════════════════════════════════════════════════════
+
+  // Manejar éxito del pago
+  const handleMercadoPagoSuccess = (response) => {
+    console.log('✅ Pago exitoso:', response);
+    setPaymentProcessing(false);
+    setPaymentCompleted(true);
+    showToast('🎉 ¡Pago realizado con éxito! Te contactaremos pronto.', 'success');
+    
+    // Limpiar carrito después de un pago exitoso
+    setTimeout(() => {
+      saveCart([]);
+      setCartOpen(false);
+      setPaymentCompleted(false);
+    }, 3000);
+  };
+
+  // Manejar error del pago
+  const handleMercadoPagoError = (error) => {
+    console.error('❌ Error en el pago:', error);
+    setPaymentProcessing(false);
+    showToast('❌ Hubo un error al procesar el pago. Por favor, intenta nuevamente.', 'error');
+  };
+
+  // Iniciar proceso de pago
+  const handleMercadoPagoStart = () => {
+    if (cart.length === 0) {
+      showToast('⚠️ El carrito está vacío', 'error');
+      return;
+    }
+    setPaymentProcessing(true);
   };
 
   useEffect(() => {
@@ -3058,17 +3098,11 @@ export default function StarFamilyApp() {
               transition: { duration: 0.3 }
             }}
             style={{
-              position: popupPosition === 'floating' ? 'fixed' : 'relative',
-              ...(popupPosition === 'floating' ? {
-                bottom: 100,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                zIndex: 500
-              } : {
-                width: '100%',
-                maxWidth: 1200,
-                margin: '0 auto'
-              })
+              position: 'fixed',
+              bottom: 80,
+              right: 20,
+              zIndex: 500,
+              maxWidth: 320
             }}
           >
             <motion.div
@@ -3079,46 +3113,51 @@ export default function StarFamilyApp() {
               style={{
                 background:"linear-gradient(135deg, #C41E3A, #A01731)",
                 color:"white",
-                borderRadius:16,
-                padding:"16px 24px",
+                borderRadius:12,
+                padding:"12px 16px",
                 display:"flex",
                 alignItems:"center",
-                gap:16,
-                boxShadow:"0 6px 20px rgba(196, 30, 58, 0.3)",
+                gap:12,
+                boxShadow:"0 4px 16px rgba(196, 30, 58, 0.4)",
                 backdropFilter:"blur(10px)",
                 border:"1px solid rgba(255, 255, 255, 0.2)",
                 cursor:"pointer",
-                maxWidth: popupPosition === 'floating' ? 350 : 'none',
-                margin: popupPosition === 'footer' ? '20px 0' : 0
+                fontSize:14
               }}
               onClick={installPWA}
             >
               <div style={{ 
-                fontSize:32, 
+                fontSize:24, 
                 flexShrink:0,
                 animation: 'bounce 2s infinite'
               }}>
                 📱
               </div>
-              <div style={{ flex:1 }}>
-                <div style={{ 
-                  fontSize:16, 
-                  fontWeight:700, 
-                  marginBottom:4,
-                  fontFamily:"'Poppins',sans-serif"
-                }}>
-                  ¡Instala Star Family!
-                </div>
+              <div style={{ flex:1, minWidth: 0 }}>
                 <div style={{ 
                   fontSize:13, 
-                  opacity:0.9,
-                  fontFamily:"'Poppins',sans-serif"
+                  fontWeight:600, 
+                  marginBottom:2,
+                  fontFamily:"'Poppins',sans-serif",
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
                 }}>
-                  Compra más rápido desde tu celular
+                  ¡Instala la app!
+                </div>
+                <div style={{ 
+                  fontSize:11, 
+                  opacity:0.9,
+                  fontFamily:"'Poppins',sans-serif",
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}>
+                  Compra más rápido
                 </div>
               </div>
               <div style={{ 
-                fontSize:20, 
+                fontSize:16, 
                 opacity:0.7,
                 flexShrink:0
               }}>
@@ -3135,25 +3174,19 @@ export default function StarFamilyApp() {
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               style={{
-                position: popupPosition === 'floating' ? 'absolute' : 'relative',
-                ...(popupPosition === 'floating' ? {
-                  top: -8,
-                  right: -8
-                } : {
-                  position: 'absolute',
-                  top: 8,
-                  right: 8
-                }),
+                position: 'absolute',
+                top: -6,
+                right: -6,
                 background:"rgba(255, 255, 255, 0.2)",
                 border:"none",
-                borderRadius:20,
-                width:32,
-                height:32,
+                borderRadius:16,
+                width:28,
+                height:28,
                 display:"flex",
                 alignItems:"center",
                 justifyContent:"center",
                 cursor:"pointer",
-                fontSize:16,
+                fontSize:14,
                 color:"white",
                 backdropFilter:"blur(10px)"
               }}
@@ -3828,10 +3861,102 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
             <span style={{ fontWeight:700, color:"white" }}>Total del pedido</span>
             <span style={{ fontWeight:900, fontSize:20, color:"#10B981" }}>{fmt(total)}</span>
           </div>
-          <button onClick={sendWA} style={{ width:"100%", background:"#25D366", color:"white", border:"none", borderRadius:12, padding:14, fontSize:15, fontWeight:700, cursor:"pointer", marginBottom:8, fontFamily:"'Poppins',sans-serif" }}>
-            📱 Enviar por WhatsApp
+          
+          {/* MERCADO PAGO CHECKOUT */}
+          {!paymentCompleted && (
+            <div style={{ marginBottom:12 }}>
+              <div style={{ 
+                background: "#F0F9FF", 
+                border: "1px solid #BFDBFE", 
+                borderRadius:12, 
+                padding:12, 
+                marginBottom:8 
+              }}>
+                <div style={{ 
+                  fontSize:12, 
+                  fontWeight:600, 
+                  color:"#1E40AF", 
+                  marginBottom:8, 
+                  display:"flex", 
+                  alignItems:"center", 
+                  gap:6 
+                }}>
+                  💳 Pago seguro con Mercado Pago
+                </div>
+                <div style={{ fontSize:11, color:"#64748B", marginBottom:8 }}>
+                  Paga con tarjeta, débito o efectivo en Pago Fácil
+                </div>
+                <MercadoPagoCheckout 
+                  cartItems={cart} 
+                  total={total}
+                  onPaymentSuccess={handleMercadoPagoSuccess}
+                  onPaymentError={handleMercadoPagoError}
+                />
+              </div>
+            </div>
+          )}
+          
+          {/* PAYMENT SUCCESS MESSAGE */}
+          {paymentCompleted && (
+            <div style={{ 
+              background: "#DCFCE7", 
+              border: "1px solid #BBF7D0", 
+              borderRadius:12, 
+              padding:16, 
+              marginBottom:12,
+              textAlign: "center"
+            }}>
+              <div style={{ fontSize:24, marginBottom:8 }}>🎉</div>
+              <div style={{ 
+                fontSize:14, 
+                fontWeight:600, 
+                color:"#166534", 
+                marginBottom:4 
+              }}>
+                ¡Pago realizado con éxito!
+              </div>
+              <div style={{ fontSize:12, color:"#15803D" }}>
+                Te contactaremos pronto para coordinar la entrega.
+              </div>
+            </div>
+          )}
+          
+          <button 
+            onClick={sendWA} 
+            disabled={paymentProcessing || paymentCompleted}
+            style={{ 
+              width:"100%", 
+              background: paymentProcessing || paymentCompleted ? "#9CA3AF" : "#25D366", 
+              color:"white", 
+              border:"none", 
+              borderRadius:12, 
+              padding:14, 
+              fontSize:15, 
+              fontWeight:700, 
+              cursor: paymentProcessing || paymentCompleted ? "not-allowed" : "pointer", 
+              marginBottom:8, 
+              fontFamily:"'Poppins',sans-serif",
+              opacity: paymentProcessing || paymentCompleted ? 0.6 : 1
+            }}
+          >
+            {paymentProcessing ? "⏳ Procesando..." : paymentCompleted ? "✅ Pedido confirmado" : "📱 Enviar por WhatsApp"}
           </button>
-          <button onClick={onClear} style={{ width:"100%", background:"#F4F4F5", color:"#6B7280", border:"none", borderRadius:12, padding:10, fontSize:13, cursor:"pointer", fontFamily:"'Poppins',sans-serif" }}>
+          <button 
+            onClick={onClear} 
+            disabled={paymentProcessing || paymentCompleted}
+            style={{ 
+              width:"100%", 
+              background:"#F4F4F5", 
+              color: paymentProcessing || paymentCompleted ? "#9CA3AF" : "#6B7280", 
+              border:"none", 
+              borderRadius:12, 
+              padding:10, 
+              fontSize:13, 
+              cursor: paymentProcessing || paymentCompleted ? "not-allowed" : "pointer", 
+              fontFamily:"'Poppins',sans-serif",
+              opacity: paymentProcessing || paymentCompleted ? 0.6 : 1
+            }}
+          >
             Vaciar carrito
           </button>
         </div>
