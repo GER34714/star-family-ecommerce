@@ -4,6 +4,18 @@ import { AnimatePresence, motion } from 'framer-motion';
 const BannerSection = ({ banners = [], loading = false }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const updateIsMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    updateIsMobile();
+    window.addEventListener('resize', updateIsMobile);
+
+    return () => window.removeEventListener('resize', updateIsMobile);
+  }, []);
 
   // Auto-advance banner
   useEffect(() => {
@@ -58,7 +70,7 @@ const BannerSection = ({ banners = [], loading = false }) => {
       style={{ 
         position: "relative", 
         width: "100%", 
-        height: "300px", 
+        height: isMobile ? "250px" : "300px", 
         overflow: "hidden", 
         borderRadius: "12px",
         margin: "16px 0",
@@ -88,8 +100,9 @@ const BannerSection = ({ banners = [], loading = false }) => {
             alt={currentBanner.title || "Banner"}
             style={{
               width: "100%",
-              height: "100%",
+              height: isMobile ? "42%" : "100%",
               objectFit: "contain",
+              objectPosition: isMobile ? "top center" : "center",
               background: "#000"
             }}
           />
@@ -102,15 +115,16 @@ const BannerSection = ({ banners = [], loading = false }) => {
                 bottom: 0,
                 left: 0,
                 right: 0,
-                background: "linear-gradient(to top, rgba(0,0,0,0.8), transparent)",
-                padding: "20px",
+                minHeight: isMobile ? "58%" : "auto",
+                background: isMobile ? "linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.75))" : "linear-gradient(to top, rgba(0,0,0,0.8), transparent)",
+                padding: isMobile ? "14px 16px 26px" : "20px",
                 color: "white"
               }}
             >
               {currentBanner.title && (
                 <h2 style={{
-                  margin: "0 0 8px 0",
-                  fontSize: "24px",
+                  margin: isMobile ? "0 0 6px 0" : "0 0 8px 0",
+                  fontSize: isMobile ? "20px" : "24px",
                   fontWeight: "bold",
                   textShadow: "2px 2px 4px rgba(0,0,0,0.8)"
                 }}>
@@ -120,7 +134,7 @@ const BannerSection = ({ banners = [], loading = false }) => {
               {currentBanner.description && (
                 <p style={{
                   margin: 0,
-                  fontSize: "16px",
+                  fontSize: isMobile ? "14px" : "16px",
                   textShadow: "1px 1px 2px rgba(0,0,0,0.8)"
                 }}>
                   {currentBanner.description}
@@ -159,7 +173,7 @@ const BannerSection = ({ banners = [], loading = false }) => {
             style={{
               position: "absolute",
               left: "10px",
-              top: "50%",
+              top: isMobile ? "21%" : "50%",
               transform: "translateY(-50%)",
               background: "rgba(0,0,0,0.5)",
               color: "white",
@@ -185,7 +199,7 @@ const BannerSection = ({ banners = [], loading = false }) => {
             style={{
               position: "absolute",
               right: "10px",
-              top: "50%",
+              top: isMobile ? "21%" : "50%",
               transform: "translateY(-50%)",
               background: "rgba(0,0,0,0.5)",
               color: "white",

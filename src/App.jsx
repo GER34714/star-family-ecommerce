@@ -3631,13 +3631,7 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
         <button onClick={onClose} style={{ background:"#F4F4F5", border:"none", borderRadius:8, width:36, height:36, cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
       </div>
 
-      <div style={{ 
-        flex:1, 
-        overflowY:"auto", 
-        padding:"14px 20px",
-        maxHeight: "calc(100vh - 280px)", // Altura máxima para permitir scroll
-        scrollBehavior: "smooth" // Scroll suave
-      }}>
+      <div style={{ flex: cart.length === 0 ? 1 : 0, overflowY:"auto", padding: cart.length === 0 ? "14px 20px" : 0, display: cart.length === 0 ? "block" : "none" }}>
         {cart.length === 0 ? (
           <div style={{ textAlign:"center", padding:"48px 0", color:"#9CA3AF" }}>
             <div style={{ fontSize:52 }}>🛒</div>
@@ -3858,7 +3852,7 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
                   total={total}
                   onPaymentSuccess={onPaymentSuccess}
                   onPaymentError={onPaymentError}
-                  onClose={() => setCartOpen(false)}
+                  onClose={() => onClose?.()}
                 />
               </div>
             </div>
@@ -5855,5 +5849,5 @@ const CSS = `
   .btn-add-cart { background:#C41E3A; color:white; border:none; border-radius:8px; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:22px; font-weight:700; flex-shrink:0; transition:background 0.15s; line-height:1; }
   .btn-add-cart:hover { background:#A01731; }
 
-  @media(max-width:480px) { .cart-drawer { width:100vw; } }
+  @media(max-width:480px) { .cart-drawer { top:0; width:100vw; height:100dvh; background:#fff; z-index:1000; } }
 `;

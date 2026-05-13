@@ -27,46 +27,58 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
         throw new Error('El carrito no tiene productos válidos para pagar');
       }
 
-      // Crear preferencia con el access token proporcionado
-      const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer APP_USR-6318323343884379-051213-1de2b6c067eeb716b1e4ed751da8f3ac-1016520294`
-        },
-        body: JSON.stringify({
-          items,
-          back_urls: {
-            success: `${window.location.origin}/payment/success`,
-            failure: `${window.location.origin}/payment/failure`,
-            pending: `${window.location.origin}/payment/pending`
-          },
-          binary_mode: true,
-          statement_descriptor: 'Star Family Mayorista',
-          external_reference: `order_${Date.now()}_${cartItems.length}_items`
-          // Configuración mínima - sin payment_methods para permitir todo por defecto
-        })
-      });
+      const preferencePayload = {
+        items,
+        origin: window.location.origin,
+        externalReference: `order_${Date.now()}_${cartItems.length}_items`
+      };
+
+      const isLocalDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+      const response = isLocalDevelopment
+        ? await fetch('https://api.mercadopago.com/checkout/preferences', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer APP_USR-6318323343884379-051213-1de2b6c067eeb716b1e4ed751da8f3ac-1016520294`
+            },
+            body: JSON.stringify({
+              items,
+              back_urls: {
+                success: `${window.location.origin}/payment/success`,
+                failure: `${window.location.origin}/payment/failure`,
+                pending: `${window.location.origin}/payment/pending`
+              },
+              binary_mode: true,
+              statement_descriptor: 'Star Family Mayorista',
+              external_reference: preferencePayload.externalReference,
+              payment_methods: {
+                excluded_payment_types: [],
+                excluded_payment_methods: [],
+                default_payment_method_id: null
+              },
+              purpose: 'wallet_purchase',
+              payment_methods_allowed: {
+                payment_types: [
+                  { id: 'credit_card' },
+                  { id: 'debit_card' },
+                  { id: 'account_money' }
+                ]
+              }
+            })
+          })
+        : await fetch('/.netlify/functions/create-mercadopago-preference', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(preferencePayload)
+          });
 
       const data = await response.json();
-      console.log('Respuesta de Mercado Pago:', { status: response.status, data });
-      
       if (!response.ok || !data.id) {
-        console.error('Error de Mercado Pago al crear preferencia:', {
-          status: response.status,
-          statusText: response.statusText,
-          data: data,
-          headers: Object.fromEntries(response.headers.entries())
-        });
-        
-        let errorMessage = 'No se pudo crear la preferencia de Mercado Pago';
-        if (data.message) errorMessage = data.message;
-        else if (data.error) errorMessage = data.error;
-        else if (response.status === 401) errorMessage = 'Error de autenticación - revisar credenciales';
-        else if (response.status === 403) errorMessage = 'Acceso denegado - permisos insuficientes';
-        else if (response.status === 400) errorMessage = 'Datos inválidos en la solicitud';
-        
-        throw new Error(errorMessage);
+        console.error('Error de Mercado Pago al crear preferencia:', data);
+        throw new Error(data.message || data.error || 'No se pudo crear la preferencia de Mercado Pago');
       }
 
       setPreferenceId(data.id);
@@ -75,8 +87,7 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
     } catch (error) {
       console.error('Error creating Mercado Pago preference:', error);
       setErrorMessage(error.message || 'No se pudo cargar el método de pago');
-      // No llamar a onPaymentError aquí para evitar mostrar mensaje de error al usuario
-      // El usuario puede reintentar con el botón de reintento
+      onPaymentError?.(error);
     } finally {
       setLoading(false);
     }
