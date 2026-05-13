@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { getSupabaseClient } from './supabaseClient';
 import { useMasterUser } from './useMasterUser';
 import { AnimatePresence, motion } from 'framer-motion';
+import BannerSection from './BannerSection';
 import { 
   toTitleCase, 
   suggestCategory, 
@@ -104,6 +105,21 @@ export default function StarFamilyApp() {
     extra_message: 'Una vez pagado, enviá el comprobante por mensaje 📩'
   });
   const [loadingPaymentSettings, setLoadingPaymentSettings] = useState(false);
+  
+  // Estados para banners
+  const [banners, setBanners] = useState([]);
+  const [loadingBanners, setLoadingBanners] = useState(false);
+  const [bannerForm, setBannerForm] = useState({
+    id: '',
+    title: '',
+    description: '',
+    image_url: '',
+    link: '',
+    active: true
+  });
+  const [editingBanner, setEditingBanner] = useState(false);
+  const [bannerImagePreview, setBannerImagePreview] = useState(null);
+  const [uploadingBannerImage, setUploadingBannerImage] = useState(false);
   
   const [supaUrl, setSupaUrl] = useState("");
   const [supaKey, setSupaKey] = useState("");
@@ -1046,6 +1062,260 @@ export default function StarFamilyApp() {
     }
   };
 
+  // ═══════════════════════════════════════════════════════
+  // FUNCIONES PARA MANEJO DE BANNERS
+  // ═══════════════════════════════════════════════════════
+
+  // Cargar banners desde Supabase
+  const loadBannersFromSupabase = async () => {
+    setLoadingBanners(true);
+    try {
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        console.warn('Cliente de Supabase no disponible para banners');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('banners')
+        .select('*')
+        .eq('active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error cargando banners:', error);
+        // Si la tabla no existe, mostrar mensaje pero no romper la app
+        if (error.code === 'PGRST116') {
+          console.log('ℹ️ La tabla banners no existe aún. Se creará al agregar el primer banner.');
+        }
+        return;
+      }
+
+      if (data) {
+        setBanners(data);
+        console.log(`✅ ${data.length} banners cargados desde Supabase`);
+      }
+    } catch (error) {
+      console.error('Error cargando banners:', error);
+    } finally {
+      setLoadingBanners(false);
+    }
+  };
+
+  // Subir imagen de banner a Supabase Storage
+  const uploadBannerImageToSupabase = async (file) => {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      showToast('⚠️ Configuración de Supabase requerida', 'error');
+      return null;
+    }
+
+    try {
+      setUploadingBannerImage(true);
+      
+      // Generar nombre único para el archivo
+      const fileExt = file.name.split('.').pop();
+      const fileName = `banner-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `banners/${fileName}`;
+      
+      // Subir archivo a Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('banners')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      // Obtener URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('banners')
+        .getPublicUrl(filePath);
+
+      showToast('✅ Imagen de banner subida exitosamente', 'success');
+      return publicUrl;
+      
+    } catch (error) {
+      console.error('Error subiendo imagen de banner:', error);
+      showToast('❌ Error al subir la imagen: ' + error.message, 'error');
+      return null;
+    } finally {
+      setUploadingBannerImage(false);
+    }
+  };
+
+  // Guardar banner en Supabase
+  const saveBannerToSupabase = async (banner) => {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      showToast('⚠️ Configuración de Supabase requerida', 'error');
+      return null;
+    }
+
+    try {
+      if (editingBanner) {
+        // Actualizar banner existente
+        const { data, error } = await supabase
+          .from('banners')
+          .update({
+            title: banner.title,
+            description: banner.description,
+            image_url: banner.image_url,
+            link: banner.link,
+            active: banner.active,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', banner.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data.id;
+      } else {
+        // Crear nuevo banner
+        const { data, error } = await supabase
+          .from('banners')
+          .insert({
+            title: banner.title,
+            description: banner.description,
+            image_url: banner.image_url,
+            link: banner.link,
+            active: banner.active,
+            created_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data.id;
+      }
+    } catch (error) {
+      console.error('Error guardando banner:', error);
+      showToast('❌ Error guardando banner: ' + error.message, 'error');
+      return null;
+    }
+  };
+
+  // Eliminar banner
+  const deleteBanner = async (id) => {
+    if (!confirm('¿Estás seguro que querés eliminar este banner?')) return;
+    
+    try {
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        showToast('⚠️ Configuración de Supabase requerida', 'error');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('banners')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Actualizar estado local
+      const updatedBanners = banners.filter(b => b.id !== id);
+      setBanners(updatedBanners);
+      
+      showToast('🗑️ Banner eliminado', 'success');
+    } catch (error) {
+      console.error('Error eliminando banner:', error);
+      showToast('❌ Error eliminando banner', 'error');
+    }
+  };
+
+  // Manejar selección de imagen de banner
+  const handleBannerImageSelect = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validar que sea una imagen
+      if (!file.type.startsWith('image/')) {
+        showToast('⚠️ Por favor selecciona un archivo de imagen', 'error');
+        return;
+      }
+      
+      // Validar tamaño (máximo 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('⚠️ La imagen no debe superar los 5MB', 'error');
+        return;
+      }
+      
+      // Subir imagen a Supabase
+      const uploadedUrl = await uploadBannerImageToSupabase(file);
+      if (uploadedUrl) {
+        setBannerForm(prev => ({ ...prev, image_url: uploadedUrl }));
+        setBannerImagePreview(uploadedUrl);
+      }
+    }
+  };
+
+  // Limpiar vista previa de banner
+  const clearBannerImagePreview = () => {
+    setBannerImagePreview(null);
+    setBannerForm(prev => ({ ...prev, image_url: '' }));
+  };
+
+  // Guardar formulario de banner
+  const handleBannerSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!bannerForm.image_url) {
+      showToast('⚠️ Por favor agregá una imagen para el banner', 'error');
+      return;
+    }
+
+    try {
+      const bannerId = await saveBannerToSupabase(bannerForm);
+      
+      if (bannerId) {
+        if (editingBanner) {
+          // Actualizar banner en la lista
+          const updatedBanners = banners.map(b => 
+            b.id === bannerForm.id ? { ...bannerForm, id: bannerId } : b
+          );
+          setBanners(updatedBanners);
+          showToast('✏️ Banner actualizado', 'success');
+        } else {
+          // Agregar nuevo banner a la lista
+          const newBanner = { ...bannerForm, id: bannerId };
+          setBanners(prev => [...prev, newBanner]);
+          showToast('🎉 Banner agregado', 'success');
+        }
+
+        // Resetear formulario
+        setBannerForm({
+          id: '',
+          title: '',
+          description: '',
+          image_url: '',
+          link: '',
+          active: true
+        });
+        setEditingBanner(false);
+        setBannerImagePreview(null);
+      }
+    } catch (error) {
+      console.error('Error guardando banner:', error);
+      showToast('❌ Error guardando banner', 'error');
+    }
+  };
+
+  // Editar banner
+  const startEditBanner = (banner) => {
+    setBannerForm({
+      id: banner.id,
+      title: banner.title || '',
+      description: banner.description || '',
+      image_url: banner.image_url || '',
+      link: banner.link || '',
+      active: banner.active
+    });
+    setEditingBanner(true);
+    setBannerImagePreview(banner.image_url || null);
+  };
+
   useEffect(() => {
   const initApp = async () => {
     setLoading(true);
@@ -1082,6 +1352,9 @@ export default function StarFamilyApp() {
       
       // Cargar historial de precios desde Supabase
       await loadPriceHistoryFromSupabase();
+      
+      // Cargar banners desde Supabase
+      await loadBannersFromSupabase();
       
     } catch (err) {
       console.error("❌ Error en la inicialización:", err);
@@ -2208,6 +2481,11 @@ export default function StarFamilyApp() {
             </div>
           </div>
 
+          {/* BANNERS */}
+          <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 16px" }}>
+            <BannerSection banners={banners} loading={loadingBanners} />
+          </div>
+
           {/* CATEGORY BAR */}
           <div style={{ background:"white", borderBottom:"1px solid #E5E7EB", position:"sticky", top:62, zIndex:100 }}>
             <div className="cat-scroll">
@@ -2586,6 +2864,21 @@ export default function StarFamilyApp() {
             setPaymentSettings={setPaymentSettings}
             loadingPaymentSettings={loadingPaymentSettings}
             setLoadingPaymentSettings={setLoadingPaymentSettings}
+            banners={banners}
+            setBanners={setBanners}
+            loadingBanners={loadingBanners}
+            bannerForm={bannerForm}
+            setBannerForm={setBannerForm}
+            editingBanner={editingBanner}
+            setEditingBanner={setEditingBanner}
+            bannerImagePreview={bannerImagePreview}
+            setBannerImagePreview={setBannerImagePreview}
+            uploadingBannerImage={uploadingBannerImage}
+            onBannerSubmit={handleBannerSubmit}
+            onBannerImageSelect={handleBannerImageSelect}
+            onClearBannerImage={clearBannerImagePreview}
+            onDeleteBanner={deleteBanner}
+            onEditBanner={startEditBanner}
                       />
       )}
 
@@ -4316,7 +4609,7 @@ function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint
 // ADMIN PANEL
 // ═══════════════════════════════════════════════════════
 
-function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint, onDeleteRestorePoint, loadingRestorePoints, restorePointsError, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview, loadingPriceHistory, priceHistoryError, onToggleSuspension, paymentSettings, setPaymentSettings, loadingPaymentSettings, setLoadingPaymentSettings }) {
+function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint, onDeleteRestorePoint, loadingRestorePoints, restorePointsError, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview, loadingPriceHistory, priceHistoryError, onToggleSuspension, paymentSettings, setPaymentSettings, loadingPaymentSettings, setLoadingPaymentSettings, banners, setBanners, loadingBanners, bannerForm, setBannerForm, editingBanner, setEditingBanner, bannerImagePreview, setBannerImagePreview, uploadingBannerImage, onBannerSubmit, onBannerImageSelect, onClearBannerImage, onDeleteBanner, onEditBanner }) {
   const supabase = getSupabaseClient();
   
   // Cargar configuración de pago desde Supabase
@@ -4484,7 +4777,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
 
       {/* TABS */}
       <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
-        {[["list","📋 Productos"],["add", editing?"✏️ Editar":"➕ Agregar"],["prices","💰 Precios"],["payment","💳 Datos de Pago"],["history","📜 Historial"],["restore","🔄 Restauración"],["excel","📊 Excel"]].map(([t,label]) => (
+        {[["list","📋 Productos"],["add", editing?"✏️ Editar":"➕ Agregar"],["banners","🎆 Banners"],["prices","💰 Precios"],["payment","💳 Datos de Pago"],["history","📜 Historial"],["restore","🔄 Restauración"],["excel","📊 Excel"]].map(([t,label]) => (
           <button key={t} onClick={() => setAdminTab(t)} style={{ background:adminTab===t?"#C41E3A":"white", color:adminTab===t?"white":"#374151", border:adminTab===t?"none":"1px solid #E5E7EB", borderRadius:10, padding:"8px 16px", cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Poppins',sans-serif" }}>
             {label}
           </button>
@@ -5033,6 +5326,323 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
           </div>
           
                   </div>
+      )}
+
+      {/* TAB: BANNERS */}
+      {adminTab === "banners" && (
+        <div style={{ background:"white", borderRadius:16, padding:24 }}>
+          <h3 style={{ margin:"0 0 6px", fontWeight:800 }}>🎆 Gestión de Banners</h3>
+          <p style={{ color:"#6B7280", fontSize:14, marginBottom:20 }}>Administrá los banners promocionales que se muestran en la tienda.</p>
+          
+          {/* FORMULARIO DE BANNER */}
+          <div style={{ background:"#F9FAFB", borderRadius:12, padding:20, marginBottom:24 }}>
+            <h4 style={{ margin:"0 0 16px", fontWeight:700, fontSize:16 }}>
+              {editingBanner ? "✏️ Editar Banner" : "➕ Agregar Banner"}
+            </h4>
+            
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:16 }}>
+              <div>
+                <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>Título (opcional)</label>
+                <input
+                  type="text"
+                  value={bannerForm.title}
+                  onChange={(e) => setBannerForm({...bannerForm, title: e.target.value})}
+                  style={{ width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" }}
+                  placeholder="Ej: Promo Especial"
+                />
+              </div>
+              
+              <div>
+                <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>Enlace (opcional)</label>
+                <input
+                  type="url"
+                  value={bannerForm.link}
+                  onChange={(e) => setBannerForm({...bannerForm, link: e.target.value})}
+                  style={{ width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" }}
+                  placeholder="https://ejemplo.com"
+                />
+              </div>
+            </div>
+            
+            <div style={{ marginBottom:16 }}>
+              <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>Descripción (opcional)</label>
+              <textarea
+                value={bannerForm.description}
+                onChange={(e) => setBannerForm({...bannerForm, description: e.target.value})}
+                style={{ width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none", minHeight:80, resize:"vertical" }}
+                placeholder="Descripción del banner..."
+              />
+            </div>
+            
+            <div style={{ marginBottom:16 }}>
+              <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>Imagen del Banner *</label>
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display:"none" }}
+                onChange={onBannerImageSelect}
+                id="banner-file-input"
+              />
+              <div style={{ 
+                border:"2px dashed #E5E7EB", 
+                borderRadius:12, 
+                padding:20, 
+                textAlign:"center", 
+                cursor:"pointer", 
+                transition:"all 0.2s",
+                background:"#FAFAFA",
+                position:"relative"
+              }}
+                onClick={() => document.getElementById('banner-file-input').click()}
+                onMouseOver={(e) => { e.target.style.borderColor="#C41E3A"; e.target.style.background="#FFF5F5"; }}
+                onMouseOut={(e) => { e.target.style.borderColor="#E5E7EB"; e.target.style.background="#FAFAFA"; }}
+              >
+                {bannerImagePreview ? (
+                  <div style={{ position:"relative" }}>
+                    <img 
+                      src={bannerImagePreview} 
+                      alt="Vista previa del banner" 
+                      style={{ 
+                        width: "100%", 
+                        maxWidth:300, 
+                        height:150, 
+                        objectFit:"cover", 
+                        borderRadius:8,
+                        border:"1px solid #E5E7EB"
+                      }} 
+                    />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onClearBannerImage();
+                      }}
+                      style={{
+                        position:"absolute",
+                        top:8,
+                        right:8,
+                        background:"rgba(220, 38, 38, 0.9)",
+                        color:"white",
+                        border:"none",
+                        borderRadius:"50%",
+                        width:24,
+                        height:24,
+                        cursor:"pointer",
+                        display:"flex",
+                        alignItems:"center",
+                        justifyContent:"center",
+                        fontSize:12,
+                        fontWeight:"bold"
+                      }}
+                      title="Borrar imagen"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ fontSize:32, marginBottom:8 }}>🎆</div>
+                    <div style={{ fontWeight:600, color:"#374151", marginBottom:4 }}>
+                      {uploadingBannerImage ? "Subiendo imagen..." : "Hacé clic para subir imagen del banner"}
+                    </div>
+                    <div style={{ fontSize:12, color:"#9CA3AF" }}>
+                      Formatos: JPG, PNG, GIF (máx. 5MB) · Tamaño recomendado: 1200x300px
+                    </div>
+                  </div>
+                )}
+              </div>
+              {uploadingBannerImage && (
+                <div style={{ 
+                  marginTop:10, 
+                  textAlign:"center", 
+                  color:"#C41E3A", 
+                  fontSize:13, 
+                  fontWeight:500 
+                }}>
+                  ⏳ Subiendo imagen a Supabase...
+                </div>
+              )}
+            </div>
+            
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:20 }}>
+              <input
+                type="checkbox"
+                id="banner-active"
+                checked={bannerForm.active}
+                onChange={(e) => setBannerForm({...bannerForm, active: e.target.checked})}
+                style={{ width:16, height:16 }}
+              />
+              <label htmlFor="banner-active" style={{ fontSize:14, color:"#374151", cursor:"pointer" }}>
+                Banner activo (visible en la tienda)
+              </label>
+            </div>
+            
+            <div style={{ display:"flex", gap:10 }}>
+              <button 
+                onClick={onBannerSubmit} 
+                className="btn-red" 
+                style={{ flex:1, padding:12, fontSize:14, borderRadius:10, justifyContent:"center" }}
+                disabled={!bannerForm.image_url || uploadingBannerImage}
+              >
+                {editingBanner ? "💾 Guardar cambios" : "✅ Agregar banner"}
+              </button>
+              {editingBanner && (
+                <button 
+                  onClick={() => {
+                    setEditingBanner(false);
+                    setBannerForm({
+                      id: '',
+                      title: '',
+                      description: '',
+                      image_url: '',
+                      link: '',
+                      active: true
+                    });
+                    setBannerImagePreview(null);
+                  }} 
+                  style={{ background:"#F4F4F5", color:"#6B7280", border:"none", borderRadius:10, padding:"12px 20px", cursor:"pointer", fontSize:14, fontFamily:"'Poppins',sans-serif" }}
+                >
+                  Cancelar
+                </button>
+              )}
+            </div>
+          </div>
+          
+          {/* LISTA DE BANNERS */}
+          <div>
+            <h4 style={{ margin:"0 0 16px", fontWeight:700, fontSize:16 }}>
+              📋 Banners Existentes ({banners.length})
+            </h4>
+            
+            {loadingBanners ? (
+              <div style={{ textAlign:"center", padding:40, color:"#6B7280" }}>
+                <div style={{ fontSize:24, marginBottom:8 }}>🔄</div>
+                <div>Cargando banners...</div>
+              </div>
+            ) : banners.length === 0 ? (
+              <div style={{ textAlign:"center", padding:40, color:"#6B7280", background:"#F9FAFB", borderRadius:12 }}>
+                <div style={{ fontSize:32, marginBottom:8 }}>🎆</div>
+                <div style={{ fontWeight:600, marginBottom:4 }}>No hay banners aún</div>
+                <div style={{ fontSize:12 }}>Agregá tu primer banner usando el formulario de arriba</div>
+              </div>
+            ) : (
+              <div style={{ display:"grid", gap:12 }}>
+                {banners.map((banner) => (
+                  <div key={banner.id} style={{ 
+                    border:"1px solid #E5E7EB", 
+                    borderRadius:12, 
+                    padding:16, 
+                    display:"flex", 
+                    gap:16,
+                    background:"white",
+                    position:"relative"
+                  }}>
+                    {/* Imagen miniatura */}
+                    <div style={{ flexShrink:0 }}>
+                      {banner.image_url ? (
+                        <img 
+                          src={banner.image_url} 
+                          alt={banner.title || "Banner"} 
+                          style={{ 
+                            width:120, 
+                            height:60, 
+                            objectFit:"cover", 
+                            borderRadius:8,
+                            border:"1px solid #E5E7EB"
+                          }} 
+                        />
+                      ) : (
+                        <div style={{ 
+                          width:120, 
+                          height:60, 
+                          background:"#F3F4F6", 
+                          borderRadius:8, 
+                          display:"flex", 
+                          alignItems:"center", 
+                          justifyContent:"center",
+                          color:"#9CA3AF",
+                          fontSize:12
+                        }}>
+                          Sin imagen
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Información */}
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontWeight:600, fontSize:14, marginBottom:4 }}>
+                        {banner.title || "Sin título"}
+                      </div>
+                      {banner.description && (
+                        <div style={{ fontSize:12, color:"#6B7280", marginBottom:4 }}>
+                          {banner.description}
+                        </div>
+                      )}
+                      {banner.link && (
+                        <div style={{ fontSize:12, color:"#2563EB", marginBottom:4 }}>
+                          🔗 {banner.link}
+                        </div>
+                      )}
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:8 }}>
+                        <span style={{ 
+                          fontSize:11, 
+                          padding:"2px 8px", 
+                          borderRadius:12, 
+                          background:banner.active ? "#DCFCE7" : "#FEE2E2",
+                          color:banner.active ? "#166534" : "#991B1B",
+                          fontWeight:600
+                        }}>
+                          {banner.active ? "✅ Activo" : "❌ Inactivo"}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Acciones */}
+                    <div style={{ display:"flex", gap:6, alignItems:"flex-start" }}>
+                      <button
+                        onClick={() => onEditBanner(banner)}
+                        style={{
+                          padding:"6px 10px",
+                          borderRadius:6,
+                          border:"1px solid #3B82F6",
+                          background:"#3B82F6",
+                          color:"white",
+                          fontWeight:600,
+                          cursor:"pointer",
+                          fontSize:12,
+                          transition:"background 0.2s"
+                        }}
+                        onMouseOver={(e) => e.target.style.background = "#2563EB"}
+                        onMouseOut={(e) => e.target.style.background = "#3B82F6"}
+                        title="Editar banner"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => onDeleteBanner(banner.id)}
+                        style={{
+                          padding:"6px 10px",
+                          borderRadius:6,
+                          border:"1px solid #DC2626",
+                          background:"#DC2626",
+                          color:"white",
+                          fontWeight:600,
+                          cursor:"pointer",
+                          fontSize:12,
+                          transition:"background 0.2s"
+                        }}
+                        onMouseOver={(e) => e.target.style.background = "#B91C1C"}
+                        onMouseOut={(e) => e.target.style.background = "#DC2626"}
+                        title="Eliminar banner"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* TAB: PAYMENT SETTINGS */}
