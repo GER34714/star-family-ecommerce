@@ -49,9 +49,24 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
       });
 
       const data = await response.json();
+      console.log('Respuesta de Mercado Pago:', { status: response.status, data });
+      
       if (!response.ok || !data.id) {
-        console.error('Error de Mercado Pago al crear preferencia:', data);
-        throw new Error(data.message || data.error || 'No se pudo crear la preferencia de Mercado Pago');
+        console.error('Error de Mercado Pago al crear preferencia:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data,
+          headers: Object.fromEntries(response.headers.entries())
+        });
+        
+        let errorMessage = 'No se pudo crear la preferencia de Mercado Pago';
+        if (data.message) errorMessage = data.message;
+        else if (data.error) errorMessage = data.error;
+        else if (response.status === 401) errorMessage = 'Error de autenticación - revisar credenciales';
+        else if (response.status === 403) errorMessage = 'Acceso denegado - permisos insuficientes';
+        else if (response.status === 400) errorMessage = 'Datos inválidos en la solicitud';
+        
+        throw new Error(errorMessage);
       }
 
       setPreferenceId(data.id);
@@ -60,7 +75,8 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
     } catch (error) {
       console.error('Error creating Mercado Pago preference:', error);
       setErrorMessage(error.message || 'No se pudo cargar el método de pago');
-      onPaymentError?.(error);
+      // No llamar a onPaymentError aquí para evitar mostrar mensaje de error al usuario
+      // El usuario puede reintentar con el botón de reintento
     } finally {
       setLoading(false);
     }
