@@ -3818,61 +3818,6 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
             </div>
           </div>
           
-          {/* PAYMENT DATA SECTION */}
-          {paymentSettings && (paymentSettings.account_name || paymentSettings.bank_name || paymentSettings.cbu || paymentSettings.alias) && (
-            <div style={{ marginBottom:16, padding:"14px", background:"#F9FAFB", borderRadius:12, border:"1px solid #E5E7EB" }}>
-              <div style={{ fontWeight:700, fontSize:13, color:"#374151", marginBottom:10 }}>📱 Datos para transferencia</div>
-              
-              {paymentSettings.account_name && (
-                <div style={{ marginBottom:8 }}>
-                  <div style={{ fontSize:11, color:"#6B7280", fontWeight:600, textTransform:"uppercase", letterSpacing:0.5 }}>Titular</div>
-                  <div style={{ fontSize:13, color:"#1F2937", fontWeight:500 }}>{paymentSettings.account_name}</div>
-                </div>
-              )}
-              
-              {paymentSettings.bank_name && (
-                <div style={{ marginBottom:8 }}>
-                  <div style={{ fontSize:11, color:"#6B7280", fontWeight:600, textTransform:"uppercase", letterSpacing:0.5 }}>Banco</div>
-                  <div style={{ fontSize:13, color:"#1F2937", fontWeight:500 }}>{paymentSettings.bank_name}</div>
-                </div>
-              )}
-              
-              <div style={{ display:"flex", gap:12, marginBottom:8 }}>
-                {paymentSettings.cbu && (
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:11, color:"#6B7280", fontWeight:600, textTransform:"uppercase", letterSpacing:0.5 }}>CBU</div>
-                    <div style={{ fontSize:13, color:"#1F2937", fontWeight:500, fontFamily:"monospace" }}>{paymentSettings.cbu}</div>
-                    <button 
-                      onClick={() => copyToClipboard(paymentSettings.cbu, 'CBU')}
-                      style={{ marginTop:4, fontSize:10, color:"#C41E3A", background:"none", border:"none", cursor:"pointer", fontWeight:600 }}
-                    >
-                      📋 Copiar CBU
-                    </button>
-                  </div>
-                )}
-                
-                {paymentSettings.alias && (
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:11, color:"#6B7280", fontWeight:600, textTransform:"uppercase", letterSpacing:0.5 }}>Alias</div>
-                    <div style={{ fontSize:13, color:"#1F2937", fontWeight:500, fontFamily:"monospace" }}>{paymentSettings.alias}</div>
-                    <button 
-                      onClick={() => copyToClipboard(paymentSettings.alias, 'Alias')}
-                      style={{ marginTop:4, fontSize:10, color:"#C41E3A", background:"none", border:"none", cursor:"pointer", fontWeight:600 }}
-                    >
-                      📋 Copiar Alias
-                    </button>
-                  </div>
-                )}
-              </div>
-              
-              {paymentSettings.extra_message && (
-                <div style={{ marginTop:10, paddingTop:10, borderTop:"1px solid #E5E7EB" }}>
-                  <div style={{ fontSize:12, color:"#6B7280", fontStyle:"italic" }}>{paymentSettings.extra_message}</div>
-                </div>
-              )}
-            </div>
-          )}
-                    
           <div style={{ display:"flex", justifyContent:"space-between", marginBottom:14, padding:"12px 14px", background:"#1F2937", borderRadius:12 }}>
             <span style={{ fontWeight:700, color:"white" }}>Total del pedido</span>
             <span style={{ fontWeight:900, fontSize:20, color:"#10B981" }}>{fmt(total)}</span>
@@ -3905,8 +3850,8 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
                 <MercadoPagoCheckout 
                   cartItems={cart} 
                   total={total}
-                  onPaymentSuccess={handleMercadoPagoSuccess}
-                  onPaymentError={handleMercadoPagoError}
+                  onPaymentSuccess={onPaymentSuccess}
+                  onPaymentError={onPaymentError}
                 />
               </div>
             </div>
@@ -4918,7 +4863,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
 
       {/* TABS */}
       <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
-        {[["list","📋 Productos"],["add", editing?"✏️ Editar":"➕ Agregar"],["banners","🎆 Banners"],["prices","💰 Precios"],["payment","💳 Datos de Pago"],["history","📜 Historial"],["restore","🔄 Restauración"],["excel","📊 Excel"]].map(([t,label]) => (
+        {[["list","📋 Productos"],["add", editing?"✏️ Editar":"➕ Agregar"],["banners","🎆 Banners"],["prices","💰 Precios"],["history","📜 Historial"],["restore","🔄 Restauración"],["excel","📊 Excel"]].map(([t,label]) => (
           <button key={t} onClick={() => setAdminTab(t)} style={{ background:adminTab===t?"#C41E3A":"white", color:adminTab===t?"white":"#374151", border:adminTab===t?"none":"1px solid #E5E7EB", borderRadius:10, padding:"8px 16px", cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Poppins',sans-serif" }}>
             {label}
           </button>
@@ -5375,9 +5320,10 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                         alt="Vista previa" 
                         style={{ 
                           width: "100%", 
-                          maxWidth:200, 
+                          maxWidth:300, 
                           height:150, 
-                          objectFit:"cover", 
+                          objectFit:"contain", 
+                          background:"#111827",
                           borderRadius:8,
                           border:"1px solid #E5E7EB"
                         }} 
@@ -5547,7 +5493,8 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                         width: "100%", 
                         maxWidth:300, 
                         height:150, 
-                        objectFit:"cover", 
+                        objectFit:"contain", 
+                        background:"#111827",
                         borderRadius:8,
                         border:"1px solid #E5E7EB"
                       }} 
@@ -5686,7 +5633,8 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                           style={{ 
                             width:120, 
                             height:60, 
-                            objectFit:"cover", 
+                            objectFit:"contain", 
+                            background:"#111827",
                             borderRadius:8,
                             border:"1px solid #E5E7EB"
                           }} 
@@ -5789,87 +5737,13 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
       {/* TAB: PAYMENT SETTINGS */}
       {adminTab === "payment" && (
         <div style={{ background:"white", borderRadius:16, padding:24 }}>
-          <h3 style={{ margin:"0 0 6px", fontWeight:800 }}>💳 Datos de Pago</h3>
-          <p style={{ color:"#6B7280", fontSize:14, marginBottom:20 }}>Configurá los datos para transferencias bancarias.</p>
-          
-          <div style={{ display:"grid", gridTemplateColumns:"1fr", gap:16 }}>
-            <div>
-              <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>NOMBRE DEL TITULAR *</label>
-              <input
-                type="text"
-                value={paymentSettings.account_name}
-                onChange={(e) => setPaymentSettings({...paymentSettings, account_name: e.target.value})}
-                style={{ width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" }}
-                placeholder="Ej: Star Family S.A."
-              />
+          <h3 style={{ margin:"0 0 6px", fontWeight:800 }}>💳 Mercado Pago</h3>
+          <p style={{ color:"#6B7280", fontSize:14, marginBottom:20 }}>El checkout de Mercado Pago está activo en el carrito.</p>
+          <div style={{ background:"#F0F9FF", border:"1px solid #BFDBFE", borderRadius:12, padding:16 }}>
+            <div style={{ fontWeight:700, color:"#1E40AF", marginBottom:6 }}>Pago online habilitado</div>
+            <div style={{ color:"#64748B", fontSize:13, lineHeight:1.5 }}>
+              Los clientes pagan directamente desde el botón de Mercado Pago. Los datos de transferencia bancaria ya no se muestran ni se configuran desde este panel.
             </div>
-            
-            <div>
-              <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>NOMBRE DEL BANCO *</label>
-              <input
-                type="text"
-                value={paymentSettings.bank_name}
-                onChange={(e) => setPaymentSettings({...paymentSettings, bank_name: e.target.value})}
-                style={{ width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" }}
-                placeholder="Ej: Banco Galicia"
-              />
-            </div>
-            
-            <div>
-              <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>CBU *</label>
-              <input
-                type="text"
-                value={paymentSettings.cbu}
-                onChange={(e) => setPaymentSettings({...paymentSettings, cbu: e.target.value})}
-                style={{ width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" }}
-                placeholder="Ej: 0070052630000001234567"
-              />
-            </div>
-            
-            <div>
-              <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>ALIAS *</label>
-              <input
-                type="text"
-                value={paymentSettings.alias}
-                onChange={(e) => setPaymentSettings({...paymentSettings, alias: e.target.value})}
-                style={{ width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" }}
-                placeholder="Ej: starfamily.pagos"
-              />
-            </div>
-            
-            <div>
-              <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>MENSAJE PERSONALIZADO</label>
-              <textarea
-                value={paymentSettings.extra_message}
-                onChange={(e) => setPaymentSettings({...paymentSettings, extra_message: e.target.value})}
-                style={{ width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none", height:80, resize:"vertical" }}
-                placeholder="Mensaje que se mostrará en el carrito después de los datos de transferencia"
-              />
-              <div style={{ fontSize:11, color:"#9CA3AF", marginTop:4 }}>Este mensaje se mostrará en el carrito debajo de los datos de transferencia</div>
-            </div>
-          </div>
-          
-          <div style={{ display:"flex", gap:10, marginTop:24 }}>
-            <button
-              onClick={() => savePaymentSettings(paymentSettings)}
-              disabled={loadingPaymentSettings || !paymentSettings.account_name || !paymentSettings.bank_name || !paymentSettings.cbu || !paymentSettings.alias}
-              style={{
-                flex:1,
-                padding:14,
-                fontSize:15,
-                borderRadius:12,
-                justifyContent:"center",
-                background: loadingPaymentSettings || !paymentSettings.account_name || !paymentSettings.bank_name || !paymentSettings.cbu || !paymentSettings.alias ? "#9CA3AF" : "#C41E3A",
-                color: "white",
-                border: "none",
-                cursor: loadingPaymentSettings || !paymentSettings.account_name || !paymentSettings.bank_name || !paymentSettings.cbu || !paymentSettings.alias ? "not-allowed" : "pointer",
-                fontFamily: "'Poppins',sans-serif",
-                fontWeight: 600,
-                transition: "all 0.2s"
-              }}
-            >
-              {loadingPaymentSettings ? "⏳ Guardando..." : "💾 Guardar cambios"}
-            </button>
           </div>
         </div>
       )}
