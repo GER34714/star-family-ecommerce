@@ -32,7 +32,7 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.REACT_APP_MERCADO_PAGO_ACCESS_TOKEN}`
+          'Authorization': `Bearer APP_USR-6318323343884379-051213-1de2b6c067eeb716b1e4ed751da8f3ac-1016520294`
         },
         body: JSON.stringify({
           items,
