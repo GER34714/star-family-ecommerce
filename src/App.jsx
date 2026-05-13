@@ -1089,9 +1089,13 @@ export default function StarFamilyApp() {
 
       if (error) {
         console.error('Error cargando banners:', error);
-        // Si la tabla no existe, mostrar mensaje pero no romper la app
+        // Si la tabla no existe o no hay permisos, mostrar mensaje pero no romper la app
         if (error.code === 'PGRST116') {
           console.log('ℹ️ La tabla banners no existe aún. Se creará al agregar el primer banner.');
+        } else if (error.code === '42501') {
+          console.log('⚠️ Permisos de banners no configurados. Ejecutá el script SQL en Supabase.');
+        } else {
+          console.log('⚠️ Error general cargando banners. La app continuará funcionando.');
         }
         return;
       }
@@ -1101,7 +1105,8 @@ export default function StarFamilyApp() {
         console.log(`✅ ${data.length} banners cargados desde Supabase`);
       }
     } catch (error) {
-      console.error('Error cargando banners:', error);
+      console.error('Error inesperado cargando banners:', error);
+      console.log('ℹ️ La aplicación continuará funcionando sin banners.');
     } finally {
       setLoadingBanners(false);
     }
