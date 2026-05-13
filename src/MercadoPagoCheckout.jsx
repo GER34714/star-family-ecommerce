@@ -67,7 +67,7 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
               }
             })
           })
-        : await fetch('/.netlify/functions/create-mercadopago-preference', {
+        : await fetch('/api/create-mercadopago-preference', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
