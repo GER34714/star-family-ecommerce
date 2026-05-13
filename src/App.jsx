@@ -3546,9 +3546,27 @@ function ProductModal({ p, qty, setQty, onAdd, onClose }) {
 // ═══════════════════════════════════════════════════════
 
 function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear, paymentSettings, paymentCompleted, paymentProcessing, onPaymentSuccess, onPaymentError }) {
+  // Ref para tracking de montaje y toast
+  const toastRef = React.useRef(null);
+  const isMountedRef = React.useRef(true);
+  
+  React.useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      // Limpiar toast si existe al desmontar
+      if (toastRef.current && document.body.contains(toastRef.current)) {
+        try {
+          document.body.removeChild(toastRef.current);
+        } catch (e) {
+          // Ignorar error si el nodo ya fue removido
+        }
+      }
+    };
+  }, []);
     
   // Función para copiar al portapapeles
-  const copyToClipboard = async (text, type) => {
+  const copyToClipboard = React.useCallback(async (text, type) => {
     try {
       await navigator.clipboard.writeText(text);
       // Crear toast temporal
@@ -3571,11 +3589,17 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
       `;
       toast.textContent = `¡Copiaste el ${type}! ✅`;
       document.body.appendChild(toast);
+      toastRef.current = toast;
       
       // Auto-ocultar después de 3 segundos
       setTimeout(() => {
-        if (document.body.contains(toast)) {
-          document.body.removeChild(toast);
+        if (isMountedRef.current && toastRef.current && document.body.contains(toastRef.current)) {
+          try {
+            document.body.removeChild(toastRef.current);
+          } catch (e) {
+            // Ignorar error si el nodo ya fue removido
+          }
+          toastRef.current = null;
         }
       }, 3000);
     } catch (error) {
@@ -3607,14 +3631,20 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
       `;
       toast.textContent = `¡Copiaste el ${type}! ✅`;
       document.body.appendChild(toast);
+      toastRef.current = toast;
       
       setTimeout(() => {
-        if (document.body.contains(toast)) {
-          document.body.removeChild(toast);
+        if (isMountedRef.current && toastRef.current && document.body.contains(toastRef.current)) {
+          try {
+            document.body.removeChild(toastRef.current);
+          } catch (e) {
+            // Ignorar error si el nodo ya fue removido
+          }
+          toastRef.current = null;
         }
       }, 3000);
     }
-  };
+  }, []);
   
   const sendWA = () => {
     const lines = cart.map(i => `• ${i.qty}x ${i.name}: ${fmt(i.price * i.qty)}`).join("\n");
