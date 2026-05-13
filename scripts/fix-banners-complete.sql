@@ -46,12 +46,6 @@ GRANT SELECT ON TABLE banners TO anon;
 -- Permitir que usuarios autenticados lean y gestionen banners
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE banners TO authenticated;
 
--- Permitir que usuarios anónimos lean la secuencia de IDs
-GRANT USAGE ON SEQUENCE banners_id_seq TO anon;
-
--- Permitir que usuarios autenticados usen la secuencia de IDs
-GRANT USAGE ON SEQUENCE banners_id_seq TO authenticated;
-
 -- 6. Insertar banners de ejemplo para testing
 INSERT INTO banners (title, description, image_url, link, active)
 VALUES 
