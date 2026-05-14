@@ -5074,39 +5074,23 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
     console.log('Guardando...', paymentSettings);
     let error;
     
-    // Si no hay ID, hacer INSERT (crear nuevo registro)
-    if (!paymentSettings.id) {
-      ({ error } = await supabase
-        .from('payment_settings')
-        .insert({
-          id: '00000000-0000-0000-0000-000000000000', // UUID por defecto
-          account_name: paymentSettings.account_name,
-          bank_name: paymentSettings.bank_name,
-          cbu: paymentSettings.cbu,
-          alias: paymentSettings.alias,
-          titular: paymentSettings.titular,
-          banco: paymentSettings.banco,
-          mp_enabled: paymentSettings.mp_enabled,
-          transfer_enabled: paymentSettings.transfer_enabled,
-          extra_message: paymentSettings.extra_message
-        }));
-    } else {
-      // Si hay ID, hacer UPDATE
-      ({ error } = await supabase
-        .from('payment_settings')
-        .update({
-          account_name: paymentSettings.account_name,
-          bank_name: paymentSettings.bank_name,
-          cbu: paymentSettings.cbu,
-          alias: paymentSettings.alias,
-          titular: paymentSettings.titular,
-          banco: paymentSettings.banco,
-          mp_enabled: paymentSettings.mp_enabled,
-          transfer_enabled: paymentSettings.transfer_enabled,
-          extra_message: paymentSettings.extra_message
-        })
-        .eq('id', paymentSettings.id));
-    }
+    // Usar UPSERT (INSERT o UPDATE automático)
+    ({ error } = await supabase
+      .from('payment_settings')
+      .upsert({
+        id: '00000000-0000-0000-0000-000000000000', // UUID por defecto
+        account_name: paymentSettings.account_name,
+        bank_name: paymentSettings.bank_name,
+        cbu: paymentSettings.cbu,
+        alias: paymentSettings.alias,
+        titular: paymentSettings.titular,
+        banco: paymentSettings.banco,
+        mp_enabled: paymentSettings.mp_enabled,
+        transfer_enabled: paymentSettings.transfer_enabled,
+        extra_message: paymentSettings.extra_message
+      }, {
+        onConflict: 'id' // si hay conflicto en id, hace update
+      }));
 
     if (error) throw error;
 
