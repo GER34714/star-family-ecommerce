@@ -5110,6 +5110,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
       const { data, error } = await supabase
         .from('payment_settings')
         .select('*')
+        .limit(1)
         .single();
       
       console.log('🔥 DATA DE SUPABASE:', data);
