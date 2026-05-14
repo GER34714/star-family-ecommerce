@@ -98,11 +98,15 @@ export default function StarFamilyApp() {
   
   // Estados para configuración de pago
   const [paymentSettings, setPaymentSettings] = useState({
-    id: null, // ← agregar esto
+    id: null,
     account_name: '',
     bank_name: '',
     cbu: '',
     alias: '',
+    titular: '',
+    banco: '',
+    mp_enabled: true,
+    transfer_enabled: true,
     extra_message: 'Una vez pagado, enviá el comprobante por mensaje 📩'
   });
   const [loadingPaymentSettings, setLoadingPaymentSettings] = useState(false);
