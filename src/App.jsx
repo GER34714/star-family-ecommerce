@@ -3882,7 +3882,6 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
                   total={total}
                   onPaymentSuccess={onPaymentSuccess}
                   onPaymentError={onPaymentError}
-                  onClose={() => onClose?.()}
                 />
               </div>
             </div>
