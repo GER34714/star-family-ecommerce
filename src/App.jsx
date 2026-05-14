@@ -107,7 +107,8 @@ export default function StarFamilyApp() {
     banco: '',
     mp_enabled: false,
     transfer_enabled: false,
-    extra_message: 'Una vez pagado, enviá el comprobante por mensaje 📩'
+    extra_message: 'Una vez pagado, enviá el comprobante por mensaje 📩',
+    is_active: true
   });
   const [loadingPaymentSettings, setLoadingPaymentSettings] = useState(false);
   
@@ -2546,7 +2547,15 @@ export default function StarFamilyApp() {
       <div style={{ minHeight:"100vh", background:"#F4F4F5", fontFamily:"'Poppins', sans-serif", display:"flex", alignItems:"center", justifyContent:"center" }}>
         <style>{CSS}</style>
         <div style={{ textAlign:"center" }}>
-          <div style={{ fontSize:48, marginBottom:20 }}>🔄</div>
+          <div style={{ width:80, height:80, margin:"0 auto 20px", borderRadius:"50%", overflow:"hidden", border:"3px solid #F5A623", animation:"spin 2s linear infinite" }}>
+            <img src="https://bedccnjylrnkacaxtusv.supabase.co/storage/v1/object/public/imagenes/274300884_477506477168087_6457824232979322157_n.jpg" alt="Star Family Logo" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+          </div>
+          <style>{`
+            @keyframes spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
           <div style={{ fontSize:18, color:"#6B7280", fontWeight:500 }}>Cargando...</div>
         </div>
       </div>
@@ -2571,8 +2580,8 @@ export default function StarFamilyApp() {
       <header style={{ background:"#111111", position:"sticky", top:0, zIndex:500, boxShadow:"0 2px 16px rgba(0,0,0,0.4)" }}>
         <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 16px", height:62, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={() => { setView("shop"); setCat("Todos"); }}>
-            <div style={{ borderRadius:"50%", width:44, height:44, display:"flex", alignItems:"center", justifyContent:"center", border:"2.5px solid #F5A623", flexShrink:0, overflow:"hidden", background:"#111", fontSize:24 }}>
-              ⭐
+            <div style={{ borderRadius:"50%", width:44, height:44, display:"flex", alignItems:"center", justifyContent:"center", border:"2.5px solid #F5A623", flexShrink:0, overflow:"hidden", background:"#111" }}>
+              <img src="https://bedccnjylrnkacaxtusv.supabase.co/storage/v1/object/public/imagenes/274300884_477506477168087_6457824232979322157_n.jpg" alt="Star Family Logo" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
             </div>
             <div>
               <div style={{ color:"white", fontWeight:900, fontSize:18, letterSpacing:3, lineHeight:1, fontFamily:"'Bebas Neue', sans-serif" }}>STAR FAMILY</div>
@@ -3014,7 +3023,7 @@ export default function StarFamilyApp() {
           <div>
             <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}>
               <div style={{ borderRadius:"50%", width:50, height:50, display:"flex", alignItems:"center", justifyContent:"center", border:"2.5px solid #F5A623", overflow:"hidden" }}>
-                <img src="https://iili.io/B6XgSSI.jpg" alt="Star Family Logo" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                <img src="https://bedccnjylrnkacaxtusv.supabase.co/storage/v1/object/public/imagenes/274300884_477506477168087_6457824232979322157_n.jpg" alt="Star Family Logo" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
               </div>
               <div>
                 <div style={{ color:"white", fontWeight:900, fontSize:20, letterSpacing:2, lineHeight:1, fontFamily:"'Bebas Neue', sans-serif" }}>STAR FAMILY</div>
@@ -3970,7 +3979,7 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
               </div>
               
               {/* Mercado Pago Button */}
-              {(paymentSettings?.mp_enabled !== false) && (
+              {(paymentSettings?.mp_enabled === true) && (
                 <button
                   onClick={() => setSelectedPaymentMethod('mercadopago')}
                   style={{
@@ -3999,7 +4008,7 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
               )}
               
               {/* Transferencia Button */}
-              {(paymentSettings?.transfer_enabled !== false) && (
+              {(paymentSettings?.transfer_enabled === true) && (
                 <button
                   onClick={() => setSelectedPaymentMethod('transferencia')}
                   style={{
@@ -5151,19 +5160,25 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
     try {
       console.log('🔥 CARGANDO payment settings...');
       setLoadingPaymentSettings(true);
+      
+      // Buscar directamente el registro con ID fijo (más simple y confiable)
       const { data, error } = await supabase
         .from('payment_settings')
         .select('*')
-        .limit(1)
+        .eq('id', '00000000-0000-0000-0000-000000000000')
         .single();
       
       console.log('🔥 DATA DE SUPABASE:', data);
+      console.log('🔥 DATA DE SUPABASE - is_active:', data?.is_active);
+      console.log('🔥 DATA DE SUPABASE - mp_enabled:', data?.mp_enabled);
+      console.log('🔥 DATA DE SUPABASE - transfer_enabled:', data?.transfer_enabled);
       console.log('🔥 ERROR DE SUPABASE:', error);
       
-      if (error) {
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
         console.error('🔥 Error cargando configuración de pago:', error);
         return;
       }
+      
       if (data) {
         console.log('🔥 SETEANDO payment settings con datos:', data);
         const newSettings = {
@@ -5176,12 +5191,31 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
           banco: data.banco || data.bank_name || '',
           mp_enabled: data.mp_enabled !== undefined ? data.mp_enabled : false,
           transfer_enabled: data.transfer_enabled !== undefined ? data.transfer_enabled : false,
-          extra_message: data.extra_message || 'Una vez pagado, enviá el comprobante por mensaje 📩'
+          extra_message: data.extra_message || 'Una vez pagado, enviá el comprobante por mensaje 📩',
+          is_active: data.is_active !== undefined ? data.is_active : true
         };
-        console.log('🔥 NUEVOS SETTINGS:', newSettings);
-        setPaymentSettings(newSettings);
+        console.log('🔥 NUEVOS SETTINGS (desde Supabase):', newSettings);
+        // SOLO actualizar si los datos son diferentes
+        setPaymentSettings(prev => {
+          if (JSON.stringify(prev) !== JSON.stringify(newSettings)) {
+            console.log('🔄 Actualizando estado con datos de Supabase');
+            return newSettings;
+          } else {
+            console.log('⏭️ Estado sin cambios, omitiendo actualización');
+            return prev;
+          }
+        });
       } else {
-        console.log('🔥 NO HAY DATOS EN SUPABASE');
+        console.log('🔥 NO HAY DATOS EN SUPABASE - usando valores por defecto');
+        // Si no hay datos, crear registro por defecto
+        await supabase
+          .from('payment_settings')
+          .upsert({
+            id: '00000000-0000-0000-0000-000000000000',
+            mp_enabled: false,
+            transfer_enabled: false,
+            is_active: true
+          }, { onConflict: 'id' });
       }
     } catch (error) {
       console.error('🔥 Error cargando configuración de pago:', error);
@@ -5196,7 +5230,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
     console.log('🔥 GUARDANDO paymentSettings:', JSON.stringify(paymentSettings, null, 2));
     let error;
     
-    // Usar UPSERT (INSERT o UPDATE automático)
+    // Usar UPSERT con el registro activo - SIN desactivar otros primero
     const result = await supabase
       .from('payment_settings')
       .upsert({
@@ -5209,7 +5243,8 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
         banco: paymentSettings.banco,
         mp_enabled: paymentSettings.mp_enabled,
         transfer_enabled: paymentSettings.transfer_enabled,
-        extra_message: paymentSettings.extra_message
+        extra_message: paymentSettings.extra_message,
+        is_active: true // Siempre marcar como activo el registro actual
       }, {
         onConflict: 'id' // si hay conflicto en id, hace update
       });
@@ -5222,7 +5257,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
       throw error;
     }
 
-    console.log('🔥 UPSERT EXITOSO');
+    console.log('🔥 UPSERT EXITOSO - Registro activo guardado');
     alert('✅ Guardado correctamente');
   } catch (error) {
     console.error('🔥 ERROR GENERAL guardando:', error);
@@ -5230,9 +5265,10 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
   }
 };
 
-  // Cargar datos al montar el componente
+  // Cargar datos al montar el componente - SOLO una vez
   useEffect(() => {
-    // loadPaymentSettings(); // Temporalmente desactivado para debugging
+    console.log('🚀 AdminPanel montado - cargando payment settings UNA VEZ');
+    loadPaymentSettings();
   }, []);
 
   const input = { width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" };
@@ -6232,30 +6268,50 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
               <label style={{ position:"relative", display:"inline-block", width:48, height:24 }}>
                 <input 
                   type="checkbox" 
-                  checked={paymentSettings?.mp_enabled !== false}
+                  checked={paymentSettings?.mp_enabled === true}
                   onChange={(e) => {
                     const newValue = e.target.checked;
+                    console.log('🔄 Toggle mp_enabled cambiado a:', newValue);
                     // Actualizar estado local inmediatamente
-                    setPaymentSettings(prev => ({...prev, mp_enabled: newValue}));
+                    setPaymentSettings(prev => {
+                      const updated = {...prev, mp_enabled: newValue};
+                      console.log('📝 Estado local actualizado:', updated);
+                      return updated;
+                    });
                     // Guardar automáticamente el cambio
-                    setTimeout(() => {
+                    const saveChange = async () => {
                       const supabase = getSupabaseClient();
                       if (supabase) {
-                        supabase
-                          .from('payment_settings')
-                          .upsert({
+                        try {
+                          console.log('💾 Guardando mp_enabled:', newValue);
+                          console.log('💾 Objeto completo a guardar:', {
                             id: '00000000-0000-0000-0000-000000000000',
-                            mp_enabled: newValue
-                          }, { onConflict: 'id' })
-                          .then(({ error }) => {
-                            if (error) {
-                              console.error('Error guardando mp_enabled:', error);
-                            } else {
-                              console.log('✅ mp_enabled guardado:', newValue);
-                            }
+                            mp_enabled: newValue,
+                            transfer_enabled: paymentSettings.transfer_enabled,
+                            extra_message: paymentSettings.extra_message,
+                            is_active: true
                           });
+                          const { error } = await supabase
+                            .from('payment_settings')
+                            .upsert({
+                              id: '00000000-0000-0000-0000-000000000000',
+                              mp_enabled: newValue,
+                              transfer_enabled: paymentSettings.transfer_enabled,
+                              extra_message: paymentSettings.extra_message,
+                              is_active: true
+                            }, { onConflict: 'id' });
+                          
+                          if (error) {
+                            console.error('❌ Error guardando mp_enabled:', error);
+                          } else {
+                            console.log('✅ mp_enabled guardado correctamente:', newValue);
+                          }
+                        } catch (err) {
+                          console.error('❌ Error general guardando:', err);
+                        }
                       }
-                    }, 100);
+                    };
+                    saveChange();
                   }}
                   style={{ opacity:0, width:0, height:0 }}
                 />
@@ -6266,7 +6322,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                   left:0,
                   right:0,
                   bottom:0,
-                  backgroundColor: paymentSettings?.mp_enabled !== false ? "#10B981" : "#D1D5DB",
+                  backgroundColor: paymentSettings?.mp_enabled === true ? "#10B981" : "#D1D5DB",
                   transition:"0.3s",
                   borderRadius:24
                 }}>
@@ -6275,7 +6331,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                     content:"\"",
                     height:18,
                     width:18,
-                    left: paymentSettings?.mp_enabled !== false ? 26 : 3,
+                    left: paymentSettings?.mp_enabled === true ? 26 : 3,
                     bottom:3,
                     backgroundColor:"white",
                     transition:"0.3s",
@@ -6305,30 +6361,50 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
               <label style={{ position:"relative", display:"inline-block", width:48, height:24 }}>
                 <input 
                   type="checkbox" 
-                  checked={paymentSettings?.transfer_enabled !== false}
+                  checked={paymentSettings?.transfer_enabled === true}
                   onChange={(e) => {
                     const newValue = e.target.checked;
+                    console.log('🔄 Toggle transfer_enabled cambiado a:', newValue);
                     // Actualizar estado local inmediatamente
-                    setPaymentSettings(prev => ({...prev, transfer_enabled: newValue}));
+                    setPaymentSettings(prev => {
+                      const updated = {...prev, transfer_enabled: newValue};
+                      console.log('📝 Estado local actualizado:', updated);
+                      return updated;
+                    });
                     // Guardar automáticamente el cambio
-                    setTimeout(() => {
+                    const saveChange = async () => {
                       const supabase = getSupabaseClient();
                       if (supabase) {
-                        supabase
-                          .from('payment_settings')
-                          .upsert({
+                        try {
+                          console.log('💾 Guardando transfer_enabled:', newValue);
+                          console.log('💾 Objeto completo a guardar:', {
                             id: '00000000-0000-0000-0000-000000000000',
-                            transfer_enabled: newValue
-                          }, { onConflict: 'id' })
-                          .then(({ error }) => {
-                            if (error) {
-                              console.error('Error guardando transfer_enabled:', error);
-                            } else {
-                              console.log('✅ transfer_enabled guardado:', newValue);
-                            }
+                            mp_enabled: paymentSettings.mp_enabled,
+                            transfer_enabled: newValue,
+                            extra_message: paymentSettings.extra_message,
+                            is_active: true
                           });
+                          const { error } = await supabase
+                            .from('payment_settings')
+                            .upsert({
+                              id: '00000000-0000-0000-0000-000000000000',
+                              mp_enabled: paymentSettings.mp_enabled,
+                              transfer_enabled: newValue,
+                              extra_message: paymentSettings.extra_message,
+                              is_active: true
+                            }, { onConflict: 'id' });
+                          
+                          if (error) {
+                            console.error('❌ Error guardando transfer_enabled:', error);
+                          } else {
+                            console.log('✅ transfer_enabled guardado correctamente:', newValue);
+                          }
+                        } catch (err) {
+                          console.error('❌ Error general guardando:', err);
+                        }
                       }
-                    }, 100);
+                    };
+                    saveChange();
                   }}
                   style={{ opacity:0, width:0, height:0 }}
                 />
@@ -6339,7 +6415,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                   left:0,
                   right:0,
                   bottom:0,
-                  backgroundColor: paymentSettings?.transfer_enabled !== false ? "#10B981" : "#D1D5DB",
+                  backgroundColor: paymentSettings?.transfer_enabled === true ? "#10B981" : "#D1D5DB",
                   transition:"0.3s",
                   borderRadius:24
                 }}>
@@ -6348,7 +6424,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                     content:"\"",
                     height:18,
                     width:18,
-                    left: paymentSettings?.transfer_enabled !== false ? 26 : 3,
+                    left: paymentSettings?.transfer_enabled === true ? 26 : 3,
                     bottom:3,
                     backgroundColor:"white",
                     transition:"0.3s",
