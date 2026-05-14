@@ -240,9 +240,6 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
         requestId
       });
       
-      // Cerrar el carrito cuando se crea la preferencia y se abre el checkout
-      onClose?.();
-      
     } catch (error) {
       console.error(`[${requestId}] 💥 FRONTEND ERROR:`, error);
       console.error(`[${requestId}] === MERCADO PAGO FRONTEND ERROR ===\n`);
