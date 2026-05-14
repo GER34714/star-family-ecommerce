@@ -4188,47 +4188,31 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
                 </div>
               </div>
 
-              {hasCopiedBankData && (
-                <button
-                  onClick={() => sendWA('transferencia')}
-                  style={{
-                    width:"100%",
-                    background:"#25D366",
-                    color:"white",
-                    border:"none",
-                    borderRadius:12,
-                    padding:14,
-                    fontSize:14,
-                    fontWeight:600,
-                    cursor:"pointer",
-                    marginBottom:8,
-                    display:"flex",
-                    alignItems:"center",
-                    justifyContent:"center",
-                    gap:8,
-                    fontFamily:"'Poppins',sans-serif",
-                    transition:"background 0.2s"
-                  }}
-                  onMouseOver={(e) => e.target.style.background = "#128C7E"}
-                  onMouseOut={(e) => e.target.style.background = "#25D366"}
-                >
-                  📱 Enviar pedido por WhatsApp
-                </button>
-              )}
-              
-              {!hasCopiedBankData && (
-                <div style={{ 
-                  textAlign:"center", 
-                  padding:"12px", 
-                  background:"#F3F4F6", 
-                  borderRadius:12, 
-                  fontSize:12, 
-                  color:"#6B7280",
-                  marginBottom:8
-                }}>
-                  📋 Copiá el CBU o Alias para continuar
-                </div>
-              )}
+              <button
+                onClick={() => sendWA('transferencia')}
+                style={{
+                  width:"100%",
+                  background:"#25D366",
+                  color:"white",
+                  border:"none",
+                  borderRadius:12,
+                  padding:14,
+                  fontSize:14,
+                  fontWeight:600,
+                  cursor:"pointer",
+                  marginBottom:8,
+                  display:"flex",
+                  alignItems:"center",
+                  justifyContent:"center",
+                  gap:8,
+                  fontFamily:"'Poppins',sans-serif",
+                  transition:"background 0.2s"
+                }}
+                onMouseOver={(e) => e.target.style.background = "#128C7E"}
+                onMouseOut={(e) => e.target.style.background = "#25D366"}
+              >
+                📱 Enviar pedido por WhatsApp
+              </button>
 
               <button
                 onClick={() => setSelectedPaymentMethod(null)}
