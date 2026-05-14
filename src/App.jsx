@@ -4117,7 +4117,7 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
                           fontWeight:600
                         }}
                       >
-                        📋
+                        Copiar
                       </button>
                     </div>
                   </div>
@@ -4157,7 +4157,7 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
                           fontWeight:600
                         }}
                       >
-                        📋
+                        Copiar
                       </button>
                     </div>
                   </div>
