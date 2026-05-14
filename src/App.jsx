@@ -4061,22 +4061,7 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
                 </button>
               )}
               
-              {/* Mensaje informativo en móvil */}
-              {isMobile && (
-                <div style={{ 
-                  textAlign:"center", 
-                  padding:"12px", 
-                  background:"#E8F5E8", 
-                  borderRadius:12, 
-                  fontSize:12, 
-                  color:"#2F7D2F",
-                  marginBottom:8,
-                  border:"1px solid #A5D6A7"
-                }}>
-                  📱 En móvil, Mercado Pago abrirá la app directamente. El pedido se enviará automáticamente por WhatsApp al completar el pago.
-                </div>
-              )}
-              
+                            
               <button
                 onClick={() => setSelectedPaymentMethod(null)}
                 style={{
