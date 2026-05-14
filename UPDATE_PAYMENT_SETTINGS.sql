@@ -15,7 +15,7 @@ ADD COLUMN IF NOT EXISTS transfer_enabled BOOLEAN DEFAULT true;
 INSERT INTO payment_settings (id, cbu, alias, titular, banco, mp_enabled, transfer_enabled)
 VALUES 
 (
-  1,
+  '00000000-0000-0000-0000-000000000000',
   '0000000000000000000000000000',
   'tu.alias.bancario',
   'Nombre del Titular',
