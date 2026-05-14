@@ -12,6 +12,7 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
 
   const createPreference = async () => {
     const requestId = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const timestamp = new Date().toISOString();
     console.log(`\n=== MERCADO PAGO FRONTEND [${requestId}] ===`);
     
     setLoading(true);
