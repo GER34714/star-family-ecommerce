@@ -255,7 +255,7 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
     if (cartItems.length > 0 && !preferenceId && !loading) {
       createPreference();
     }
-  }, [cartItems, preferenceId, loading, createPreference]);
+  }, [cartItems, preferenceId, loading]);
 
   const handlePayment = (response) => {
     console.log('Payment submitted:', response);
