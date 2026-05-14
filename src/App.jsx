@@ -376,6 +376,11 @@ export default function StarFamilyApp() {
       await navigator.clipboard.writeText(text);
       showToast(`¡Copiaste el ${type}! ✅`, 'success');
       
+      // Si es CBU o Alias, marcar que se copiaron datos bancarios
+      if (type === 'CBU' || type === 'Alias') {
+        setHasCopiedBankData(true);
+      }
+      
       // Auto-ocultar el toast después de 3 segundos
       setTimeout(() => {
         setToast(null);
@@ -390,6 +395,12 @@ export default function StarFamilyApp() {
       document.body.removeChild(textArea);
       showToast(`¡Copiaste el ${type}! ✅`, 'success');
       
+      // Si es CBU o Alias, marcar que se copiaron datos bancarios
+      if (type === 'CBU' || type === 'Alias') {
+        setHasCopiedBankData(true);
+      }
+      
+      // Auto-ocultar el toast después de 3 segundos
       setTimeout(() => {
         setToast(null);
       }, 3000);
@@ -3575,6 +3586,9 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
   // Estado para manejar el método de pago seleccionado
   const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState(null); // null, 'mercadopago', 'transferencia'
   
+  // Estado para controlar si el usuario copió datos bancarios
+  const [hasCopiedBankData, setHasCopiedBankData] = React.useState(false);
+  
   React.useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -4174,31 +4188,47 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
                 </div>
               </div>
 
-              <button
-                onClick={() => sendWA('transferencia')}
-                style={{
-                  width:"100%",
-                  background:"#25D366",
-                  color:"white",
-                  border:"none",
-                  borderRadius:12,
-                  padding:14,
-                  fontSize:14,
-                  fontWeight:600,
-                  cursor:"pointer",
-                  marginBottom:8,
-                  display:"flex",
-                  alignItems:"center",
-                  justifyContent:"center",
-                  gap:8,
-                  fontFamily:"'Poppins',sans-serif",
-                  transition:"background 0.2s"
-                }}
-                onMouseOver={(e) => e.target.style.background = "#128C7E"}
-                onMouseOut={(e) => e.target.style.background = "#25D366"}
-              >
-                📱 Enviar pedido por WhatsApp
-              </button>
+              {hasCopiedBankData && (
+                <button
+                  onClick={() => sendWA('transferencia')}
+                  style={{
+                    width:"100%",
+                    background:"#25D366",
+                    color:"white",
+                    border:"none",
+                    borderRadius:12,
+                    padding:14,
+                    fontSize:14,
+                    fontWeight:600,
+                    cursor:"pointer",
+                    marginBottom:8,
+                    display:"flex",
+                    alignItems:"center",
+                    justifyContent:"center",
+                    gap:8,
+                    fontFamily:"'Poppins',sans-serif",
+                    transition:"background 0.2s"
+                  }}
+                  onMouseOver={(e) => e.target.style.background = "#128C7E"}
+                  onMouseOut={(e) => e.target.style.background = "#25D366"}
+                >
+                  📱 Enviar pedido por WhatsApp
+                </button>
+              )}
+              
+              {!hasCopiedBankData && (
+                <div style={{ 
+                  textAlign:"center", 
+                  padding:"12px", 
+                  background:"#F3F4F6", 
+                  borderRadius:12, 
+                  fontSize:12, 
+                  color:"#6B7280",
+                  marginBottom:8
+                }}>
+                  📋 Copiá el CBU o Alias para continuar
+                </div>
+              )}
 
               <button
                 onClick={() => setSelectedPaymentMethod(null)}
