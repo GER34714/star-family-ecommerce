@@ -5870,6 +5870,20 @@ const CSS = `
   .product-card { background:white; border-radius:14px; overflow:hidden; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.07); transition:transform 0.2s, box-shadow 0.2s; }
   .product-card:hover { transform:translateY(-5px); box-shadow:0 10px 28px rgba(0,0,0,0.13); }
   .product-card:hover img { transform:scale(1.06); }
+  
+  /* Imágenes de productos adaptadas a móviles */
+  .product-card img { 
+    width: 100%; 
+    height: 200px; 
+    object-fit: cover; 
+    display: block; 
+  }
+  @media(max-width:640px) { 
+    .product-card img { 
+      height: 250px; 
+      object-fit: cover; 
+    } 
+  }
 
   .btn-red { display:inline-flex; align-items:center; background:#C41E3A; color:white; border:none; border-radius:10px; padding:9px 18px; cursor:pointer; font-size:14px; font-weight:700; font-family:'Poppins',sans-serif; transition:background 0.15s; }
   .btn-red:hover { background:#A01731; }

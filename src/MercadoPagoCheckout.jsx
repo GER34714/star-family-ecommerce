@@ -240,39 +240,25 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
         requestId
       });
       
-      // NO cerrar el carrito automáticamente - dejar que el usuario complete el pago
-      // onClose?.();
+      // Cerrar el carrito cuando se crea la preferencia y se abre el checkout
+      onClose?.();
       
     } catch (error) {
       console.error(`[${requestId}] 💥 FRONTEND ERROR:`, error);
       console.error(`[${requestId}] === MERCADO PAGO FRONTEND ERROR ===\n`);
       
-      // Determinar si es un error crítico que debe cerrar el carrito
-      const isCriticalError = error.message && (
-        error.message.includes('fallo al crear la preferencia') ||
-        error.message.includes('No se pudo cargar el método de pago') ||
-        error.message.includes('Timeout de conexión') ||
-        error.message.includes('Error del servidor') ||
-        error.message.includes('Respuesta inválida') ||
-        error.message.includes('El carrito no tiene productos válidos')
-      );
-      
       setErrorMessage(error.message || 'No se pudo cargar el método de pago');
-      
-      // Solo llamar a onPaymentError si es un error crítico
-      if (isCriticalError) {
-        onPaymentError?.(error);
-      }
+      onPaymentError?.(error);
     } finally {
       setLoading(false);
     }
   }, [apiBaseUrl, cartItems, createPreferenceEndpoint, isLocalDevelopment, onClose, onPaymentError, total]);
 
   useEffect(() => {
-    if (cartItems.length > 0 && !preferenceId && !loading) {
+    if (cartItems.length > 0) {
       createPreference();
     }
-  }, [cartItems.length, preferenceId, loading]);
+  }, [cartItems, createPreference]);
 
   const handlePayment = (response) => {
     console.log('Payment submitted:', response);
@@ -400,21 +386,7 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
   return (
     <div style={{ margin: '16px 0' }}>
       <Wallet
-        initialization={{ 
-          preferenceId,
-          redirectMode: 'blank'
-        }}
-        customization={{
-          visual: {
-            buttonBackground: 'black',
-            borderRadius: '8px',
-            valuePropColor: 'grey'
-          },
-          texts: {
-            action: 'pay',
-            valueProp: 'security_details'
-          }
-        }}
+        initialization={{ preferenceId }}
         onReady={handleReady}
         onSubmit={handlePayment}
         onError={handleError}
