@@ -25,10 +25,15 @@ app.use(express.static(path.join(__dirname, 'build')));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+  console.log(`[${new Date().toISOString()}] Health check requested`);
+  res.setHeader('Content-Type', 'application/json');
   res.json({ 
+    success: true,
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    node_version: process.version,
+    port: PORT
   });
 });
 
@@ -265,11 +270,15 @@ app.post('/api/create-mercadopago-preference', async (req, res) => {
   }
 });
 
-// Todas las demás rutas las maneja React
+// Catch-all handler para React - DEBE ESTAR ÚLTIMO
 app.get('*', (req, res) => {
+  console.log(`[${new Date().toISOString()}] Serving React app for:`, req.path);
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`[${new Date().toISOString()}] 🚀 Server running on port ${PORT}`);
+  console.log(`[${new Date().toISOString()}] 📡 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`[${new Date().toISOString()}] 🏥 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`[${new Date().toISOString()}] 💳 Mercado Pago API: http://localhost:${PORT}/api/create-mercadopago-preference`);
 });
