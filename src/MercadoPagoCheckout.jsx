@@ -8,11 +8,18 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
   const [preferenceId, setPreferenceId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [debugInfo, setDebugInfo] = useState(null);
 
   const createPreference = async () => {
+    const requestId = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    console.log(`\n=== MERCADO PAGO FRONTEND [${requestId}] ===`);
+    
     setLoading(true);
     setErrorMessage('');
+    setDebugInfo(null);
+    
     try {
+      // VALIDACIÓN DE ITEMS
       const items = cartItems
         .filter(item => item && item.name && Number(item.price) > 0)
         .map(item => ({
@@ -23,7 +30,14 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
           description: String(item.description || `${item.name} - Star Family`).slice(0, 600)
         }));
 
+      console.log(`[${requestId}] 📦 Cart items processed:`, {
+        original: cartItems.length,
+        valid: items.length,
+        items: items.map(i => ({ name: i.title, price: i.unit_price, qty: i.quantity }))
+      });
+
       if (!items.length) {
+        console.error(`[${requestId}] ❌ No valid items in cart`);
         throw new Error('El carrito no tiene productos válidos para pagar');
       }
 
@@ -33,70 +47,193 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
         externalReference: `order_${Date.now()}_${cartItems.length}_items`
       };
 
+      console.log(`[${requestId}] 📤 Payload prepared:`, {
+        itemsCount: items.length,
+        origin: window.location.origin,
+        externalReference: preferencePayload.externalReference,
+        total: total
+      });
+
       const isLocalDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const endpoint = isLocalDevelopment 
+        ? 'https://api.mercadopago.com/checkout/preferences'
+        : '/api/create-mercadopago-preference';
+      
+      console.log(`[${requestId}] 🌐 Environment:`, isLocalDevelopment ? 'LOCAL' : 'PRODUCTION');
+      console.log(`[${requestId}] 🔗 Endpoint:`, endpoint);
 
-      const response = isLocalDevelopment
-        ? await fetch('https://api.mercadopago.com/checkout/preferences', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer APP_USR-6318323343884379-051213-1de2b6c067eeb716b1e4ed751da8f3ac-1016520294`
-            },
-            body: JSON.stringify({
-              items,
-              back_urls: {
-                success: `${window.location.origin}/payment/success`,
-                failure: `${window.location.origin}/payment/failure`,
-                pending: `${window.location.origin}/payment/pending`
-              },
-              binary_mode: true,
-              statement_descriptor: 'Star Family Mayorista',
-              external_reference: preferencePayload.externalReference,
-              payment_methods: {
-                excluded_payment_types: [],
-                excluded_payment_methods: [],
-                default_payment_method_id: null
-              },
-              purpose: 'wallet_purchase',
-              payment_methods_allowed: {
-                payment_types: [
-                  { id: 'credit_card' },
-                  { id: 'debit_card' },
-                  { id: 'account_money' }
-                ]
-              }
-            })
-          })
-        : await fetch('/api/create-mercadopago-preference', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(preferencePayload)
-          });
-
-      let data;
+      // REQUEST CON TIMEOUT Y DETALLE COMPLETO
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 35000); // 35s timeout
+      
+      let response;
       try {
-        const text = await response.text();
-        if (!text) {
-          throw new Error('Respuesta vacía del servidor');
-        }
-        data = JSON.parse(text);
-      } catch (e) {
-        console.error('Error parsing response:', e);
-        throw new Error('Respuesta inválida del servidor. Verifica la configuración de Mercado Pago.');
+        const requestConfig = isLocalDevelopment
+          ? {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer APP_USR-6318323343884379-051213-1de2b6c067eeb716b1e4ed751da8f3ac-1016520294`,
+                'User-Agent': 'StarFamily-Ecommerce/1.0'
+              },
+              body: JSON.stringify({
+                items,
+                back_urls: {
+                  success: `${window.location.origin}/payment/success`,
+                  failure: `${window.location.origin}/payment/failure`,
+                  pending: `${window.location.origin}/payment/pending`
+                },
+                binary_mode: true,
+                statement_descriptor: 'Star Family Mayorista',
+                external_reference: preferencePayload.externalReference,
+                payment_methods: {
+                  excluded_payment_types: [],
+                  excluded_payment_methods: [],
+                  default_payment_method_id: null
+                },
+                purpose: 'wallet_purchase',
+                payment_methods_allowed: {
+                  payment_types: [
+                    { id: 'credit_card' },
+                    { id: 'debit_card' },
+                    { id: 'account_money' }
+                  ]
+                }
+              }),
+              signal: controller.signal
+            }
+          : {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'StarFamily-Ecommerce/1.0'
+              },
+              body: JSON.stringify(preferencePayload),
+              signal: controller.signal
+            };
+
+        console.log(`[${requestId}] 📤 Request config:`, {
+          method: requestConfig.method,
+          headers: requestConfig.headers,
+          bodyLength: requestConfig.body.length
+        });
+
+        response = await fetch(endpoint, requestConfig);
+        clearTimeout(timeout);
+      } catch (fetchError) {
+        clearTimeout(timeout);
+        console.error(`[${requestId}] ❌ Fetch error:`, fetchError);
+        const error = fetchError.name === 'AbortError' 
+          ? 'Timeout de conexión (35s)' 
+          : `Error de conexión: ${fetchError.message}`;
+        
+        setDebugInfo({
+          type: 'fetch_error',
+          error: error,
+          endpoint,
+          requestId
+        });
+        
+        throw new Error(error);
+      }
+
+      console.log(`[${requestId}] 📥 Response status:`, response.status);
+      console.log(`[${requestId}] 📥 Response headers:`, Object.fromEntries(response.headers.entries()));
+
+      // MANEJO ROBUSTO DE RESPUESTA
+      let responseText;
+      try {
+        responseText = await response.text();
+        console.log(`[${requestId}] 📥 Raw response (${responseText.length} chars):`, responseText.substring(0, 1000) + (responseText.length > 1000 ? '...' : ''));
+      } catch (textError) {
+        console.error(`[${requestId}] ❌ Error reading response:`, textError);
+        
+        setDebugInfo({
+          type: 'response_read_error',
+          error: textError.message,
+          status: response.status,
+          requestId
+        });
+        
+        throw new Error('Error leyendo respuesta del servidor');
       }
       
-      if (!response.ok || !data.id) {
-        console.error('Error de Mercado Pago al crear preferencia:', data);
-        throw new Error(data.message || data.error || 'No se pudo crear la preferencia de Mercado Pago');
+      if (!responseText || responseText.trim() === '') {
+        console.error(`[${requestId}] ❌ EMPTY RESPONSE`);
+        
+        setDebugInfo({
+          type: 'empty_response',
+          status: response.status,
+          headers: Object.fromEntries(response.headers.entries()),
+          requestId
+        });
+        
+        throw new Error('El servidor devolvió una respuesta vacía. Verifica los logs del servidor.');
+      }
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+        console.log(`[${requestId}] ✅ JSON parsed successfully`);
+      } catch (parseError) {
+        console.error(`[${requestId}] ❌ JSON parse error:`, parseError);
+        console.error(`[${requestId}] ❌ Invalid JSON:`, responseText);
+        
+        setDebugInfo({
+          type: 'json_parse_error',
+          error: parseError.message,
+          rawResponse: responseText.substring(0, 2000),
+          requestId
+        });
+        
+        throw new Error('Respuesta inválida del servidor (JSON malformado)');
+      }
+      
+      // VALIDACIÓN DE RESPUESTA
+      if (!response.ok) {
+        console.error(`[${requestId}] ❌ HTTP error:`, data);
+        
+        setDebugInfo({
+          type: 'http_error',
+          status: response.status,
+          response: data,
+          requestId
+        });
+        
+        const errorMsg = data.error || data.message || 'Error del servidor';
+        throw new Error(`Error ${response.status}: ${errorMsg}`);
+      }
+      
+      if (!data || !data.id) {
+        console.error(`[${requestId}] ❌ Invalid response structure:`, data);
+        
+        setDebugInfo({
+          type: 'invalid_response',
+          response: data,
+          requestId
+        });
+        
+        throw new Error('Respuesta sin ID de preferencia válido');
       }
 
+      // ÉXITO
+      console.log(`[${requestId}] 🎉 SUCCESS - Preference ID:`, data.id);
+      console.log(`[${requestId}] === MERCADO PAGO FRONTEND SUCCESS ===\n`);
+      
       setPreferenceId(data.id);
+      setDebugInfo({
+        type: 'success',
+        preferenceId: data.id,
+        requestId
+      });
+      
       // Cerrar el carrito cuando se crea la preferencia y se abre el checkout
       onClose?.();
+      
     } catch (error) {
-      console.error('Error creating Mercado Pago preference:', error);
+      console.error(`[${requestId}] 💥 FRONTEND ERROR:`, error);
+      console.error(`[${requestId}] === MERCADO PAGO FRONTEND ERROR ===\n`);
+      
       setErrorMessage(error.message || 'No se pudo cargar el método de pago');
       onPaymentError?.(error);
     } finally {
@@ -177,6 +314,39 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
         }}>
           {errorMessage || 'No se pudo cargar el método de pago'}
         </p>
+        
+        {/* DEBUG INFO PANEL */}
+        {debugInfo && process.env.NODE_ENV === 'development' && (
+          <details style={{ 
+            margin: '12px 0', 
+            textAlign: 'left',
+            background: '#fff',
+            border: '1px solid #dee2e6',
+            borderRadius: '6px',
+            padding: '8px'
+          }}>
+            <summary style={{ 
+              cursor: 'pointer', 
+              fontWeight: 'bold',
+              fontSize: '12px',
+              color: '#495057'
+            }}>
+              🐛 Debug Info (Click to expand)
+            </summary>
+            <pre style={{ 
+              fontSize: '11px', 
+              margin: '8px 0 0',
+              overflow: 'auto',
+              maxHeight: '200px',
+              background: '#f8f9fa',
+              padding: '8px',
+              borderRadius: '4px'
+            }}>
+              {JSON.stringify(debugInfo, null, 2)}
+            </pre>
+          </details>
+        )}
+        
         <button 
           onClick={createPreference} 
           style={{
@@ -188,12 +358,41 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
             cursor: 'pointer',
             fontSize: '14px',
             fontFamily: "'Poppins', sans-serif",
-            transition: 'background 0.2s'
+            transition: 'background 0.2s',
+            marginRight: '8px'
           }}
           onMouseOver={(e) => e.target.style.background = '#a01731'}
           onMouseOut={(e) => e.target.style.background = '#C41E3A'}
         >
           Reintentar
+        </button>
+        
+        {/* HEALTH CHECK BUTTON */}
+        <button 
+          onClick={async () => {
+            try {
+              const response = await fetch('/api/health');
+              const data = await response.json();
+              alert(`✅ API Health Check:\n${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+              alert(`❌ API Health Check Failed:\n${error.message}`);
+            }
+          }}
+          style={{
+            background: '#28a745',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            padding: '8px 16px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontFamily: "'Poppins', sans-serif",
+            transition: 'background 0.2s'
+          }}
+          onMouseOver={(e) => e.target.style.background = '#218838'}
+          onMouseOut={(e) => e.target.style.background = '#28a745'}
+        >
+          Verificar API
         </button>
       </div>
     );
