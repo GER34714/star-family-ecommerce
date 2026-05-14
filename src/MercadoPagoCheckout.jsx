@@ -54,15 +54,16 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
         total: total
       });
 
-      const isLocalDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      // ═══════════════════════════════════════════════════════════════════════════════
+      // CONFIGURACIÓN DE ENDPOINT (SIEMPRE USA BACKEND)
+      // ═══════════════════════════════════════════════════════════════════════════════
       
-      // SOLUCIÓN PROFESIONAL: Usar backend en producción, MP directo en desarrollo
-      const endpoint = isLocalDevelopment 
-        ? 'https://api.mercadopago.com/checkout/preferences'
-        : '/api/create-mercadopago-preference'; // Backend server en producción
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3000';
+      const endpoint = `${backendUrl}/create-preference`;
       
-      console.log(`[${requestId}] 🌐 Environment:`, isLocalDevelopment ? 'LOCAL' : 'PRODUCTION');
-      console.log(`[${requestId}] 🔗 Endpoint:`, endpoint);
+      console.log(`[${requestId}] 🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`[${requestId}] 🔗 Backend URL: ${backendUrl}`);
+      console.log(`[${requestId}] 🔗 Full Endpoint: ${endpoint}`);
 
       // REQUEST CON TIMEOUT Y DETALLE COMPLETO
       const controller = new AbortController();
@@ -71,49 +72,17 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
       let response;
       try {
         // CONFIGURACIÓN PROFESIONAL: Backend en producción, MP directo en desarrollo
-        const requestConfig = isLocalDevelopment
-          ? {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer APP_USR-6318323343884379-051213-1de2b6c067eeb716b1e4ed751da8f3ac-1016520294`,
-                'User-Agent': 'StarFamily-Ecommerce/1.0'
-              },
-              body: JSON.stringify({
-                items,
-                back_urls: {
-                  success: `${window.location.origin}/payment/success`,
-                  failure: `${window.location.origin}/payment/failure`,
-                  pending: `${window.location.origin}/payment/pending`
-                },
-                binary_mode: true,
-                statement_descriptor: 'Star Family Mayorista',
-                external_reference: preferencePayload.externalReference,
-                payment_methods: {
-                  excluded_payment_types: [],
-                  excluded_payment_methods: [],
-                  default_payment_method_id: null
-                },
-                purpose: 'wallet_purchase',
-                payment_methods_allowed: {
-                  payment_types: [
-                    { id: 'credit_card' },
-                    { id: 'debit_card' },
-                    { id: 'account_money' }
-                  ]
-                }
-              }),
-              signal: controller.signal
-            }
-          : {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'User-Agent': 'StarFamily-Ecommerce/1.0'
-              },
-              body: JSON.stringify(preferencePayload),
-              signal: controller.signal
-            };
+        const requestConfig = {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'StarFamily-Frontend/1.0',
+            'X-Client-Request-ID': requestId,
+            'X-Timestamp': timestamp
+          },
+          body: JSON.stringify(preferencePayload),
+          signal: controller.signal
+        };
 
         console.log(`[${requestId}] 📤 Request config:`, {
           method: requestConfig.method,
