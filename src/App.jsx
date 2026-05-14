@@ -5871,17 +5871,13 @@ const CSS = `
   .product-card:hover { transform:translateY(-5px); box-shadow:0 10px 28px rgba(0,0,0,0.13); }
   .product-card:hover img { transform:scale(1.06); }
   
-  /* Imágenes de productos adaptadas a móviles */
-  .product-card img { 
-    width: 100%; 
-    height: 200px; 
-    object-fit: cover; 
-    display: block; 
-  }
+  /* Imágenes de productos adaptadas SOLO para móviles */
   @media(max-width:640px) { 
     .product-card img { 
+      width: 100%; 
       height: 250px; 
       object-fit: cover; 
+      display: block; 
     } 
   }
 
