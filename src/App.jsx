@@ -5165,29 +5165,9 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
   }
 };
 
-  // Cargar datos al montar el componente
+  // Cargar datos al montar el componente y cuando se cambia al tab de payment
   useEffect(() => {
-    const load = async () => {
-      const { getSupabaseClient } = await import('./supabaseClient');
-      const supabase = getSupabaseClient();
-      if (!supabase) {
-        console.warn('Configuración de Supabase no disponible');
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('payment_settings')
-        .select('*')
-        .single();
-      if (data && !error) setPaymentSettings(data);
-    };
-    load();
-  }, []);
-
-  useEffect(() => {
-    if (adminTab === "payment") {
-      loadPaymentSettings();
-    }
+    loadPaymentSettings();
   }, [adminTab]);
 
   const input = { width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" };
