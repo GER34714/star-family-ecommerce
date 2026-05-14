@@ -2512,8 +2512,8 @@ export default function StarFamilyApp() {
       <header style={{ background:"#111111", position:"sticky", top:0, zIndex:500, boxShadow:"0 2px 16px rgba(0,0,0,0.4)" }}>
         <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 16px", height:62, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={() => { setView("shop"); setCat("Todos"); }}>
-            <div style={{ borderRadius:"50%", width:44, height:44, display:"flex", alignItems:"center", justifyContent:"center", border:"2.5px solid #F5A623", flexShrink:0, overflow:"hidden" }}>
-              <img src="https://iili.io/B6XgSSI.jpg" alt="Star Family Logo" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+            <div style={{ borderRadius:"50%", width:44, height:44, display:"flex", alignItems:"center", justifyContent:"center", border:"2.5px solid #F5A623", flexShrink:0, overflow:"hidden", background:"#111", fontSize:24 }}>
+              ⭐
             </div>
             <div>
               <div style={{ color:"white", fontWeight:900, fontSize:18, letterSpacing:3, lineHeight:1, fontFamily:"'Bebas Neue', sans-serif" }}>STAR FAMILY</div>
