@@ -15,7 +15,10 @@ app.use(express.static(path.join(__dirname, 'build')));
 
 // API endpoint para Mercado Pago
 app.post('/api/create-mercadopago-preference', async (req, res) => {
+  console.log('=== MERCADO PAGO API CALLED ===');
   console.log('API called with method:', req.method);
+  console.log('Request headers:', req.headers);
+  console.log('Request body:', req.body);
   console.log('Environment variables check:', {
     hasAccessToken: !!process.env.MERCADO_PAGO_ACCESS_TOKEN,
     accessTokenPrefix: process.env.MERCADO_PAGO_ACCESS_TOKEN ? process.env.MERCADO_PAGO_ACCESS_TOKEN.substring(0, 20) + '...' : 'null'
@@ -89,9 +92,12 @@ app.post('/api/create-mercadopago-preference', async (req, res) => {
     }
 
     console.log('Preference created successfully:', data.id);
+    console.log('=== MERCADO PAGO API SUCCESS ===');
     return res.json({ id: data.id });
   } catch (error) {
+    console.error('=== MERCADO PAGO API ERROR ===');
     console.error('API error:', error);
+    console.error('Error stack:', error.stack);
     return res.status(500).json({ error: error.message || 'Error interno creando preferencia' });
   }
 });
