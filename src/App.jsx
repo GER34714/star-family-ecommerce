@@ -321,10 +321,14 @@ export default function StarFamilyApp() {
       if (data) {
         setPaymentSettings({
           id: data.id,
-          account_name: data.account_name || '',
-          bank_name: data.bank_name || '',
+          account_name: data.account_name || data.titular || '',
+          bank_name: data.bank_name || data.banco || '',
           cbu: data.cbu || '',
           alias: data.alias || '',
+          titular: data.titular || data.account_name || '',
+          banco: data.banco || data.bank_name || '',
+          mp_enabled: data.mp_enabled !== undefined ? data.mp_enabled : true,
+          transfer_enabled: data.transfer_enabled !== undefined ? data.transfer_enabled : true,
           extra_message: data.extra_message || 'Una vez pagado, enviá el comprobante por mensaje 📩'
         });
       }
@@ -350,6 +354,10 @@ export default function StarFamilyApp() {
         bank_name: paymentSettings.bank_name,
         cbu: paymentSettings.cbu,
         alias: paymentSettings.alias,
+        titular: paymentSettings.titular,
+        banco: paymentSettings.banco,
+        mp_enabled: paymentSettings.mp_enabled,
+        transfer_enabled: paymentSettings.transfer_enabled,
         extra_message: paymentSettings.extra_message
       })
       .neq('id', '00000000-0000-0000-0000-000000000000'); // actualiza la única fila existente
@@ -3564,6 +3572,9 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
   const toastRef = React.useRef(null);
   const isMountedRef = React.useRef(true);
   
+  // Estado para manejar el método de pago seleccionado
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState(null); // null, 'mercadopago', 'transferencia'
+  
   React.useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -3660,9 +3671,17 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
     }
   }, []);
   
-  const sendWA = () => {
+  const sendWA = (paymentMethod = null) => {
     const lines = cart.map(i => `• ${i.qty}x ${i.name}: ${fmt(i.price * i.qty)}`).join("\n");
-    const msg = encodeURIComponent(`Hola! Quisiera hacer un pedido 👋\n\n${lines}\n\n*TOTAL: ${fmt(total)}*\n\nEspero su confirmación, gracias!`);
+    let paymentInfo = "";
+    
+    if (paymentMethod === 'transferencia') {
+      paymentInfo = "\n💳 Pago: Transferencia bancaria - adjunto comprobante";
+    } else if (paymentMethod === 'mercadopago') {
+      paymentInfo = "\n✅ Pago: Mercado Pago confirmado";
+    }
+    
+    const msg = encodeURIComponent(`Hola! Quisiera hacer un pedido 👋\n\n${lines}\n\n*TOTAL: ${fmt(total)}*${paymentInfo}\n\nEspero su confirmación, gracias!`);
     window.open(`https://wa.me/5491124953641?text=${msg}`, "_blank");
   };
   return (
@@ -3867,8 +3886,90 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
             <span style={{ fontWeight:900, fontSize:20, color:"#10B981" }}>{fmt(total)}</span>
           </div>
           
+          {/* PAYMENT METHOD SELECTION */}
+          {!paymentCompleted && !selectedPaymentMethod && (
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:13, fontWeight:600, color:"#374151", marginBottom:12 }}>
+                💳 ¿Cómo querés pagar?
+              </div>
+              
+              {/* Mercado Pago Button */}
+              {(paymentSettings?.mp_enabled !== false) && (
+                <button
+                  onClick={() => setSelectedPaymentMethod('mercadopago')}
+                  style={{
+                    width:"100%",
+                    background:"#009EE3",
+                    color:"white",
+                    border:"none",
+                    borderRadius:12,
+                    padding:14,
+                    fontSize:14,
+                    fontWeight:600,
+                    cursor:"pointer",
+                    marginBottom:8,
+                    display:"flex",
+                    alignItems:"center",
+                    justifyContent:"center",
+                    gap:8,
+                    fontFamily:"'Poppins',sans-serif",
+                    transition:"background 0.2s"
+                  }}
+                  onMouseOver={(e) => e.target.style.background = "#0077B6"}
+                  onMouseOut={(e) => e.target.style.background = "#009EE3"}
+                >
+                  💳 Pagar con Mercado Pago
+                </button>
+              )}
+              
+              {/* Transferencia Button */}
+              {(paymentSettings?.transfer_enabled !== false) && (
+                <button
+                  onClick={() => setSelectedPaymentMethod('transferencia')}
+                  style={{
+                    width:"100%",
+                    background:"#6B7280",
+                    color:"white",
+                    border:"none",
+                    borderRadius:12,
+                    padding:14,
+                    fontSize:14,
+                    fontWeight:600,
+                    cursor:"pointer",
+                    marginBottom:8,
+                    display:"flex",
+                    alignItems:"center",
+                    justifyContent:"center",
+                    gap:8,
+                    fontFamily:"'Poppins',sans-serif",
+                    transition:"background 0.2s"
+                  }}
+                  onMouseOver={(e) => e.target.style.background = "#4B5563"}
+                  onMouseOut={(e) => e.target.style.background = "#6B7280"}
+                >
+                  🏦 Pagar por Transferencia Bancaria
+                </button>
+              )}
+              
+              {/* Si no hay métodos habilitados, mostrar ambos por defecto */}
+              {(!paymentSettings || (paymentSettings?.mp_enabled === false && paymentSettings?.transfer_enabled === false)) && (
+                <div style={{ 
+                  background: "#FEF3C7", 
+                  border: "1px solid #FDE68A", 
+                  borderRadius:12, 
+                  padding:12, 
+                  fontSize:12, 
+                  color:"#92400E",
+                  textAlign:"center"
+                }}>
+                  ⚠️ No hay métodos de pago configurados. Contactá al administrador.
+                </div>
+              )}
+            </div>
+          )}
+
           {/* MERCADO PAGO CHECKOUT */}
-          {!paymentCompleted && (
+          {!paymentCompleted && selectedPaymentMethod === 'mercadopago' && (
             <div style={{ marginBottom:12 }}>
               <div style={{ 
                 background: "#F0F9FF", 
@@ -3894,10 +3995,226 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
                 <MercadoPagoCheckout 
                   cartItems={cart} 
                   total={total}
-                  onPaymentSuccess={onPaymentSuccess}
+                  onPaymentSuccess={(response) => {
+                    onPaymentSuccess(response);
+                    sendWA('mercadopago');
+                  }}
                   onPaymentError={onPaymentError}
                 />
               </div>
+              <button
+                onClick={() => setSelectedPaymentMethod(null)}
+                style={{
+                  width:"100%",
+                  background:"#F4F4F5",
+                  color:"#6B7280",
+                  border:"none",
+                  borderRadius:8,
+                  padding:8,
+                  fontSize:12,
+                  cursor:"pointer",
+                  fontFamily:"'Poppins',sans-serif"
+                }}
+              >
+                ← Volver a métodos de pago
+              </button>
+            </div>
+          )}
+
+          {/* TRANSFERENCIA BANCARIA VIEW */}
+          {!paymentCompleted && selectedPaymentMethod === 'transferencia' && (
+            <div style={{ marginBottom:12 }}>
+              <div style={{ 
+                background: "#F9FAFB", 
+                border: "1px solid #E5E7EB", 
+                borderRadius:12, 
+                padding:16, 
+                marginBottom:12 
+              }}>
+                <div style={{ 
+                  fontSize:14, 
+                  fontWeight:600, 
+                  color:"#374151", 
+                  marginBottom:12, 
+                  textAlign:"center"
+                }}>
+                  🏦 Datos para Transferencia
+                </div>
+                
+                <div style={{ fontSize:12, color:"#6B7280", marginBottom:16, textAlign:"center" }}>
+                  Monto a transferir: <span style={{ fontWeight:700, color:"#111", fontSize:14 }}>{fmt(total)}</span>
+                </div>
+
+                {/* Titular */}
+                {(paymentSettings?.titular) && (
+                  <div style={{ marginBottom:12 }}>
+                    <div style={{ fontSize:11, color:"#6B7280", marginBottom:4 }}>Titular</div>
+                    <div style={{ 
+                      fontSize:13, 
+                      fontWeight:600, 
+                      color:"#111", 
+                      padding:"8px 12px", 
+                      background:"white", 
+                      borderRadius:8, 
+                      border:"1px solid #E5E7EB" 
+                    }}>
+                      {paymentSettings.titular}
+                    </div>
+                  </div>
+                )}
+
+                {/* Banco */}
+                {(paymentSettings?.banco) && (
+                  <div style={{ marginBottom:12 }}>
+                    <div style={{ fontSize:11, color:"#6B7280", marginBottom:4 }}>Banco</div>
+                    <div style={{ 
+                      fontSize:13, 
+                      fontWeight:600, 
+                      color:"#111", 
+                      padding:"8px 12px", 
+                      background:"white", 
+                      borderRadius:8, 
+                      border:"1px solid #E5E7EB" 
+                    }}>
+                      {paymentSettings.banco}
+                    </div>
+                  </div>
+                )}
+
+                {/* CBU */}
+                {(paymentSettings?.cbu) && (
+                  <div style={{ marginBottom:12 }}>
+                    <div style={{ fontSize:11, color:"#6B7280", marginBottom:4 }}>CBU</div>
+                    <div style={{ 
+                      display:"flex", 
+                      gap:8, 
+                      alignItems:"center"
+                    }}>
+                      <div style={{ 
+                        flex:1, 
+                        fontSize:12, 
+                        fontWeight:600, 
+                        color:"#111", 
+                        padding:"8px 12px", 
+                        background:"white", 
+                        borderRadius:8, 
+                        border:"1px solid #E5E7EB",
+                        fontFamily:"monospace"
+                      }}>
+                        {paymentSettings.cbu}
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(paymentSettings.cbu, 'CBU')}
+                        style={{
+                          padding:"6px 10px",
+                          background:"#10B981",
+                          color:"white",
+                          border:"none",
+                          borderRadius:6,
+                          fontSize:11,
+                          cursor:"pointer",
+                          fontWeight:600
+                        }}
+                      >
+                        📋
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Alias */}
+                {(paymentSettings?.alias) && (
+                  <div style={{ marginBottom:12 }}>
+                    <div style={{ fontSize:11, color:"#6B7280", marginBottom:4 }}>Alias</div>
+                    <div style={{ 
+                      display:"flex", 
+                      gap:8, 
+                      alignItems:"center"
+                    }}>
+                      <div style={{ 
+                        flex:1, 
+                        fontSize:12, 
+                        fontWeight:600, 
+                        color:"#111", 
+                        padding:"8px 12px", 
+                        background:"white", 
+                        borderRadius:8, 
+                        border:"1px solid #E5E7EB"
+                      }}>
+                        {paymentSettings.alias}
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(paymentSettings.alias, 'Alias')}
+                        style={{
+                          padding:"6px 10px",
+                          background:"#10B981",
+                          color:"white",
+                          border:"none",
+                          borderRadius:6,
+                          fontSize:11,
+                          cursor:"pointer",
+                          fontWeight:600
+                        }}
+                      >
+                        📋
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ 
+                  fontSize:11, 
+                  color:"#6B7280", 
+                  textAlign:"center", 
+                  marginTop:12,
+                  fontStyle:"italic"
+                }}>
+                  Una vez realizado el pago, enviá el comprobante por WhatsApp
+                </div>
+              </div>
+
+              <button
+                onClick={() => sendWA('transferencia')}
+                style={{
+                  width:"100%",
+                  background:"#25D366",
+                  color:"white",
+                  border:"none",
+                  borderRadius:12,
+                  padding:14,
+                  fontSize:14,
+                  fontWeight:600,
+                  cursor:"pointer",
+                  marginBottom:8,
+                  display:"flex",
+                  alignItems:"center",
+                  justifyContent:"center",
+                  gap:8,
+                  fontFamily:"'Poppins',sans-serif",
+                  transition:"background 0.2s"
+                }}
+                onMouseOver={(e) => e.target.style.background = "#128C7E"}
+                onMouseOut={(e) => e.target.style.background = "#25D366"}
+              >
+                📱 Enviar pedido por WhatsApp
+              </button>
+
+              <button
+                onClick={() => setSelectedPaymentMethod(null)}
+                style={{
+                  width:"100%",
+                  background:"#F4F4F5",
+                  color:"#6B7280",
+                  border:"none",
+                  borderRadius:8,
+                  padding:8,
+                  fontSize:12,
+                  cursor:"pointer",
+                  fontFamily:"'Poppins',sans-serif"
+                }}
+              >
+                ← Volver a métodos de pago
+              </button>
             </div>
           )}
           
@@ -3925,27 +4242,6 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
               </div>
             </div>
           )}
-          
-          <button 
-            onClick={sendWA} 
-            disabled={paymentProcessing || paymentCompleted}
-            style={{ 
-              width:"100%", 
-              background: paymentProcessing || paymentCompleted ? "#9CA3AF" : "#25D366", 
-              color:"white", 
-              border:"none", 
-              borderRadius:12, 
-              padding:14, 
-              fontSize:15, 
-              fontWeight:700, 
-              cursor: paymentProcessing || paymentCompleted ? "not-allowed" : "pointer", 
-              marginBottom:8, 
-              fontFamily:"'Poppins',sans-serif",
-              opacity: paymentProcessing || paymentCompleted ? 0.6 : 1
-            }}
-          >
-            {paymentProcessing ? "⏳ Procesando..." : paymentCompleted ? "✅ Pedido confirmado" : "📱 Enviar por WhatsApp"}
-          </button>
           <button 
             onClick={onClear} 
             disabled={paymentProcessing || paymentCompleted}
@@ -5781,13 +6077,227 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
       {/* TAB: PAYMENT SETTINGS */}
       {adminTab === "payment" && (
         <div style={{ background:"white", borderRadius:16, padding:24 }}>
-          <h3 style={{ margin:"0 0 6px", fontWeight:800 }}>💳 Mercado Pago</h3>
-          <p style={{ color:"#6B7280", fontSize:14, marginBottom:20 }}>El checkout de Mercado Pago está activo en el carrito.</p>
-          <div style={{ background:"#F0F9FF", border:"1px solid #BFDBFE", borderRadius:12, padding:16 }}>
-            <div style={{ fontWeight:700, color:"#1E40AF", marginBottom:6 }}>Pago online habilitado</div>
-            <div style={{ color:"#64748B", fontSize:13, lineHeight:1.5 }}>
-              Los clientes pagan directamente desde el botón de Mercado Pago. Los datos de transferencia bancaria ya no se muestran ni se configuran desde este panel.
+          <h3 style={{ margin:"0 0 6px", fontWeight:800 }}>💳 Métodos de Pago</h3>
+          <p style={{ color:"#6B7280", fontSize:14, marginBottom:24 }}>Configurá qué métodos de pago están disponibles para los clientes.</p>
+          
+          {/* Métodos Habilitados */}
+          <div style={{ marginBottom:32 }}>
+            <h4 style={{ margin:"0 0 16px", fontWeight:700, fontSize:16 }}>🔧 Métodos Activos</h4>
+            
+            {/* Mercado Pago Toggle */}
+            <div style={{ 
+              display:"flex", 
+              justifyContent:"space-between", 
+              alignItems:"center", 
+              padding:"16px", 
+              background:"#F9FAFB", 
+              borderRadius:12, 
+              border:"1px solid #E5E7EB",
+              marginBottom:12 
+            }}>
+              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ fontSize:24 }}>💳</div>
+                <div>
+                  <div style={{ fontWeight:700, fontSize:15 }}>Mercado Pago</div>
+                  <div style={{ fontSize:13, color:"#6B7280" }}>Pago online con tarjeta, débito o efectivo</div>
+                </div>
+              </div>
+              <label style={{ position:"relative", display:"inline-block", width:48, height:24 }}>
+                <input 
+                  type="checkbox" 
+                  checked={paymentSettings?.mp_enabled !== false}
+                  onChange={(e) => setPaymentSettings(prev => ({...prev, mp_enabled: e.target.checked}))}
+                  style={{ opacity:0, width:0, height:0 }}
+                />
+                <span style={{
+                  position:"absolute",
+                  cursor:"pointer",
+                  top:0,
+                  left:0,
+                  right:0,
+                  bottom:0,
+                  backgroundColor: paymentSettings?.mp_enabled !== false ? "#10B981" : "#D1D5DB",
+                  transition:"0.3s",
+                  borderRadius:24
+                }}>
+                  <span style={{
+                    position:"absolute",
+                    content:"\"",
+                    height:18,
+                    width:18,
+                    left: paymentSettings?.mp_enabled !== false ? 26 : 3,
+                    bottom:3,
+                    backgroundColor:"white",
+                    transition:"0.3s",
+                    borderRadius:50
+                  }}></span>
+                </span>
+              </label>
             </div>
+
+            {/* Transferencia Toggle */}
+            <div style={{ 
+              display:"flex", 
+              justifyContent:"space-between", 
+              alignItems:"center", 
+              padding:"16px", 
+              background:"#F9FAFB", 
+              borderRadius:12, 
+              border:"1px solid #E5E7EB" 
+            }}>
+              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ fontSize:24 }}>🏦</div>
+                <div>
+                  <div style={{ fontWeight:700, fontSize:15 }}>Transferencia Bancaria</div>
+                  <div style={{ fontSize:13, color:"#6B7280" }}>Transferencia o depósito bancario tradicional</div>
+                </div>
+              </div>
+              <label style={{ position:"relative", display:"inline-block", width:48, height:24 }}>
+                <input 
+                  type="checkbox" 
+                  checked={paymentSettings?.transfer_enabled !== false}
+                  onChange={(e) => setPaymentSettings(prev => ({...prev, transfer_enabled: e.target.checked}))}
+                  style={{ opacity:0, width:0, height:0 }}
+                />
+                <span style={{
+                  position:"absolute",
+                  cursor:"pointer",
+                  top:0,
+                  left:0,
+                  right:0,
+                  bottom:0,
+                  backgroundColor: paymentSettings?.transfer_enabled !== false ? "#10B981" : "#D1D5DB",
+                  transition:"0.3s",
+                  borderRadius:24
+                }}>
+                  <span style={{
+                    position:"absolute",
+                    content:"\"",
+                    height:18,
+                    width:18,
+                    left: paymentSettings?.transfer_enabled !== false ? 26 : 3,
+                    bottom:3,
+                    backgroundColor:"white",
+                    transition:"0.3s",
+                    borderRadius:50
+                  }}></span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          {/* Datos Bancarios */}
+          <div style={{ marginBottom:32 }}>
+            <h4 style={{ margin:"0 0 16px", fontWeight:700, fontSize:16 }}>🏦 Datos Bancarios</h4>
+            
+            <div style={{ display:"grid", gap:16 }}>
+              {/* Titular */}
+              <div>
+                <label style={{ display:"block", fontWeight:600, fontSize:13, marginBottom:6, color:"#374151" }}>
+                  Titular de la cuenta
+                </label>
+                <input
+                  type="text"
+                  value={paymentSettings?.titular || ''}
+                  onChange={(e) => setPaymentSettings(prev => ({...prev, titular: e.target.value}))}
+                  placeholder="Nombre completo del titular"
+                  style={{
+                    width:"100%",
+                    padding:"10px 14px",
+                    border:"1px solid #D1D5DB",
+                    borderRadius:8,
+                    fontSize:14,
+                    background:"white"
+                  }}
+                />
+              </div>
+
+              {/* Banco */}
+              <div>
+                <label style={{ display:"block", fontWeight:600, fontSize:13, marginBottom:6, color:"#374151" }}>
+                  Banco
+                </label>
+                <input
+                  type="text"
+                  value={paymentSettings?.banco || ''}
+                  onChange={(e) => setPaymentSettings(prev => ({...prev, banco: e.target.value}))}
+                  placeholder="Nombre del banco"
+                  style={{
+                    width:"100%",
+                    padding:"10px 14px",
+                    border:"1px solid #D1D5DB",
+                    borderRadius:8,
+                    fontSize:14,
+                    background:"white"
+                  }}
+                />
+              </div>
+
+              {/* CBU */}
+              <div>
+                <label style={{ display:"block", fontWeight:600, fontSize:13, marginBottom:6, color:"#374151" }}>
+                  CBU
+                </label>
+                <input
+                  type="text"
+                  value={paymentSettings?.cbu || ''}
+                  onChange={(e) => setPaymentSettings(prev => ({...prev, cbu: e.target.value}))}
+                  placeholder="0000000000000000000000000000"
+                  style={{
+                    width:"100%",
+                    padding:"10px 14px",
+                    border:"1px solid #D1D5DB",
+                    borderRadius:8,
+                    fontSize:14,
+                    background:"white",
+                    fontFamily:"monospace"
+                  }}
+                />
+              </div>
+
+              {/* Alias */}
+              <div>
+                <label style={{ display:"block", fontWeight:600, fontSize:13, marginBottom:6, color:"#374151" }}>
+                  Alias
+                </label>
+                <input
+                  type="text"
+                  value={paymentSettings?.alias || ''}
+                  onChange={(e) => setPaymentSettings(prev => ({...prev, alias: e.target.value}))}
+                  placeholder="tu.alias.bancario"
+                  style={{
+                    width:"100%",
+                    padding:"10px 14px",
+                    border:"1px solid #D1D5DB",
+                    borderRadius:8,
+                    fontSize:14,
+                    background:"white"
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Botón Guardar */}
+          <div style={{ display:"flex", justifyContent:"flex-end", gap:12 }}>
+            <button
+              onClick={savePaymentSettings}
+              style={{
+                padding:"12px 24px",
+                background:"#10B981",
+                color:"white",
+                border:"none",
+                borderRadius:8,
+                fontWeight:600,
+                fontSize:14,
+                cursor:"pointer",
+                transition:"background 0.2s"
+              }}
+              onMouseOver={(e) => e.target.style.background = "#059669"}
+              onMouseOut={(e) => e.target.style.background = "#10B981"}
+            >
+              💾 Guardar Configuración
+            </button>
           </div>
         </div>
       )}
