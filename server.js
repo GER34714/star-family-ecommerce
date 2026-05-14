@@ -129,9 +129,9 @@ app.post('/api/create-mercadopago-preference', async (req, res) => {
     const mpPayload = {
       items: validItems,
       back_urls: {
-        success: `${origin}/payment/success`,
-        failure: `${origin}/payment/failure`,
-        pending: `${origin}/payment/pending`
+        success: origin,
+        failure: origin,
+        pending: origin
       },
       binary_mode: true,
       statement_descriptor: 'Star Family Mayorista',

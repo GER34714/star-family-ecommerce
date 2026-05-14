@@ -101,9 +101,9 @@ const createMercadoPagoPreference = async (req, res) => {
     const mpPayload = {
       items: validItems,
       back_urls: {
-        success: `${siteOrigin}/payment/success`,
-        failure: `${siteOrigin}/payment/failure`,
-        pending: `${siteOrigin}/payment/pending`
+        success: siteOrigin,
+        failure: siteOrigin,
+        pending: siteOrigin
       },
       binary_mode: true,
       statement_descriptor: 'Star Family Mayorista',
