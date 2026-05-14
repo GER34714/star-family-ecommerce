@@ -240,15 +240,29 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
         requestId
       });
       
-      // Cerrar el carrito cuando se crea la preferencia y se abre el checkout
-      onClose?.();
+      // NO cerrar el carrito automáticamente - dejar que el usuario complete el pago
+      // onClose?.();
       
     } catch (error) {
       console.error(`[${requestId}] 💥 FRONTEND ERROR:`, error);
       console.error(`[${requestId}] === MERCADO PAGO FRONTEND ERROR ===\n`);
       
+      // Determinar si es un error crítico que debe cerrar el carrito
+      const isCriticalError = error.message && (
+        error.message.includes('fallo al crear la preferencia') ||
+        error.message.includes('No se pudo cargar el método de pago') ||
+        error.message.includes('Timeout de conexión') ||
+        error.message.includes('Error del servidor') ||
+        error.message.includes('Respuesta inválida') ||
+        error.message.includes('El carrito no tiene productos válidos')
+      );
+      
       setErrorMessage(error.message || 'No se pudo cargar el método de pago');
-      onPaymentError?.(error);
+      
+      // Solo llamar a onPaymentError si es un error crítico
+      if (isCriticalError) {
+        onPaymentError?.(error);
+      }
     } finally {
       setLoading(false);
     }
