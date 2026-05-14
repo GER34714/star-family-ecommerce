@@ -105,8 +105,8 @@ export default function StarFamilyApp() {
     alias: '',
     titular: '',
     banco: '',
-    mp_enabled: true,
-    transfer_enabled: true,
+    mp_enabled: false,
+    transfer_enabled: false,
     extra_message: 'Una vez pagado, enviá el comprobante por mensaje 📩'
   });
   const [loadingPaymentSettings, setLoadingPaymentSettings] = useState(false);
@@ -229,7 +229,7 @@ export default function StarFamilyApp() {
   // Efecto para cargar categorías y configuración de pago
   useEffect(() => {
     loadAvailableCategories();
-    loadPaymentSettings();
+    loadPaymentSettingsSafe(); // Cargar solo si está vacío
   }, []);
 
   // Efecto para actualizar productos filtrados
@@ -305,6 +305,50 @@ export default function StarFamilyApp() {
     }
   };
 
+  // Cargar configuración de pago desde Supabase (solo si está vacío)
+  const loadPaymentSettingsSafe = useCallback(async () => {
+    // Si ya hay datos cargados, no recargar
+    if (paymentSettings && paymentSettings.id !== null) {
+      console.log('🔥 PaymentSettings ya cargados, omitiendo...');
+      return;
+    }
+    
+    try {
+      setLoadingPaymentSettings(true);
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        console.error('Cliente de Supabase no disponible');
+        return;
+      }
+      const { data, error } = await supabase
+        .from('payment_settings')
+        .select('*')
+        .single();
+      if (error) {
+        console.error('Error cargando configuración de pago:', error);
+        return;
+      }
+      if (data) {
+        setPaymentSettings({
+          id: data.id,
+          account_name: data.account_name || data.titular || '',
+          bank_name: data.bank_name || data.banco || '',
+          cbu: data.cbu || '',
+          alias: data.alias || '',
+          titular: data.titular || data.account_name || '',
+          banco: data.banco || data.bank_name || '',
+          mp_enabled: data.mp_enabled !== undefined ? data.mp_enabled : false,
+          transfer_enabled: data.transfer_enabled !== undefined ? data.transfer_enabled : false,
+          extra_message: data.extra_message || 'Una vez pagado, enviá el comprobante por mensaje 📩'
+        });
+      }
+    } catch (error) {
+      console.error('Error cargando configuración de pago:', error);
+    } finally {
+      setLoadingPaymentSettings(false);
+    }
+  }, [paymentSettings]); // Dependency para verificar si hay datos
+
   // Cargar configuración de pago desde Supabase
   const loadPaymentSettings = useCallback(async () => {
     try {
@@ -331,8 +375,8 @@ export default function StarFamilyApp() {
           alias: data.alias || '',
           titular: data.titular || data.account_name || '',
           banco: data.banco || data.bank_name || '',
-          mp_enabled: data.mp_enabled !== undefined ? data.mp_enabled : true,
-          transfer_enabled: data.transfer_enabled !== undefined ? data.transfer_enabled : true,
+          mp_enabled: data.mp_enabled !== undefined ? data.mp_enabled : false,
+          transfer_enabled: data.transfer_enabled !== undefined ? data.transfer_enabled : false,
           extra_message: data.extra_message || 'Una vez pagado, enviá el comprobante por mensaje 📩'
         });
       }
@@ -5130,8 +5174,8 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
           alias: data.alias || '',
           titular: data.titular || data.account_name || '',
           banco: data.banco || data.bank_name || '',
-          mp_enabled: data.mp_enabled !== undefined ? data.mp_enabled : true,
-          transfer_enabled: data.transfer_enabled !== undefined ? data.transfer_enabled : true,
+          mp_enabled: data.mp_enabled !== undefined ? data.mp_enabled : false,
+          transfer_enabled: data.transfer_enabled !== undefined ? data.transfer_enabled : false,
           extra_message: data.extra_message || 'Una vez pagado, enviá el comprobante por mensaje 📩'
         };
         console.log('🔥 NUEVOS SETTINGS:', newSettings);
@@ -5178,8 +5222,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
       throw error;
     }
 
-    console.log('🔥 UPSERT EXITOSO, recargando...');
-    await loadPaymentSettings(); // ← refrescar estado después de guardar
+    console.log('🔥 UPSERT EXITOSO');
     alert('✅ Guardado correctamente');
   } catch (error) {
     console.error('🔥 ERROR GENERAL guardando:', error);
@@ -5187,10 +5230,10 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
   }
 };
 
-  // Cargar datos al montar el componente y cuando se cambia al tab de payment
+  // Cargar datos al montar el componente
   useEffect(() => {
-    loadPaymentSettings();
-  }, [adminTab]);
+    // loadPaymentSettings(); // Temporalmente desactivado para debugging
+  }, []);
 
   const input = { width:"100%", padding:"10px 13px", borderRadius:9, border:"1px solid #E5E7EB", fontSize:14, fontFamily:"'Poppins',sans-serif", marginTop:5, outline:"none" };
 
@@ -6190,7 +6233,30 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                 <input 
                   type="checkbox" 
                   checked={paymentSettings?.mp_enabled !== false}
-                  onChange={(e) => setPaymentSettings(prev => ({...prev, mp_enabled: e.target.checked}))}
+                  onChange={(e) => {
+                    const newValue = e.target.checked;
+                    // Actualizar estado local inmediatamente
+                    setPaymentSettings(prev => ({...prev, mp_enabled: newValue}));
+                    // Guardar automáticamente el cambio
+                    setTimeout(() => {
+                      const supabase = getSupabaseClient();
+                      if (supabase) {
+                        supabase
+                          .from('payment_settings')
+                          .upsert({
+                            id: '00000000-0000-0000-0000-000000000000',
+                            mp_enabled: newValue
+                          }, { onConflict: 'id' })
+                          .then(({ error }) => {
+                            if (error) {
+                              console.error('Error guardando mp_enabled:', error);
+                            } else {
+                              console.log('✅ mp_enabled guardado:', newValue);
+                            }
+                          });
+                      }
+                    }, 100);
+                  }}
                   style={{ opacity:0, width:0, height:0 }}
                 />
                 <span style={{
@@ -6240,7 +6306,30 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                 <input 
                   type="checkbox" 
                   checked={paymentSettings?.transfer_enabled !== false}
-                  onChange={(e) => setPaymentSettings(prev => ({...prev, transfer_enabled: e.target.checked}))}
+                  onChange={(e) => {
+                    const newValue = e.target.checked;
+                    // Actualizar estado local inmediatamente
+                    setPaymentSettings(prev => ({...prev, transfer_enabled: newValue}));
+                    // Guardar automáticamente el cambio
+                    setTimeout(() => {
+                      const supabase = getSupabaseClient();
+                      if (supabase) {
+                        supabase
+                          .from('payment_settings')
+                          .upsert({
+                            id: '00000000-0000-0000-0000-000000000000',
+                            transfer_enabled: newValue
+                          }, { onConflict: 'id' })
+                          .then(({ error }) => {
+                            if (error) {
+                              console.error('Error guardando transfer_enabled:', error);
+                            } else {
+                              console.log('✅ transfer_enabled guardado:', newValue);
+                            }
+                          });
+                      }
+                    }, 100);
+                  }}
                   style={{ opacity:0, width:0, height:0 }}
                 />
                 <span style={{
