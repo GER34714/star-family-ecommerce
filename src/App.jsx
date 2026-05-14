@@ -1827,6 +1827,20 @@ export default function StarFamilyApp() {
     setCurrentPage(1);
   }, [cat, searchTerm, priceRange]);
   
+  // Bloquear scroll del body cuando el carrito está abierto
+  useEffect(() => {
+    if (cartOpen) {
+      document.body.classList.add('cart-open');
+    } else {
+      document.body.classList.remove('cart-open');
+    }
+    
+    // Cleanup al desmontar
+    return () => {
+      document.body.classList.remove('cart-open');
+    };
+  }, [cartOpen]);
+  
   
   // Verificar si la categoría seleccionada aún existe en availableCategories
   if (cat !== "Todos" && !availableCategories.includes(cat)) {
@@ -5851,6 +5865,9 @@ const CSS = `
 
   .overlay { position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:400; opacity:0; pointer-events:none; transition:opacity 0.25s; }
   .overlay.show { opacity:1; pointer-events:all; }
+  
+  /* Bloquear scroll del body cuando el carrito está abierto */
+  body.cart-open { overflow: hidden; position: fixed; width: 100%; }
 
   .cart-drawer { position:fixed; top:62px; right:0; width:380px; max-width:100vw; height:calc(100vh - 62px); background:white; z-index:450; box-shadow:-6px 0 32px rgba(0,0,0,0.15); transform:translateX(100%); transition:transform 0.3s cubic-bezier(0.4,0,0.2,1); overflow-y:auto; }
   .cart-drawer.open { transform:translateX(0); }
