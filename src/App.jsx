@@ -5105,17 +5105,23 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
   // Cargar configuración de pago desde Supabase
   const loadPaymentSettings = useCallback(async () => {
     try {
+      console.log('🔥 CARGANDO payment settings...');
       setLoadingPaymentSettings(true);
       const { data, error } = await supabase
         .from('payment_settings')
         .select('*')
         .single();
+      
+      console.log('🔥 DATA DE SUPABASE:', data);
+      console.log('🔥 ERROR DE SUPABASE:', error);
+      
       if (error) {
-        console.error('Error cargando configuración de pago:', error);
+        console.error('🔥 Error cargando configuración de pago:', error);
         return;
       }
       if (data) {
-        setPaymentSettings({
+        console.log('🔥 SETEANDO payment settings con datos:', data);
+        const newSettings = {
           id: data.id,
           account_name: data.account_name || data.titular || '',
           bank_name: data.bank_name || data.banco || '',
@@ -5126,10 +5132,14 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
           mp_enabled: data.mp_enabled !== undefined ? data.mp_enabled : true,
           transfer_enabled: data.transfer_enabled !== undefined ? data.transfer_enabled : true,
           extra_message: data.extra_message || 'Una vez pagado, enviá el comprobante por mensaje 📩'
-        });
+        };
+        console.log('🔥 NUEVOS SETTINGS:', newSettings);
+        setPaymentSettings(newSettings);
+      } else {
+        console.log('🔥 NO HAY DATOS EN SUPABASE');
       }
     } catch (error) {
-      console.error('Error cargando configuración de pago:', error);
+      console.error('🔥 Error cargando configuración de pago:', error);
     } finally {
       setLoadingPaymentSettings(false);
     }
@@ -5138,11 +5148,11 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
   // Guardar configuración de pago en Supabase
   const savePaymentSettings = async () => {
   try {
-    console.log('Guardando...', paymentSettings);
+    console.log('🔥 GUARDANDO paymentSettings:', JSON.stringify(paymentSettings, null, 2));
     let error;
     
     // Usar UPSERT (INSERT o UPDATE automático)
-    ({ error } = await supabase
+    const result = await supabase
       .from('payment_settings')
       .upsert({
         id: '00000000-0000-0000-0000-000000000000', // UUID por defecto
@@ -5157,14 +5167,21 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
         extra_message: paymentSettings.extra_message
       }, {
         onConflict: 'id' // si hay conflicto en id, hace update
-      }));
+      });
 
-    if (error) throw error;
+    console.log('🔥 RESULTADO UPSERT:', result);
+    error = result.error;
 
+    if (error) {
+      console.error('🔥 ERROR EN UPSERT:', error);
+      throw error;
+    }
+
+    console.log('🔥 UPSERT EXITOSO, recargando...');
     await loadPaymentSettings(); // ← refrescar estado después de guardar
     alert('✅ Guardado correctamente');
   } catch (error) {
-    console.error('Error guardando:', error.message);
+    console.error('🔥 ERROR GENERAL guardando:', error);
     alert('❌ Error: ' + error.message);
   }
 };
