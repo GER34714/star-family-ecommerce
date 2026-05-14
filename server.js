@@ -98,13 +98,15 @@ app.post('/api/create-mercadopago-preference', async (req, res) => {
     }
     
     // VALIDACIÓN DE ITEMS
-    const validItems = items.filter(item => 
-      item && 
-      typeof item === 'object' && 
-      item.name && 
-      typeof item.price === 'number' && 
-      item.price > 0
-    );
+    const validItems = items
+      .filter(item => item && typeof item === 'object' && Number(item.quantity || item.qty || 1) > 0 && Number(item.unit_price || item.price) > 0)
+      .map(item => ({
+        title: String(item.title || item.name).slice(0, 250),
+        quantity: Number(item.quantity || item.qty || 1),
+        unit_price: Math.round(Number(item.unit_price || item.price) * 100) / 100,
+        currency_id: item.currency_id || 'ARS',
+        description: String(item.description || `${item.title || item.name} - Star Family`).slice(0, 600)
+      }));
     
     if (validItems.length === 0) {
       console.error(`[${requestId}] ❌ No valid items found`);

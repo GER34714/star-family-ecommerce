@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 
-// Inicializar Mercado Pago con la clave pública proporcionada
-initMercadoPago('APP_USR-2601bd12-3a55-4f18-a4d2-b907a571537c');
+const MERCADO_PAGO_PUBLIC_KEY = process.env.REACT_APP_MERCADO_PAGO_PUBLIC_KEY || 'APP_USR-2601bd12-3a55-4f18-a4d2-b907a571537c';
+
+initMercadoPago(MERCADO_PAGO_PUBLIC_KEY);
 
 const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentError, onClose }) => {
   const [preferenceId, setPreferenceId] = useState(null);
@@ -10,7 +11,20 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
   const [errorMessage, setErrorMessage] = useState('');
   const [debugInfo, setDebugInfo] = useState(null);
 
-  const createPreference = async () => {
+  const isLocalDevelopment = process.env.NODE_ENV === 'development';
+
+  const apiBaseUrl = useMemo(() => {
+    const configuredUrl = process.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_API_URL;
+    if (!configuredUrl || configuredUrl === 'https://tu-backend-api.com') {
+      return '';
+    }
+    return configuredUrl.replace(/\/$/, '');
+  }, []);
+
+  const createPreferenceEndpoint = `${apiBaseUrl}/api/create-mercadopago-preference`;
+  const healthEndpoint = `${apiBaseUrl}/api/health`;
+
+  const createPreference = useCallback(async () => {
     const requestId = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const timestamp = new Date().toISOString();
     console.log(`\n=== MERCADO PAGO FRONTEND [${requestId}] ===`);
@@ -59,12 +73,10 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
       // CONFIGURACIÓN DE ENDPOINT (SIEMPRE USA BACKEND)
       // ═══════════════════════════════════════════════════════════════════════════════
       
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3000';
-      const endpoint = `${backendUrl}/create-preference`;
-      
       console.log(`[${requestId}] 🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`[${requestId}] 🔗 Backend URL: ${backendUrl}`);
-      console.log(`[${requestId}] 🔗 Full Endpoint: ${endpoint}`);
+      console.log(`[${requestId}] 🧪 Local development: ${isLocalDevelopment}`);
+      console.log(`[${requestId}] 🔗 API Base URL: ${apiBaseUrl || 'same-origin'}`);
+      console.log(`[${requestId}] 🔗 Full Endpoint: ${createPreferenceEndpoint}`);
 
       // REQUEST CON TIMEOUT Y DETALLE COMPLETO
       const controller = new AbortController();
@@ -91,7 +103,7 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
           bodyLength: requestConfig.body.length
         });
 
-        response = await fetch(endpoint, requestConfig);
+        response = await fetch(createPreferenceEndpoint, requestConfig);
         clearTimeout(timeout);
       } catch (fetchError) {
         clearTimeout(timeout);
@@ -103,7 +115,7 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
         setDebugInfo({
           type: 'fetch_error',
           error: error,
-          endpoint,
+          endpoint: createPreferenceEndpoint,
           requestId
         });
         
@@ -128,7 +140,7 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
           responseLength: responseText.length,
           responsePreview: responseText.substring(0, 500),
           requestId,
-          endpoint,
+          endpoint: createPreferenceEndpoint,
           isLocalDevelopment
         });
       } catch (textError) {
@@ -140,7 +152,7 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
           status: response.status,
           headers: Object.fromEntries(response.headers.entries()),
           requestId,
-          endpoint,
+          endpoint: createPreferenceEndpoint,
           isLocalDevelopment
         });
         
@@ -156,11 +168,11 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
           statusText: response.statusText,
           headers: Object.fromEntries(response.headers.entries()),
           requestId,
-          endpoint,
+          endpoint: createPreferenceEndpoint,
           isLocalDevelopment,
           troubleshooting: {
-            backend_not_running: !isLocalDevelopment,
-            endpoint_correct: endpoint === '/api/create-mercadopago-preference',
+            backend_not_running: true,
+            endpoint_correct: createPreferenceEndpoint.endsWith('/api/create-mercadopago-preference'),
             render_issue: !isLocalDevelopment && response.status === 0
           }
         });
@@ -240,13 +252,13 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiBaseUrl, cartItems, createPreferenceEndpoint, isLocalDevelopment, onClose, onPaymentError, total]);
 
   useEffect(() => {
     if (cartItems.length > 0) {
       createPreference();
     }
-  }, [cartItems]);
+  }, [cartItems, createPreference]);
 
   const handlePayment = (response) => {
     console.log('Payment submitted:', response);
@@ -366,109 +378,6 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
           onMouseOut={(e) => e.target.style.background = '#C41E3A'}
         >
           Reintentar
-        </button>
-        
-        {/* BACKEND HEALTH CHECK */}
-        <button 
-          onClick={async () => {
-            try {
-              const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-              const endpoint = isLocal ? '/api/health' : '/api/health';
-              
-              console.log('🔍 Testing backend health:', endpoint);
-              const startTime = Date.now();
-              
-              const response = await fetch(endpoint);
-              const responseTime = Date.now() - startTime;
-              const data = await response.json();
-              
-              alert(`✅ Backend Health Check:\nStatus: ${response.status}\nTime: ${responseTime}ms\nData: ${JSON.stringify(data, null, 2)}`);
-            } catch (error) {
-              alert(`❌ Backend Health Check Failed:\n${error.message}\n\n🔍 Esto indica que el backend server no está corriendo en producción.`);
-            }
-          }}
-          style={{
-            background: '#28a745',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '8px 16px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontFamily: "'Poppins', sans-serif",
-            transition: 'background 0.2s',
-            marginRight: '8px'
-          }}
-          onMouseOver={(e) => e.target.style.background = '#218838'}
-          onMouseOut={(e) => e.target.style.background = '#28a745'}
-        >
-          Verificar Backend
-        </button>
-        
-        {/* MERCADO PAGO BACKEND TEST */}
-        <button 
-          onClick={async () => {
-            try {
-              const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-              const endpoint = isLocal ? 'https://api.mercadopago.com/checkout/preferences' : '/api/create-mercadopago-preference';
-              
-              const requestConfig = isLocal ? {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer APP_USR-6318323343884379-051213-1de2b6c067eeb716b1e4ed751da8f3ac-1016520294`
-                },
-                body: JSON.stringify({
-                  items: [{ title: 'Test Backend', quantity: 1, unit_price: 100, currency_id: 'ARS' }],
-                  back_urls: { success: window.location.origin, failure: window.location.origin, pending: window.location.origin },
-                  binary_mode: true,
-                  statement_descriptor: 'Star Family Mayorista',
-                  external_reference: `test_${Date.now()}`,
-                  payment_methods: { excluded_payment_types: [], excluded_payment_methods: [], default_payment_method_id: null },
-                  purpose: 'wallet_purchase',
-                  payment_methods_allowed: { payment_types: [{ id: 'credit_card' }, { id: 'debit_card' }, { id: 'account_money' }] }
-                })
-              } : {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  items: [{ name: 'Test Backend', price: 100, qty: 1 }],
-                  origin: window.location.origin,
-                  externalReference: `test_${Date.now()}`
-                })
-              };
-              
-              console.log('🔍 Testing Mercado Pago endpoint:', endpoint);
-              const startTime = Date.now();
-              
-              const response = await fetch(endpoint, requestConfig);
-              const responseTime = Date.now() - startTime;
-              const data = await response.json();
-              
-              if (data.id) {
-                alert(`✅ ${isLocal ? 'MP Direct' : 'Backend'} Test:\nPreference ID: ${data.id}\nTime: ${responseTime}ms\n🔹 ${isLocal ? 'Localhost' : 'Producción'}`);
-              } else {
-                alert(`❌ Error:\n${JSON.stringify(data, null, 2)}`);
-              }
-            } catch (error) {
-              alert(`❌ Test Failed:\n${error.message}\n\n🔍 Endpoint: ${endpoint}`);
-            }
-          }}
-          style={{
-            background: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '8px 16px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontFamily: "'Poppins', sans-serif",
-            transition: 'background 0.2s'
-          }}
-          onMouseOver={(e) => e.target.style.background = '#0056b3'}
-          onMouseOut={(e) => e.target.style.background = '#007bff'}
-        >
-          Test Backend MP
         </button>
       </div>
     );
