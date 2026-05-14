@@ -5127,11 +5127,15 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
       }
       if (data) {
         setPaymentSettings({
-          id: data.id, // ← esto faltaba
-          account_name: data.account_name || '',
-          bank_name: data.bank_name || '',
+          id: data.id,
+          account_name: data.account_name || data.titular || '',
+          bank_name: data.bank_name || data.banco || '',
           cbu: data.cbu || '',
           alias: data.alias || '',
+          titular: data.titular || data.account_name || '',
+          banco: data.banco || data.bank_name || '',
+          mp_enabled: data.mp_enabled !== undefined ? data.mp_enabled : true,
+          transfer_enabled: data.transfer_enabled !== undefined ? data.transfer_enabled : true,
           extra_message: data.extra_message || 'Una vez pagado, enviá el comprobante por mensaje 📩'
         });
       }
