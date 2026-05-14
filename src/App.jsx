@@ -5203,7 +5203,16 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
 
       {/* TABS */}
       <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
-        {[["list","📋 Productos"],["add", editing?"✏️ Editar":"➕ Agregar"],["banners","🎆 Banners"],["prices","💰 Precios"],["history","📜 Historial"],["restore","🔄 Restauración"],["excel","📊 Excel"]].map(([t,label]) => (
+        {[
+          ["list","📋 Productos"],
+          ["add", editing?"✏️ Editar":"➕ Agregar"],
+          ["banners","🎆 Banners"],
+          ["payment","💳 Pagos"],
+          ["prices","💰 Precios"],
+          ["history","📜 Historial"],
+          ["restore","🔄 Restauración"],
+          ["excel","📊 Excel"]
+        ].map(([t,label]) => (
           <button key={t} onClick={() => setAdminTab(t)} style={{ background:adminTab===t?"#C41E3A":"white", color:adminTab===t?"white":"#374151", border:adminTab===t?"none":"1px solid #E5E7EB", borderRadius:10, padding:"8px 16px", cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Poppins',sans-serif" }}>
             {label}
           </button>
