@@ -400,7 +400,21 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
   return (
     <div style={{ margin: '16px 0' }}>
       <Wallet
-        initialization={{ preferenceId }}
+        initialization={{ 
+          preferenceId,
+          redirectMode: 'blank'
+        }}
+        customization={{
+          visual: {
+            buttonBackground: 'black',
+            borderRadius: '8px',
+            valuePropColor: 'grey'
+          },
+          texts: {
+            action: 'pay',
+            valueProp: 'security_details'
+          }
+        }}
         onReady={handleReady}
         onSubmit={handlePayment}
         onError={handleError}
