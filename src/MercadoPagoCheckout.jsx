@@ -252,10 +252,10 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
   }, [apiBaseUrl, cartItems, createPreferenceEndpoint, isLocalDevelopment, onClose, onPaymentError, total]);
 
   useEffect(() => {
-    if (cartItems.length > 0) {
+    if (cartItems.length > 0 && !preferenceId && !loading) {
       createPreference();
     }
-  }, [cartItems, createPreference]);
+  }, [cartItems, preferenceId, loading, createPreference]);
 
   const handlePayment = (response) => {
     console.log('Payment submitted:', response);
