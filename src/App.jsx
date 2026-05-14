@@ -5169,9 +5169,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
         .single();
       
       console.log('🔥 DATA DE SUPABASE:', data);
-      console.log('🔥 DATA DE SUPABASE - is_active:', data?.is_active);
       console.log('🔥 DATA DE SUPABASE - mp_enabled:', data?.mp_enabled);
-      console.log('🔥 DATA DE SUPABASE - transfer_enabled:', data?.transfer_enabled);
       console.log('🔥 ERROR DE SUPABASE:', error);
       
       if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
@@ -5192,7 +5190,6 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
           mp_enabled: data.mp_enabled !== undefined ? data.mp_enabled : false,
           transfer_enabled: data.transfer_enabled !== undefined ? data.transfer_enabled : false,
           extra_message: data.extra_message || 'Una vez pagado, enviá el comprobante por mensaje 📩',
-          is_active: data.is_active !== undefined ? data.is_active : true
         };
         console.log('🔥 NUEVOS SETTINGS (desde Supabase):', newSettings);
         // SOLO actualizar si los datos son diferentes
@@ -5244,7 +5241,6 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
         mp_enabled: paymentSettings.mp_enabled,
         transfer_enabled: paymentSettings.transfer_enabled,
         extra_message: paymentSettings.extra_message,
-        is_active: true // Siempre marcar como activo el registro actual
       }, {
         onConflict: 'id' // si hay conflicto en id, hace update
       });
@@ -6288,8 +6284,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                             id: '00000000-0000-0000-0000-000000000000',
                             mp_enabled: newValue,
                             transfer_enabled: paymentSettings.transfer_enabled,
-                            extra_message: paymentSettings.extra_message,
-                            is_active: true
+                            extra_message: paymentSettings.extra_message
                           });
                           const { error } = await supabase
                             .from('payment_settings')
@@ -6297,8 +6292,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                               id: '00000000-0000-0000-0000-000000000000',
                               mp_enabled: newValue,
                               transfer_enabled: paymentSettings.transfer_enabled,
-                              extra_message: paymentSettings.extra_message,
-                              is_active: true
+                              extra_message: paymentSettings.extra_message
                             }, { onConflict: 'id' });
                           
                           if (error) {
@@ -6381,8 +6375,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                             id: '00000000-0000-0000-0000-000000000000',
                             mp_enabled: paymentSettings.mp_enabled,
                             transfer_enabled: newValue,
-                            extra_message: paymentSettings.extra_message,
-                            is_active: true
+                            extra_message: paymentSettings.extra_message
                           });
                           const { error } = await supabase
                             .from('payment_settings')
@@ -6390,8 +6383,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                               id: '00000000-0000-0000-0000-000000000000',
                               mp_enabled: paymentSettings.mp_enabled,
                               transfer_enabled: newValue,
-                              extra_message: paymentSettings.extra_message,
-                              is_active: true
+                              extra_message: paymentSettings.extra_message
                             }, { onConflict: 'id' });
                           
                           if (error) {
