@@ -56,9 +56,10 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
 
       const isLocalDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       
-      // SOLUCIÓN DEFINITIVA: Usar MP API directamente en todos los ambientes
-      // El proxy no funciona en Render, así que usamos la API directa
-      const endpoint = 'https://api.mercadopago.com/checkout/preferences';
+      // SOLUCIÓN PROFESIONAL: Usar backend en producción, MP directo en desarrollo
+      const endpoint = isLocalDevelopment 
+        ? 'https://api.mercadopago.com/checkout/preferences'
+        : '/api/create-mercadopago-preference'; // Backend server en producción
       
       console.log(`[${requestId}] 🌐 Environment:`, isLocalDevelopment ? 'LOCAL' : 'PRODUCTION');
       console.log(`[${requestId}] 🔗 Endpoint:`, endpoint);
@@ -69,40 +70,50 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
       
       let response;
       try {
-        // CONFIGURACIÓN DEFINITIVA: API directa con token desde variables de entorno
-        const requestConfig = {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.REACT_APP_MERCADO_PAGO_ACCESS_TOKEN || 'APP_USR-6318323343884379-051213-1de2b6c067eeb716b1e4ed751da8f3ac-1016520294'}`,
-            'User-Agent': 'StarFamily-Ecommerce/1.0'
-          },
-          body: JSON.stringify({
-            items,
-            back_urls: {
-              success: `${window.location.origin}/payment/success`,
-              failure: `${window.location.origin}/payment/failure`,
-              pending: `${window.location.origin}/payment/pending`
-            },
-            binary_mode: true,
-            statement_descriptor: 'Star Family Mayorista',
-            external_reference: preferencePayload.externalReference,
-            payment_methods: {
-              excluded_payment_types: [],
-              excluded_payment_methods: [],
-              default_payment_method_id: null
-            },
-            purpose: 'wallet_purchase',
-            payment_methods_allowed: {
-              payment_types: [
-                { id: 'credit_card' },
-                { id: 'debit_card' },
-                { id: 'account_money' }
-              ]
+        // CONFIGURACIÓN PROFESIONAL: Backend en producción, MP directo en desarrollo
+        const requestConfig = isLocalDevelopment
+          ? {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.REACT_APP_MERCADO_PAGO_ACCESS_TOKEN || 'TOKEN_MISSING'}`,
+                'User-Agent': 'StarFamily-Ecommerce/1.0'
+              },
+              body: JSON.stringify({
+                items,
+                back_urls: {
+                  success: `${window.location.origin}/payment/success`,
+                  failure: `${window.location.origin}/payment/failure`,
+                  pending: `${window.location.origin}/payment/pending`
+                },
+                binary_mode: true,
+                statement_descriptor: 'Star Family Mayorista',
+                external_reference: preferencePayload.externalReference,
+                payment_methods: {
+                  excluded_payment_types: [],
+                  excluded_payment_methods: [],
+                  default_payment_method_id: null
+                },
+                purpose: 'wallet_purchase',
+                payment_methods_allowed: {
+                  payment_types: [
+                    { id: 'credit_card' },
+                    { id: 'debit_card' },
+                    { id: 'account_money' }
+                  ]
+                }
+              }),
+              signal: controller.signal
             }
-          }),
-          signal: controller.signal
-        };
+          : {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'StarFamily-Ecommerce/1.0'
+              },
+              body: JSON.stringify(preferencePayload),
+              signal: controller.signal
+            };
 
         console.log(`[${requestId}] 📤 Request config:`, {
           method: requestConfig.method,
@@ -132,11 +143,24 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
       console.log(`[${requestId}] 📥 Response status:`, response.status);
       console.log(`[${requestId}] 📥 Response headers:`, Object.fromEntries(response.headers.entries()));
 
-      // MANEJO ROBUSTO DE RESPUESTA
+      // MANEJO ROBUSTO DE RESPUESTA CON DEBUGGING PROFESIONAL
       let responseText;
       try {
         responseText = await response.text();
         console.log(`[${requestId}] 📥 Raw response (${responseText.length} chars):`, responseText.substring(0, 1000) + (responseText.length > 1000 ? '...' : ''));
+        
+        // DEBUG INFO DETALLADA
+        setDebugInfo({
+          type: 'response_received',
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries()),
+          responseLength: responseText.length,
+          responsePreview: responseText.substring(0, 500),
+          requestId,
+          endpoint,
+          isLocalDevelopment
+        });
       } catch (textError) {
         console.error(`[${requestId}] ❌ Error reading response:`, textError);
         
@@ -144,23 +168,38 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
           type: 'response_read_error',
           error: textError.message,
           status: response.status,
-          requestId
+          headers: Object.fromEntries(response.headers.entries()),
+          requestId,
+          endpoint,
+          isLocalDevelopment
         });
         
-        throw new Error('Error leyendo respuesta del servidor');
+        throw new Error(`Error leyendo respuesta del servidor: ${textError.message}`);
       }
       
       if (!responseText || responseText.trim() === '') {
-        console.error(`[${requestId}] ❌ EMPTY RESPONSE`);
+        console.error(`[${requestId}] ❌ EMPTY RESPONSE DETECTED`);
         
         setDebugInfo({
           type: 'empty_response',
           status: response.status,
+          statusText: response.statusText,
           headers: Object.fromEntries(response.headers.entries()),
-          requestId
+          requestId,
+          endpoint,
+          isLocalDevelopment,
+          troubleshooting: {
+            backend_not_running: !isLocalDevelopment,
+            endpoint_correct: endpoint === '/api/create-mercadopago-preference',
+            render_issue: !isLocalDevelopment && response.status === 0
+          }
         });
         
-        throw new Error('El servidor devolvió una respuesta vacía. Verifica los logs del servidor.');
+        const errorMsg = isLocalDevelopment 
+          ? 'El servidor devolvió una respuesta vacía en localhost'
+          : 'El servidor backend en Render no responde. Verifica que el servidor esté corriendo y el endpoint sea correcto.';
+        
+        throw new Error(errorMsg);
       }
       
       let data;
@@ -359,19 +398,58 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
           Reintentar
         </button>
         
-        {/* MERCADO PAGO DIRECT TEST */}
+        {/* BACKEND HEALTH CHECK */}
         <button 
           onClick={async () => {
             try {
-              const endpoint = 'https://api.mercadopago.com/checkout/preferences';
-              const requestConfig = {
+              const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+              const endpoint = isLocal ? '/api/health' : '/api/health';
+              
+              console.log('🔍 Testing backend health:', endpoint);
+              const startTime = Date.now();
+              
+              const response = await fetch(endpoint);
+              const responseTime = Date.now() - startTime;
+              const data = await response.json();
+              
+              alert(`✅ Backend Health Check:\nStatus: ${response.status}\nTime: ${responseTime}ms\nData: ${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+              alert(`❌ Backend Health Check Failed:\n${error.message}\n\n🔍 Esto indica que el backend server no está corriendo en producción.`);
+            }
+          }}
+          style={{
+            background: '#28a745',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            padding: '8px 16px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontFamily: "'Poppins', sans-serif",
+            transition: 'background 0.2s',
+            marginRight: '8px'
+          }}
+          onMouseOver={(e) => e.target.style.background = '#218838'}
+          onMouseOut={(e) => e.target.style.background = '#28a745'}
+        >
+          Verificar Backend
+        </button>
+        
+        {/* MERCADO PAGO BACKEND TEST */}
+        <button 
+          onClick={async () => {
+            try {
+              const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+              const endpoint = isLocal ? 'https://api.mercadopago.com/checkout/preferences' : '/api/create-mercadopago-preference';
+              
+              const requestConfig = isLocal ? {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${process.env.REACT_APP_MERCADO_PAGO_ACCESS_TOKEN || 'APP_USR-6318323343884379-051213-1de2b6c067eeb716b1e4ed751da8f3ac-1016520294'}`
+                  'Authorization': `Bearer ${process.env.REACT_APP_MERCADO_PAGO_ACCESS_TOKEN || 'TOKEN_MISSING'}`
                 },
                 body: JSON.stringify({
-                  items: [{ title: 'Test Directo', quantity: 1, unit_price: 100, currency_id: 'ARS' }],
+                  items: [{ title: 'Test Backend', quantity: 1, unit_price: 100, currency_id: 'ARS' }],
                   back_urls: { success: window.location.origin, failure: window.location.origin, pending: window.location.origin },
                   binary_mode: true,
                   statement_descriptor: 'Star Family Mayorista',
@@ -380,18 +458,30 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
                   purpose: 'wallet_purchase',
                   payment_methods_allowed: { payment_types: [{ id: 'credit_card' }, { id: 'debit_card' }, { id: 'account_money' }] }
                 })
+              } : {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  items: [{ name: 'Test Backend', price: 100, qty: 1 }],
+                  origin: window.location.origin,
+                  externalReference: `test_${Date.now()}`
+                })
               };
               
+              console.log('🔍 Testing Mercado Pago endpoint:', endpoint);
+              const startTime = Date.now();
+              
               const response = await fetch(endpoint, requestConfig);
+              const responseTime = Date.now() - startTime;
               const data = await response.json();
               
               if (data.id) {
-                alert(`✅ Mercado Pago Direct API:\nPreference ID: ${data.id}\n� Funciona en producción sin backend`);
+                alert(`✅ ${isLocal ? 'MP Direct' : 'Backend'} Test:\nPreference ID: ${data.id}\nTime: ${responseTime}ms\n🔹 ${isLocal ? 'Localhost' : 'Producción'}`);
               } else {
                 alert(`❌ Error:\n${JSON.stringify(data, null, 2)}`);
               }
             } catch (error) {
-              alert(`❌ Test Failed:\n${error.message}`);
+              alert(`❌ Test Failed:\n${error.message}\n\n🔍 Endpoint: ${endpoint}`);
             }
           }}
           style={{
@@ -408,7 +498,7 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
           onMouseOver={(e) => e.target.style.background = '#0056b3'}
           onMouseOut={(e) => e.target.style.background = '#007bff'}
         >
-          Test MP Directo
+          Test Backend MP
         </button>
       </div>
     );
