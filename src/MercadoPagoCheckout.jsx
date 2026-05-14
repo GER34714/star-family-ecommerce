@@ -16,7 +16,8 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
   const apiBaseUrl = useMemo(() => {
     const configuredUrl = process.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_API_URL;
     if (!configuredUrl || configuredUrl === 'https://tu-backend-api.com') {
-      return '';
+      // En desarrollo, usar localhost
+      return process.env.NODE_ENV === 'development' ? 'http://localhost:10000' : '';
     }
     return configuredUrl.replace(/\/$/, '');
   }, []);
