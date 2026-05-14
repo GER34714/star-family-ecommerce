@@ -3951,6 +3951,33 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
                 </button>
               )}
               
+              {/* Botón para enviar pedido sin método de pago */}
+              <button
+                onClick={() => sendWA()}
+                style={{
+                  width:"100%",
+                  background:"#F59E0B",
+                  color:"white",
+                  border:"none",
+                  borderRadius:12,
+                  padding:14,
+                  fontSize:14,
+                  fontWeight:600,
+                  cursor:"pointer",
+                  marginBottom:8,
+                  display:"flex",
+                  alignItems:"center",
+                  justifyContent:"center",
+                  gap:8,
+                  fontFamily:"'Poppins',sans-serif",
+                  transition:"background 0.2s"
+                }}
+                onMouseOver={(e) => e.target.style.background = "#D97706"}
+                onMouseOut={(e) => e.target.style.background = "#F59E0B"}
+              >
+                📱 Enviar pedido (pagar después)
+              </button>
+              
               {/* Si no hay métodos habilitados, mostrar ambos por defecto */}
               {(!paymentSettings || (paymentSettings?.mp_enabled === false && paymentSettings?.transfer_enabled === false)) && (
                 <div style={{ 
