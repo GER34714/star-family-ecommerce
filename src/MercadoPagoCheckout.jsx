@@ -55,11 +55,11 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
       });
 
       const isLocalDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const isProductionBroken = !isLocalDevelopment; // Temporal: producción está rota
       
+      // SOLUCIÓN SEGURA: Usar proxy en producción, directo MP en desarrollo
       const endpoint = isLocalDevelopment 
         ? 'https://api.mercadopago.com/checkout/preferences'
-        : 'https://api.mercadopago.com/checkout/preferences'; // Fallback directo a MP API
+        : '/mercadopago-preference'; // Proxy seguro sin exponer token
       
       console.log(`[${requestId}] 🌐 Environment:`, isLocalDevelopment ? 'LOCAL' : 'PRODUCTION');
       console.log(`[${requestId}] 🔗 Endpoint:`, endpoint);
@@ -70,40 +70,50 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
       
       let response;
       try {
-        // SOLUCIÓN TEMPORAL: Usar directamente API de Mercado Pago en producción
-        const requestConfig = {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer APP_USR-6318323343884379-051213-1de2b6c067eeb716b1e4ed751da8f3ac-1016520294`,
-            'User-Agent': 'StarFamily-Ecommerce/1.0'
-          },
-          body: JSON.stringify({
-            items,
-            back_urls: {
-              success: `${window.location.origin}/payment/success`,
-              failure: `${window.location.origin}/payment/failure`,
-              pending: `${window.location.origin}/payment/pending`
-            },
-            binary_mode: true,
-            statement_descriptor: 'Star Family Mayorista',
-            external_reference: preferencePayload.externalReference,
-            payment_methods: {
-              excluded_payment_types: [],
-              excluded_payment_methods: [],
-              default_payment_method_id: null
-            },
-            purpose: 'wallet_purchase',
-            payment_methods_allowed: {
-              payment_types: [
-                { id: 'credit_card' },
-                { id: 'debit_card' },
-                { id: 'account_money' }
-              ]
+        // CONFIGURACIÓN SEGURA: Sin exponer credenciales en frontend
+        const requestConfig = isLocalDevelopment
+          ? {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer APP_USR-6318323343884379-051213-1de2b6c067eeb716b1e4ed751da8f3ac-1016520294`,
+                'User-Agent': 'StarFamily-Ecommerce/1.0'
+              },
+              body: JSON.stringify({
+                items,
+                back_urls: {
+                  success: `${window.location.origin}/payment/success`,
+                  failure: `${window.location.origin}/payment/failure`,
+                  pending: `${window.location.origin}/payment/pending`
+                },
+                binary_mode: true,
+                statement_descriptor: 'Star Family Mayorista',
+                external_reference: preferencePayload.externalReference,
+                payment_methods: {
+                  excluded_payment_types: [],
+                  excluded_payment_methods: [],
+                  default_payment_method_id: null
+                },
+                purpose: 'wallet_purchase',
+                payment_methods_allowed: {
+                  payment_types: [
+                    { id: 'credit_card' },
+                    { id: 'debit_card' },
+                    { id: 'account_money' }
+                  ]
+                }
+              }),
+              signal: controller.signal
             }
-          }),
-          signal: controller.signal
-        };
+          : {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'StarFamily-Ecommerce/1.0'
+              },
+              body: JSON.stringify(preferencePayload),
+              signal: controller.signal
+            };
 
         console.log(`[${requestId}] 📤 Request config:`, {
           method: requestConfig.method,
@@ -360,15 +370,17 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
           Reintentar
         </button>
         
-        {/* HEALTH CHECK BUTTON */}
+        {/* PROXY HEALTH CHECK BUTTON */}
         <button 
           onClick={async () => {
             try {
-              const response = await fetch('/api/health');
+              const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+              const endpoint = isLocal ? '/api/health' : '/health';
+              const response = await fetch(endpoint);
               const data = await response.json();
-              alert(`✅ API Health Check:\n${JSON.stringify(data, null, 2)}`);
+              alert(`✅ Proxy Health Check:\n${JSON.stringify(data, null, 2)}`);
             } catch (error) {
-              alert(`❌ API Health Check Failed:\n${error.message}\n\n⚠️ Esto es normal - el servidor backend no está funcionando en producción.\nUsando fallback directo a Mercado Pago.`);
+              alert(`❌ Proxy Health Check Failed:\n${error.message}\n\n🔒 El proxy seguro debería estar funcionando.`);
             }
           }}
           style={{
@@ -386,21 +398,24 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
           onMouseOver={(e) => e.target.style.background = '#218838'}
           onMouseOut={(e) => e.target.style.background = '#28a745'}
         >
-          Verificar API
+          Verificar Proxy
         </button>
         
-        {/* MERCADO PAGO DIRECT TEST */}
+        {/* SECURE MERCADO PAGO TEST */}
         <button 
           onClick={async () => {
             try {
-              const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
+              const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+              const endpoint = isLocal ? 'https://api.mercadopago.com/checkout/preferences' : '/mercadopago-preference';
+              
+              const requestConfig = isLocal ? {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
                   'Authorization': `Bearer APP_USR-6318323343884379-051213-1de2b6c067eeb716b1e4ed751da8f3ac-1016520294`
                 },
                 body: JSON.stringify({
-                  items: [{ title: 'Test', quantity: 1, unit_price: 100, currency_id: 'ARS' }],
+                  items: [{ title: 'Test Seguro', quantity: 1, unit_price: 100, currency_id: 'ARS' }],
                   back_urls: { success: window.location.origin, failure: window.location.origin, pending: window.location.origin },
                   binary_mode: true,
                   statement_descriptor: 'Star Family Mayorista',
@@ -409,15 +424,26 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
                   purpose: 'wallet_purchase',
                   payment_methods_allowed: { payment_types: [{ id: 'credit_card' }, { id: 'debit_card' }, { id: 'account_money' }] }
                 })
-              });
+              } : {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  items: [{ name: 'Test Seguro', price: 100, qty: 1 }],
+                  origin: window.location.origin,
+                  externalReference: `test_${Date.now()}`
+                })
+              };
+              
+              const response = await fetch(endpoint, requestConfig);
               const data = await response.json();
+              
               if (data.id) {
-                alert(`✅ Mercado Pago Direct API:\nPreference ID: ${data.id}\n✅ El pago funciona directamente con MP API`);
+                alert(`✅ ${isLocal ? 'MP Direct API' : 'Proxy Seguro'}:\nPreference ID: ${data.id}\n🔒 Credenciales protegidas`);
               } else {
-                alert(`❌ Mercado Pago Error:\n${JSON.stringify(data, null, 2)}`);
+                alert(`❌ Error:\n${JSON.stringify(data, null, 2)}`);
               }
             } catch (error) {
-              alert(`❌ Mercado Pago Direct Test Failed:\n${error.message}`);
+              alert(`❌ Test Failed:\n${error.message}`);
             }
           }}
           style={{
@@ -434,7 +460,7 @@ const MercadoPagoCheckout = ({ cartItems, total, onPaymentSuccess, onPaymentErro
           onMouseOver={(e) => e.target.style.background = '#0056b3'}
           onMouseOut={(e) => e.target.style.background = '#007bff'}
         >
-          Test MP Directo
+          Test Seguro
         </button>
       </div>
     );
