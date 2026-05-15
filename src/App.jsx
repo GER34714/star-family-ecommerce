@@ -5768,8 +5768,19 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                   {p?.image_url ? <img src={p?.image_url} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" onError={e => { e.target.src = "https://via.placeholder.com/46x46/f5a623/ffffff?text=SF"; }} /> : (CAT_EMOJI[p?.category]||"🍖")}
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:2 }}>
-                    <div style={{ fontWeight:700, fontSize:14, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p?.name || "Sin nombre"}</div>
+                  <div>
+                  <div style={{ 
+                    fontWeight:700, 
+                    fontSize: typeof window !== 'undefined' && window.innerWidth <= 768 ? 16 : 14, 
+                    overflow: typeof window !== 'undefined' && window.innerWidth <= 768 ? "visible" : "hidden", 
+                    textOverflow: typeof window !== 'undefined' && window.innerWidth <= 768 ? "unset" : "ellipsis", 
+                    whiteSpace: typeof window !== 'undefined' && window.innerWidth <= 768 ? "normal" : "nowrap",
+                    lineHeight: typeof window !== 'undefined' && window.innerWidth <= 768 ? 1.3 : 1.2,
+                    marginBottom: 4
+                  }}>
+                    {p?.name || "Sin nombre"}
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
                     {/* Badge de estado activo/inactivo */}
                     {p?.active ? (
                       <span style={{
@@ -5810,6 +5821,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                       </span>
                     )}
                   </div>
+                </div>
                   <div style={{ fontSize:12, color:"#9CA3AF", marginTop:1 }}>{p?.category} · <strong style={{ color:"#C41E3A" }}>{fmt(p?.price || 0)}</strong></div>
                 </div>
                 <div style={{ display:"flex", gap:6, flexShrink:0 }}>
@@ -5829,21 +5841,24 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                   >
                     {p?.active ? "🔴 Desactivar" : "✅ Activar"}
                   </button>
-                  <button 
-                    onClick={() => onToggleSuspension(p.id)} 
-                    style={{ 
-                      background: p?.suspended ? "#D1FAE5" : "#FEF3C7", 
-                      border:"none", 
-                      borderRadius:8, 
-                      padding:"7px 11px", 
-                      cursor:"pointer", 
-                      fontSize:12,
-                      color: p?.suspended ? "#059669" : "#D97706"
-                    }}
-                    title={p?.suspended ? "Activar producto" : "Suspender producto"}
-                  >
-                    {p?.suspended ? "✅ Activar" : "⏸️ Suspender"}
-                  </button>
+                  {/* Botón Suspender - oculto en móvil */}
+                  {typeof window === 'undefined' || window.innerWidth > 768 && (
+                    <button 
+                      onClick={() => onToggleSuspension(p.id)} 
+                      style={{ 
+                        background: p?.suspended ? "#D1FAE5" : "#FEF3C7", 
+                        border:"none", 
+                        borderRadius:8, 
+                        padding:"7px 11px", 
+                        cursor:"pointer", 
+                        fontSize:12,
+                        color: p?.suspended ? "#059669" : "#D97706"
+                      }}
+                      title={p?.suspended ? "Activar producto" : "Suspender producto"}
+                    >
+                      {p?.suspended ? "✅ Activar" : "⏸️ Suspender"}
+                    </button>
+                  )}
                   <button onClick={() => onEdit(p)} style={{ background:"#EFF6FF", border:"none", borderRadius:8, padding:"7px 11px", cursor:"pointer", fontSize:14 }}>✏️</button>
                   <button onClick={() => {
                     if (window.confirm(`¿Estás seguro que querés borrar "${p?.name || 'este producto'}"?\n\nEsta acción no se puede deshacer.`)) {
