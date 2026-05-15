@@ -149,6 +149,10 @@ export default function StarFamilyApp() {
     status: 'all'
   });
   const [filteredProducts, setFilteredProducts] = useState([]);
+  
+  // Estados para paginación del panel admin
+  const [adminCurrentPage, setAdminCurrentPage] = useState(1);
+  const [adminProductsPerPage] = useState(20); // 20 productos por página
 
   // Función para manejar suspensión/activación de productos
   const toggleProductSuspension = async (productId) => {
@@ -197,10 +201,74 @@ export default function StarFamilyApp() {
     }
   };
 
+  // Función para activar/desactivar productos (controla si aparecen en tienda)
+  const toggleProductActivation = async (productId) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+    
+    const newActiveState = !product.active;
+    const action = newActiveState ? 'activar' : 'desactivar';
+    
+    // Optimistic update - actualizar estado local inmediatamente
+    const updatedProducts = products.map(p => 
+      p.id === productId ? { ...p, active: newActiveState } : p
+    );
+    setProducts(updatedProducts);
+    
+    try {
+      const supabase = getSupabaseClient();
+      
+      // Actualizar en Supabase
+      const { error } = await supabase
+        .from('products')
+        .update({ active: newActiveState })
+        .eq('id', productId);
+        
+      if (error) throw error;
+      
+      showToast(
+        newActiveState 
+          ? `✅ Producto "${product.name}" activado - ahora visible en tienda`
+          : `🔴 Producto "${product.name}" desactivado - oculto de tienda`,
+        'success'
+      );
+    } catch (error) {
+      // Revertir cambio local si falla
+      setProducts(products);
+      console.error('Error al cambiar estado de activación:', error);
+      showToast('❌ Error al cambiar estado del producto', 'error');
+    }
+  };
+
   // Función para filtrar productos del panel admin
   const filterAdminProducts = (products, filters) => {
-    return products.filter(product => {
-      if (!product) return false;
+    console.log("🔍 filterAdminProducts - Productos entrantes:", products.length);
+    console.log("🔍 filterAdminProducts - Filtros activos:", filters);
+    
+    // Debug: mostrar productos sin nombre
+    const productosSinNombre = products.filter(p => !p.name || p.name.trim() === '');
+    if (productosSinNombre.length > 0) {
+      console.log("⚠️ Productos sin nombre detectados:", productosSinNombre.length);
+      console.log("📝 Muestra de productos sin nombre:", productosSinNombre.slice(0, 3));
+    }
+    
+    // Debug: mostrar productos con nombre undefined/null
+    const productosConNombreNull = products.filter(p => p.name === undefined || p.name === null);
+    if (productosConNombreNull.length > 0) {
+      console.log("❌ Productos con name null/undefined:", productosConNombreNull.length);
+    }
+    
+    const filtered = products.filter(product => {
+      if (!product) {
+        console.log("❌ Producto filtrado: producto es null/undefined");
+        return false;
+      }
+      
+      // Debug: verificar si tiene nombre
+      if (!product.name || product.name.trim() === '') {
+        console.log("❌ Producto filtrado: sin nombre válido", product);
+        return false;
+      }
       
       // Filtro por nombre
       if (filters.searchTerm && !product.name?.toLowerCase().includes(filters.searchTerm.toLowerCase())) {
@@ -225,6 +293,9 @@ export default function StarFamilyApp() {
       
       return true;
     });
+    
+    console.log("✅ Productos después de filtrar:", filtered.length);
+    return filtered;
   };
 
   // Efecto para cargar categorías y configuración de pago
@@ -237,7 +308,37 @@ export default function StarFamilyApp() {
   useEffect(() => {
     const filtered = filterAdminProducts(products, adminFilters);
     setFilteredProducts(filtered);
+    setAdminCurrentPage(1); // Resetear a página 1 cuando cambian los filtros
   }, [products, adminFilters]);
+
+  // Calcular productos paginados para el panel admin
+  const adminPaginatedProducts = useMemo(() => {
+    const indexOfLastProduct = adminCurrentPage * adminProductsPerPage;
+    const indexOfFirstProduct = indexOfLastProduct - adminProductsPerPage;
+    return filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
+  }, [filteredProducts, adminCurrentPage, adminProductsPerPage]);
+
+  // Calcular total de páginas para el panel admin
+  const adminTotalPages = useMemo(() => {
+    return Math.ceil(filteredProducts.length / adminProductsPerPage);
+  }, [filteredProducts.length, adminProductsPerPage]);
+
+  // Funciones de navegación para paginación del admin
+  const adminNextPage = () => {
+    if (adminCurrentPage < adminTotalPages) {
+      setAdminCurrentPage(adminCurrentPage + 1);
+    }
+  };
+
+  const adminPrevPage = () => {
+    if (adminCurrentPage > 1) {
+      setAdminCurrentPage(adminCurrentPage - 1);
+    }
+  };
+
+  const adminGoToPage = (pageNumber) => {
+    setAdminCurrentPage(pageNumber);
+  };
 
   // Event listeners para filtros del panel admin
   useEffect(() => {
@@ -691,13 +792,21 @@ export default function StarFamilyApp() {
     console.log("🔍 Debug - priceRange:", priceRange);
     
     let filtered = products.filter(p => 
-      p && typeof p === 'object' && p.id && (
+      p && typeof p === 'object' && p.id && 
+      p.category && p.category.trim() !== '' && p.category !== 'null' && p.category !== null && // Excluir productos sin categoría
+      (
         cat === "Todos" || p.category === cat
-      ) && !p.suspended // Filtrar productos suspendidos en tienda pública
+      ) && !p.suspended && p.active // Filtrar productos suspendidos y activos en tienda pública
     );
     
     console.log("🔍 Debug - filtered after basic filter:", filtered.length);
     console.log("🔍 Debug - suspended products:", products.filter(p => p.suspended).length);
+    
+    // Debug: mostrar productos filtrados por categoría
+    const productosSinCategoria = products.filter(p => 
+      !p.category || p.category.trim() === '' || p.category === 'null' || p.category === null
+    );
+    console.log("🔍 Debug - productos sin categoría (excluidos de tienda):", productosSinCategoria.length);
 
     // Aplicar filtros de búsqueda
     if (searchTerm) {
@@ -1515,10 +1624,10 @@ export default function StarFamilyApp() {
 
       // Construir objeto a guardar según el esquema real de Supabase
       const productData = {
-        name: product.name,
+        nombre: product.name,
         description: product.description || '',
-        price: product.price,
-        bulk_info: product.bulkInfo || '',
+        precio: product.price,
+        bulto: product.bulkInfo || '',
         image_url: product.image_url || '',
         custom_badge: product.custom_badge || '',
         active: true,
@@ -1949,18 +2058,73 @@ export default function StarFamilyApp() {
 
     if (data) {
       console.log("✅ Datos recibidos:", data.length);
-      console.log("📦 Muestra de datos:", data.slice(0, 2));
+      console.log("📦 Muestra de datos crudos:", data.slice(0, 2));
       
-      // Mapear para convertir bulk_info a bulkInfo y obtener categoría
-      const mapped = data.map(p => ({
-        ...p,
-        category: p.categories?.name || "Frescos",
-        bulkInfo: p.bulk_info || "",
-        custom_badge: p.custom_badge || "",
-        suspended: p.suspended || false,
-      }));
+      // Debug: mostrar todas las columnas disponibles
+      if (data.length > 0) {
+        console.log("📋 Columnas disponibles en Supabase:", Object.keys(data[0]));
+      }
+      
+      // Debug: verificar campos importantes
+      const productosSinNombre = data.filter(p => !p.nombre || p.nombre.trim() === '');
+      const productosSinPrecio = data.filter(p => !p.precio || p.precio === 0);
+      const productosSinDescripcion = data.filter(p => !p.description || p.description.trim() === '');
+      
+      if (productosSinNombre.length > 0) {
+        console.log("⚠️ Productos sin 'nombre' en Supabase:", productosSinNombre.length);
+      }
+      if (productosSinPrecio.length > 0) {
+        console.log("⚠️ Productos sin 'precio' en Supabase:", productosSinPrecio.length);
+      }
+      if (productosSinDescripcion.length > 0) {
+        console.log("⚠️ Productos sin 'description' en Supabase:", productosSinDescripcion.length);
+      }
+      
+      // Mapear para convertir todos los campos de Supabase al formato del frontend
+      const mapped = data.map(p => {
+        const mappedProduct = {
+          ...p,
+          // Mapeo de campos de Supabase a nombres del frontend
+          name: p.nombre || "Sin nombre",
+          description: p.description || "",
+          price: Number(p.precio) || 0,
+          bulkInfo: p.bulto || "",
+          image_url: p.imagen || p.image_url || "",
+          category: p.categories?.name || p.categoria || "Frescos",
+          custom_badge: p.custom_badge || "",
+          active: p.active !== undefined ? p.active : true,
+          suspended: p.suspended || false,
+          status: p.status || 'published',
+          
+          // Mantener campos originales por si se necesitan
+          nombre: p.nombre,
+          precio: p.precio,
+          descripcion: p.description,
+          categoria: p.categoria,
+          bulto: p.bulto,
+          imagen: p.imagen,
+        };
+        
+        // Debug: log si hay problemas con campos importantes
+        if (!p.nombre || p.nombre.trim() === '') {
+          console.log("❌ Producto mapeado sin nombre:", mappedProduct);
+        }
+        if (!p.precio || p.precio === 0) {
+          console.log("⚠️ Producto sin precio válido:", mappedProduct.name);
+        }
+        
+        return mappedProduct;
+      });
       
       console.log("🔄 Productos mapeados:", mapped.length);
+      console.log("📦 Muestra de productos mapeados:", mapped.slice(0, 2));
+      
+      // Debug: verificar productos mapeados sin nombre
+      const productosSinNombreMapeado = mapped.filter(p => !p.name || p.name.trim() === '');
+      if (productosSinNombreMapeado.length > 0) {
+        console.log("❌ Productos mapeados sin 'name':", productosSinNombreMapeado.length);
+      }
+      
       setProducts(mapped);
       setStorageItem("roxy_products", mapped);
       return mapped;
@@ -1996,11 +2160,11 @@ export default function StarFamilyApp() {
       
       const mapped = (data || []).map(r => ({
         id: r.id || `prod_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-        category: r.category || "Frescos",
-        name: r.name || "Producto sin nombre",
+        category: r.categoria || "Frescos",
+        name: r.nombre || "Producto sin nombre",
         description: r.description || "",
-        price: Number(r.price) || 0,
-        bulkInfo: r.bulto || r.bulk_info || "",
+        price: Number(r.precio) || 0,
+        bulkInfo: r.bulto || "",
         image_url: r.image_url || ""
       })).filter(r => r.name);
         
@@ -2030,108 +2194,161 @@ export default function StarFamilyApp() {
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(ws);
         
+        // Debug: mostrar información del Excel
+        console.log('📊 Total de filas en el Excel:', rows.length);
+        if (rows.length > 0) {
+          console.log('Columnas detectadas:', Object.keys(rows[0]));
+          console.log('Primera fila de datos:', rows[0]);
+          console.log('Última fila de datos:', rows[rows.length - 1]);
+        }
+        
         // Mostrar mensaje de procesamiento
-        showToast("🔄 Procesando Excel y subiendo imágenes a Supabase...", "success");
+        showToast(`🔄 Procesando Excel con ${rows.length} filas...`, "success");
         
-        // Crear mapa de productos existentes por nombre para búsqueda rápida
-        const existingProductsMap = new Map();
-        products.forEach(p => {
-          if (p && p.name) {
-            existingProductsMap.set(p.name.toLowerCase().trim(), p);
-          }
-        });
-        
-        let updatedCount = 0;
-        let newCount = 0;
-        let imageUpdatedCount = 0;
-        let imageUploadedCount = 0;
-        
-        const processedProducts = [];
-        
-        // Procesar cada producto
-        for (let i = 0; i < rows.length; i++) {
-          const r = rows[i];
-          const productName = (r.nombre || r.name || "").trim();
-          if (!productName) continue;
-          
-          const existingProduct = existingProductsMap.get(productName.toLowerCase());
-          const newImageData = r.image_url || "";
-          
-          let finalImageUrl = newImageData;
-          
-          // Subir imagen a Supabase si existe y no es de Supabase
-          if (newImageData && !newImageData.includes('supabase')) {
-            showToast(`⬆️ Subiendo imagen de: ${productName}`, "success");
-            const uploadedUrl = await uploadImageFromUrlToSupabase(newImageData, productName);
-            
-            // Si la subida fue exitosa (URL diferente), actualizar contador
-            if (uploadedUrl && uploadedUrl !== newImageData) {
-              finalImageUrl = uploadedUrl;
-              imageUploadedCount++;
+        // Función helper para obtener valor de columna con múltiples variantes
+        const getColumnValue = (row, ...possibleNames) => {
+          for (const name of possibleNames) {
+            // Intentar con el nombre exacto
+            if (row[name] !== undefined && row[name] !== null && row[name] !== "") {
+              return row[name];
+            }
+            // Intentar sin tildes
+            const withoutAccents = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            if (row[withoutAccents] !== undefined && row[withoutAccents] !== null && row[withoutAccents] !== "") {
+              return row[withoutAccents];
+            }
+            // Intentar en mayúsculas
+            const upperName = name.toUpperCase();
+            if (row[upperName] !== undefined && row[upperName] !== null && row[upperName] !== "") {
+              return row[upperName];
+            }
+            // Intentar en minúsculas
+            const lowerName = name.toLowerCase();
+            if (row[lowerName] !== undefined && row[lowerName] !== null && row[lowerName] !== "") {
+              return row[lowerName];
             }
           }
+          return null;
+        };
+        
+        let savedCount = 0;
+        let errorCount = 0;
+        let skippedCount = 0;
+        
+        const supabase = getSupabaseClient();
+        
+        // Preparar todos los productos válidos para inserción masiva
+        const validProducts = [];
+        
+        for (let i = 0; i < rows.length; i++) {
+          const r = rows[i];
           
-          if (existingProduct) {
-            // Producto existe - actualizarlo
-            updatedCount++;
-            
-            // Solo actualizar la imagen si el Excel tiene una nueva URL de imagen
-            const shouldUpdateImage = newImageData && newImageData !== existingProduct.image_url;
-            if (shouldUpdateImage) imageUpdatedCount++;
-            
-            processedProducts.push({
-              ...existingProduct,
-              category: r.categoria || r.category || existingProduct.category,
-              name: productName,
-              description: r.descripcion || r.description || existingProduct.description,
-              price: parseFloat(r.precio || r.price || existingProduct.price),
-              bulkInfo: r.bulto || r.bulk_info || existingProduct.bulkInfo,
-              image_url: shouldUpdateImage ? finalImageUrl : existingProduct.image_url
-            });
-          } else {
-            // Producto nuevo - crearlo
-            newCount++;
-            processedProducts.push({
-              id: `xl_${Date.now()}_${i}`,
-              category: r.categoria || r.category || "Frescos",
-              name: productName,
-              description: r.descripcion || r.description || "",
-              price: parseFloat(r.precio || r.price || 0),
-              bulkInfo: r.bulto || r.bulk_info || "",
-              image_url: finalImageUrl
-            });
+          // Debug: mostrar progreso cada 50 filas
+          if (i % 50 === 0) {
+            console.log(`🔄 Analizando fila ${i + 1} de ${rows.length}...`);
+          }
+          
+          // NOMBRE ES OBLIGATORIO - si está vacío, saltar la fila
+          const productName = getColumnValue(r, 'nombre', 'name');
+          if (!productName || productName.trim() === '') {
+            skippedCount++;
+            if (skippedCount <= 10) { // Solo mostrar los primeros 10 saltados para no saturar
+              console.log(`❌ Fila ${i + 1} saltada: no tiene nombre válido`);
+            }
+            continue;
+          }
+          
+          // Mapeo del Excel a Supabase con valores por defecto
+          const productData = {
+            nombre: productName.trim(),
+            categoria: getColumnValue(r, 'categoria', 'category') || null,
+            precio: parseFloat(getColumnValue(r, 'precio', 'price')) || 0,
+            bulto: getColumnValue(r, 'bulto', 'bulk', 'bulkInfo') || null,
+            description: getColumnValue(r, 'descripcion', 'description') || '',
+            imagen: getColumnValue(r, 'imagen', 'image', 'image_url') || null,
+            active: false,  // Siempre false al importar
+            status: 'draft'  // Siempre 'draft' al importar
+          };
+          
+          validProducts.push(productData);
+          
+          // Debug: mostrar datos del producto antes de guardar
+          if (i < 3) { // Solo mostrar los primeros 3 para no saturar la consola
+            console.log(`📝 Producto ${i + 1} preparado:`, productData);
           }
         }
         
-        if (processedProducts.length > 0) {
-          // Combinar productos actualizados y nuevos
-          const updatedProducts = products.map(existing => {
-            const updated = processedProducts.find(p => p.id === existing.id);
-            return updated || existing;
-          });
+        console.log(`📊 Se prepararon ${validProducts.length} productos válidos para insertar`);
+        
+        // Insertar en lotes de 50 para evitar timeouts
+        const batchSize = 50;
+        for (let i = 0; i < validProducts.length; i += batchSize) {
+          const batch = validProducts.slice(i, i + batchSize);
+          console.log(`🔄 Insertando lote ${Math.floor(i/batchSize) + 1} de ${Math.ceil(validProducts.length/batchSize)} (${batch.length} productos)`);
           
-          // Agregar productos nuevos que no estaban en la lista original
-          const newProducts = processedProducts.filter(p => !products.find(existing => existing.id === p.id));
-          
-          const finalProducts = [...updatedProducts, ...newProducts];
-          saveProducts(finalProducts);
-          
-          // Mensaje detallado de resultados
-          let message = `✅ Procesados ${processedProducts.length} productos:`;
-          if (updatedCount > 0) message += ` ${updatedCount} actualizados`;
-          if (newCount > 0) message += ` ${newCount} nuevos`;
-          if (imageUploadedCount > 0) message += ` (${imageUploadedCount} imágenes subidas a Supabase)`;
-          
-          showToast(message);
-        } else {
-          showToast("⚠️ No se encontraron productos válidos en el Excel", "error");
+          try {
+            const { data, error } = await supabase
+              .from('products')
+              .insert(batch)
+              .select();
+              
+            if (error) throw error;
+            
+            savedCount += batch.length;
+            console.log(`✅ Lote guardado: ${batch.length} productos`);
+            
+          } catch (error) {
+            console.error(`❌ Error en lote ${Math.floor(i/batchSize) + 1}:`, error);
+            errorCount += batch.length;
+            
+            // Si falla el lote, intentar insertar uno por uno
+            console.log('🔄 Intentando inserción individual para este lote...');
+            for (const product of batch) {
+              try {
+                const { data, error } = await supabase
+                  .from('products')
+                  .insert(product)
+                  .select()
+                  .single();
+                  
+                if (error) throw error;
+                savedCount++;
+              } catch (individualError) {
+                console.error(`❌ Error individual en producto "${product.nombre}":`, individualError);
+                errorCount++;
+              }
+            }
+          }
         }
+        
+        // Recargar todos los productos desde Supabase para actualizar el panel admin
+        console.log('🔄 Recargando productos desde Supabase...');
+        await loadProductsFromSupabase();
+        
+        // Resumen final detallado
+        console.log('📊 RESUMEN DE IMPORTACIÓN:');
+        console.log(`• Total filas en Excel: ${rows.length}`);
+        console.log(`• Productos guardados: ${savedCount}`);
+        console.log(`• Errores: ${errorCount}`);
+        console.log(`• Filas saltadas (sin nombre): ${skippedCount}`);
+        console.log(`• Procesamiento exitoso: ${((savedCount / rows.length) * 100).toFixed(1)}%`);
+        
+        // Mensaje final detallado
+        let message = `✅ Importación completada:`;
+        message += ` ${savedCount} guardados de ${rows.length} totales`;
+        if (errorCount > 0) message += `, ${errorCount} con errores`;
+        if (skippedCount > 0) message += `, ${skippedCount} saltados (sin nombre)`;
+        message += ` (${((savedCount / rows.length) * 100).toFixed(1)}% exitoso)`;
+        
+        showToast(message);
+        
       } catch (err) { 
+        console.error('Error procesando Excel:', err);
         showToast("❌ Error al leer Excel: " + err.message, "error"); 
       }
     };
     reader.readAsBinaryString(file);
-    e.target.value = "";
+    e.target.value = ""; // Limpiar input para permitir subir el mismo archivo nuevamente
   };
 
   // Funciones de administración de precios
@@ -2931,7 +3148,7 @@ export default function StarFamilyApp() {
       ) : (
         <AdminPanel 
             products={products}
-            filteredProducts={filteredProducts} 
+            filteredProducts={adminPaginatedProducts} 
             adminFilters={adminFilters}
             form={form} 
             setForm={setForm} 
@@ -2994,6 +3211,14 @@ export default function StarFamilyApp() {
             authLoading={localAuthLoading}
             saveImagePreview={saveImagePreview}
             onToggleSuspension={toggleProductSuspension}
+            onToggleActivation={toggleProductActivation}
+            adminCurrentPage={adminCurrentPage}
+            adminTotalPages={adminTotalPages}
+            adminProductsPerPage={adminProductsPerPage}
+            adminNextPage={adminNextPage}
+            adminPrevPage={adminPrevPage}
+            adminGoToPage={adminGoToPage}
+            totalFilteredProducts={filteredProducts.length}
             paymentSettings={paymentSettings}
             setPaymentSettings={setPaymentSettings}
             loadingPaymentSettings={loadingPaymentSettings}
@@ -5152,7 +5377,7 @@ function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint
 // ADMIN PANEL
 // ═══════════════════════════════════════════════════════
 
-function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint, onDeleteRestorePoint, loadingRestorePoints, restorePointsError, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview, loadingPriceHistory, priceHistoryError, onToggleSuspension, paymentSettings, setPaymentSettings, loadingPaymentSettings, setLoadingPaymentSettings, banners, setBanners, loadingBanners, bannerForm, setBannerForm, editingBanner, setEditingBanner, bannerImagePreview, setBannerImagePreview, uploadingBannerImage, onBannerSubmit, onBannerImageSelect, onClearBannerImage, onDeleteBanner, onEditBanner }) {
+function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint, onDeleteRestorePoint, loadingRestorePoints, restorePointsError, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview, loadingPriceHistory, priceHistoryError, onToggleSuspension, onToggleActivation, adminCurrentPage, adminTotalPages, adminProductsPerPage, adminNextPage, adminPrevPage, adminGoToPage, totalFilteredProducts, paymentSettings, setPaymentSettings, loadingPaymentSettings, setLoadingPaymentSettings, banners, setBanners, loadingBanners, bannerForm, setBannerForm, editingBanner, setEditingBanner, bannerImagePreview, setBannerImagePreview, uploadingBannerImage, onBannerSubmit, onBannerImageSelect, onClearBannerImage, onDeleteBanner, onEditBanner }) {
   const supabase = getSupabaseClient();
   
   // Cargar configuración de pago desde Supabase
@@ -5374,7 +5599,14 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
         <div>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, flexWrap:"wrap", gap:8 }}>
             <div>
-              <span style={{ fontWeight:700 }}>{filteredProducts.length} de {products.length} productos</span>
+              <span style={{ fontWeight:700 }}>
+                {filteredProducts.length} de {totalFilteredProducts} productos 
+                {adminTotalPages > 1 && (
+                  <span style={{ fontSize:12, color:"#6B7280", marginLeft:8 }}>
+                    (Página {adminCurrentPage} de {adminTotalPages})
+                  </span>
+                )}
+              </span>
               {(adminFilters.searchTerm || adminFilters.category || adminFilters.status !== 'all') && (
                 <span style={{ fontSize:12, color:"#6B7280", marginLeft:8 }}>
                   • Filtrando
@@ -5538,6 +5770,32 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:2 }}>
                     <div style={{ fontWeight:700, fontSize:14, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p?.name || "Sin nombre"}</div>
+                    {/* Badge de estado activo/inactivo */}
+                    {p?.active ? (
+                      <span style={{
+                        background:"#10B981",
+                        color:"white",
+                        fontSize:10,
+                        fontWeight:700,
+                        borderRadius:4,
+                        padding:"2px 6px",
+                        whiteSpace:"nowrap"
+                      }}>
+                        ✅ ACTIVO
+                      </span>
+                    ) : (
+                      <span style={{
+                        background:"#6B7280",
+                        color:"white",
+                        fontSize:10,
+                        fontWeight:700,
+                        borderRadius:4,
+                        padding:"2px 6px",
+                        whiteSpace:"nowrap"
+                      }}>
+                        🔴 INACTIVO
+                      </span>
+                    )}
                     {p?.suspended && (
                       <span style={{
                         background:"#F59E0B",
@@ -5555,6 +5813,22 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                   <div style={{ fontSize:12, color:"#9CA3AF", marginTop:1 }}>{p?.category} · <strong style={{ color:"#C41E3A" }}>{fmt(p?.price || 0)}</strong></div>
                 </div>
                 <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                  {/* Botón Activar/Desactivar */}
+                  <button 
+                    onClick={() => onToggleActivation(p.id)} 
+                    style={{ 
+                      background: p?.active ? "#FEE2E2" : "#D1FAE5", 
+                      border:"none", 
+                      borderRadius:8, 
+                      padding:"7px 11px", 
+                      cursor:"pointer", 
+                      fontSize:12,
+                      color: p?.active ? "#DC2626" : "#059669"
+                    }}
+                    title={p?.active ? "Desactivar producto (ocultar de tienda)" : "Activar producto (mostrar en tienda)"}
+                  >
+                    {p?.active ? "🔴 Desactivar" : "✅ Activar"}
+                  </button>
                   <button 
                     onClick={() => onToggleSuspension(p.id)} 
                     style={{ 
@@ -5597,6 +5871,91 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                 <div style={{ fontSize:14 }}>Por favor, espera mientras se cargan los productos</div>
               </div>
             )}
+            
+            {/* CONTROLES DE PAGINACIÓN */}
+            {adminTotalPages > 1 && (
+              <div style={{ 
+                display:"flex", 
+                justifyContent:"center", 
+                alignItems:"center", 
+                gap:8, 
+                marginTop:20, 
+                padding:"16px 0",
+                borderTop:"1px solid #E5E7EB"
+              }}>
+                <button
+                  onClick={adminPrevPage}
+                  disabled={adminCurrentPage === 1}
+                  style={{
+                    padding:"8px 12px",
+                    borderRadius:8,
+                    border:"1px solid #E5E7EB",
+                    background: adminCurrentPage === 1 ? "#F9FAFB" : "#FFFFFF",
+                    color: adminCurrentPage === 1 ? "#9CA3AF" : "#374151",
+                    cursor: adminCurrentPage === 1 ? "not-allowed" : "pointer",
+                    fontSize:14,
+                    fontWeight:500
+                  }}
+                >
+                  ← Anterior
+                </button>
+                
+                {/* Números de página */}
+                <div style={{ display:"flex", gap:4 }}>
+                  {(() => {
+                    const pages = [];
+                    const maxVisiblePages = 5;
+                    let startPage = Math.max(1, adminCurrentPage - Math.floor(maxVisiblePages / 2));
+                    let endPage = Math.min(adminTotalPages, startPage + maxVisiblePages - 1);
+                    
+                    if (endPage - startPage < maxVisiblePages - 1) {
+                      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                    }
+                    
+                    for (let i = startPage; i <= endPage; i++) {
+                      pages.push(
+                        <button
+                          key={i}
+                          onClick={() => adminGoToPage(i)}
+                          style={{
+                            padding:"8px 12px",
+                            borderRadius:8,
+                            border: i === adminCurrentPage ? "1px solid #C41E3A" : "1px solid #E5E7EB",
+                            background: i === adminCurrentPage ? "#C41E3A" : "#FFFFFF",
+                            color: i === adminCurrentPage ? "#FFFFFF" : "#374151",
+                            cursor: "pointer",
+                            fontSize:14,
+                            fontWeight: i === adminCurrentPage ? 600 : 500,
+                            minWidth:40
+                          }}
+                        >
+                          {i}
+                        </button>
+                      );
+                    }
+                    return pages;
+                  })()}
+                </div>
+                
+                <button
+                  onClick={adminNextPage}
+                  disabled={adminCurrentPage === adminTotalPages}
+                  style={{
+                    padding:"8px 12px",
+                    borderRadius:8,
+                    border:"1px solid #E5E7EB",
+                    background: adminCurrentPage === adminTotalPages ? "#F9FAFB" : "#FFFFFF",
+                    color: adminCurrentPage === adminTotalPages ? "#9CA3AF" : "#374151",
+                    cursor: adminCurrentPage === adminTotalPages ? "not-allowed" : "pointer",
+                    fontSize:14,
+                    fontWeight:500
+                  }}
+                >
+                  Siguiente →
+                </button>
+              </div>
+            )}
+            
           </div>
         </div>
       )}
