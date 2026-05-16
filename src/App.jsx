@@ -96,6 +96,7 @@ export default function StarFamilyApp() {
   const [categoryError, setCategoryError] = useState('');
   const [loadingCategories, setLoadingCategories] = useState(false);
   
+    
   // Estados para configuración de pago
   const [paymentSettings, setPaymentSettings] = useState({
     id: null,
@@ -226,6 +227,13 @@ export default function StarFamilyApp() {
         
       if (error) throw error;
       
+      // Si se activó un producto y estábamos en el filtro "Inactivos", cambiar a "Activos"
+      if (newActiveState && window.adminStatusFilter === 'suspended') {
+        window.adminStatusFilter = 'active';
+        const event = new CustomEvent('adminStatusFilter', { detail: { status: 'active' } });
+        window.dispatchEvent(event);
+      }
+      
       showToast(
         newActiveState 
           ? `✅ Producto "${product.name}" activado - ahora visible en tienda`
@@ -240,6 +248,7 @@ export default function StarFamilyApp() {
     }
   };
 
+  
   // Función para filtrar productos del panel admin
   const filterAdminProducts = (products, filters) => {
     console.log("🔍 filterAdminProducts - Productos entrantes:", products.length);
@@ -287,7 +296,7 @@ export default function StarFamilyApp() {
       if (filters.status === 'inactive' && (!product.suspended && product.active)) {
         return false;
       }
-      if (filters.status === 'suspended' && !product.suspended) {
+      if (filters.status === 'suspended' && product.active) {
         return false;
       }
       
@@ -1500,6 +1509,23 @@ export default function StarFamilyApp() {
     });
     setEditingBanner(true);
     setBannerImagePreview(banner.image_url || null);
+    
+    // Scroll automático hacia arriba para ver el formulario de edición (compatible con mobile)
+    setTimeout(() => {
+      if (window.scrollTo) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        // Fallback para navegadores antiguos
+        window.scrollTo(0, 0);
+      }
+      
+      // Fallback adicional para mobile si el smooth scroll no funciona
+      setTimeout(() => {
+        if (window.pageYOffset > 100) {
+          window.scrollTo(0, 0);
+        }
+      }, 100);
+    }, 100);
   };
 
   // ═══════════════════════════════════════════════════════
@@ -2715,6 +2741,23 @@ export default function StarFamilyApp() {
     setCategoryError('');
     setShowNewCategoryInput(false);
     setNewCategoryName('');
+    
+    // Scroll automático hacia arriba para ver el formulario de edición (compatible con mobile)
+    setTimeout(() => {
+      if (window.scrollTo) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        // Fallback para navegadores antiguos
+        window.scrollTo(0, 0);
+      }
+      
+      // Fallback adicional para mobile si el smooth scroll no funciona
+      setTimeout(() => {
+        if (window.pageYOffset > 100) {
+          window.scrollTo(0, 0);
+        }
+      }, 100);
+    }, 100);
     
     // Validar categoría del producto existente
     if (p.category) {
@@ -5718,7 +5761,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                     cursor:"pointer"
                   }}
                 >
-                  ⏸️ Suspendidos
+                  🔴 Inactivos
                 </button>
               </div>
             </div>
@@ -5767,8 +5810,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                 <div style={{ width:46, height:46, borderRadius:10, background:`${CAT_COLOR[p?.category]||"#C41E3A"}18`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0, overflow:"hidden" }}>
                   {p?.image_url ? <img src={p?.image_url} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" onError={e => { e.target.src = "https://via.placeholder.com/46x46/f5a623/ffffff?text=SF"; }} /> : (CAT_EMOJI[p?.category]||"🍖")}
                 </div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div>
+                <div style={{ flex:1, minWidth:0, paddingRight: typeof window !== 'undefined' && window.innerWidth <= 768 ? 8 : 0 }}>
                   <div style={{ 
                     fontWeight:700, 
                     fontSize: typeof window !== 'undefined' && window.innerWidth <= 768 ? 16 : 14, 
@@ -5776,11 +5818,12 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                     textOverflow: typeof window !== 'undefined' && window.innerWidth <= 768 ? "unset" : "ellipsis", 
                     whiteSpace: typeof window !== 'undefined' && window.innerWidth <= 768 ? "normal" : "nowrap",
                     lineHeight: typeof window !== 'undefined' && window.innerWidth <= 768 ? 1.3 : 1.2,
-                    marginBottom: 4
+                    marginBottom: 4,
+                    maxWidth: typeof window !== 'undefined' && window.innerWidth <= 768 ? "calc(100% - 120px)" : "100%"
                   }}>
                     {p?.name || "Sin nombre"}
                   </div>
-                  <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap", marginBottom: 4 }}>
                     {/* Badge de estado activo/inactivo */}
                     {p?.active ? (
                       <span style={{
@@ -5817,11 +5860,10 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                         padding:"2px 6px",
                         whiteSpace:"nowrap"
                       }}>
-                        ⏸️ SUSPENDIDO
+                        🔴 INACTIVO
                       </span>
                     )}
                   </div>
-                </div>
                   <div style={{ fontSize:12, color:"#9CA3AF", marginTop:1 }}>{p?.category} · <strong style={{ color:"#C41E3A" }}>{fmt(p?.price || 0)}</strong></div>
                 </div>
                 <div style={{ display:"flex", gap:6, flexShrink:0 }}>
@@ -5831,40 +5873,101 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                     style={{ 
                       background: p?.active ? "#FEE2E2" : "#D1FAE5", 
                       border:"none", 
-                      borderRadius:8, 
-                      padding:"7px 11px", 
+                      borderRadius:6, 
+                      padding:"4px 8px", 
                       cursor:"pointer", 
-                      fontSize:12,
-                      color: p?.active ? "#DC2626" : "#059669"
+                      fontSize:11,
+                      color: p?.active ? "#DC2626" : "#059669",
+                      minWidth: "60px",
+                      height: "28px"
                     }}
                     title={p?.active ? "Desactivar producto (ocultar de tienda)" : "Activar producto (mostrar en tienda)"}
                   >
                     {p?.active ? "🔴 Desactivar" : "✅ Activar"}
                   </button>
-                  {/* Botón Suspender - oculto en móvil */}
-                  {typeof window === 'undefined' || window.innerWidth > 768 && (
-                    <button 
-                      onClick={() => onToggleSuspension(p.id)} 
-                      style={{ 
-                        background: p?.suspended ? "#D1FAE5" : "#FEF3C7", 
-                        border:"none", 
-                        borderRadius:8, 
-                        padding:"7px 11px", 
-                        cursor:"pointer", 
-                        fontSize:12,
-                        color: p?.suspended ? "#059669" : "#D97706"
-                      }}
-                      title={p?.suspended ? "Activar producto" : "Suspender producto"}
-                    >
-                      {p?.suspended ? "✅ Activar" : "⏸️ Suspender"}
-                    </button>
+                                    {typeof window === 'undefined' || window.innerWidth <= 768 ? (
+                    // MOBILE: Botones más grandes y centrados
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 8,
+                      width: '100%',
+                      marginTop: 8
+                    }}>
+                      <button
+                        onClick={() => onEdit(p)}
+                        style={{
+                          background: "#EFF6FF",
+                          border: "1px solid #3B82F6",
+                          borderRadius: 6,
+                          padding: "6px 10px",
+                          cursor: "pointer",
+                          fontSize: 12,
+                          fontWeight: 500,
+                          color: "#1E40AF",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 4,
+                          transition: "all 0.2s",
+                          width: "100%"
+                        }}
+                        onMouseOver={(e) => {
+                          e.target.style.background = "#DBEAFE";
+                          e.target.style.borderColor = "#2563EB";
+                        }}
+                        onMouseOut={(e) => {
+                          e.target.style.background = "#EFF6FF";
+                          e.target.style.borderColor = "#3B82F6";
+                        }}
+                      >
+                        ✏️ Editar
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`¿Estás seguro que querés borrar "${p?.name || 'este producto'}"?\n\nEsta acción no se puede deshacer.`)) {
+                            onDelete(p.id);
+                          }
+                        }}
+                        style={{
+                          background: "#FEE2E2",
+                          border: "1px solid #DC2626",
+                          borderRadius: 6,
+                          padding: "6px 10px",
+                          cursor: "pointer",
+                          fontSize: 12,
+                          fontWeight: 500,
+                          color: "#991B1B",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 4,
+                          transition: "all 0.2s",
+                          width: "100%"
+                        }}
+                        onMouseOver={(e) => {
+                          e.target.style.background = "#FECACA";
+                          e.target.style.borderColor = "#B91C1C";
+                        }}
+                        onMouseOut={(e) => {
+                          e.target.style.background = "#FEE2E2";
+                          e.target.style.borderColor = "#DC2626";
+                        }}
+                      >
+                        🗑️ Eliminar
+                      </button>
+                    </div>
+                  ) : (
+                    // DESKTOP: Botones compactos originales
+                    <>
+                      <button onClick={() => onEdit(p)} style={{ background:"#EFF6FF", border:"1px solid #3B82F6", borderRadius:6, padding:"4px 8px", cursor:"pointer", fontSize:12, width:28, height:28, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>✏️</button>
+                      <button onClick={() => {
+                        if (window.confirm(`¿Estás seguro que querés borrar "${p?.name || 'este producto'}"?\n\nEsta acción no se puede deshacer.`)) {
+                          onDelete(p.id);
+                        }
+                      }} style={{ background:"#FEE2E2", border:"1px solid #DC2626", borderRadius:6, padding:"4px 8px", cursor:"pointer", fontSize:12, width:28, height:28, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>🗑️</button>
+                    </>
                   )}
-                  <button onClick={() => onEdit(p)} style={{ background:"#EFF6FF", border:"none", borderRadius:8, padding:"7px 11px", cursor:"pointer", fontSize:14 }}>✏️</button>
-                  <button onClick={() => {
-                    if (window.confirm(`¿Estás seguro que querés borrar "${p?.name || 'este producto'}"?\n\nEsta acción no se puede deshacer.`)) {
-                      onDelete(p.id);
-                    }
-                  }} style={{ background:"#FEE2E2", border:"none", borderRadius:8, padding:"7px 11px", cursor:"pointer", fontSize:14 }}>🗑️</button>
                 </div>
               </div>
             ))
@@ -6488,117 +6591,342 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
             ) : (
               <div style={{ display:"grid", gap:12 }}>
                 {banners.map((banner) => (
-                  <div key={banner.id} style={{ 
+                  <div key={banner.id} className="banner-card" style={{ 
                     border:"1px solid #E5E7EB", 
                     borderRadius:12, 
                     padding:16, 
-                    display:"flex", 
-                    gap:16,
                     background:"white",
-                    position:"relative"
+                    position:"relative",
+                    display: 'flex',
+                    flexDirection: 'column',
+                    width: '100%',
+                    overflow: 'hidden'
                   }}>
-                    {/* Imagen miniatura */}
-                    <div style={{ flexShrink:0 }}>
-                      {banner.image_url ? (
-                        <img 
-                          src={banner.image_url} 
-                          alt={banner.title || "Banner"} 
-                          style={{ 
-                            width:120, 
-                            height:60, 
-                            objectFit:"contain", 
-                            background:"#111827",
-                            borderRadius:8,
-                            border:"1px solid #E5E7EB"
-                          }} 
-                        />
-                      ) : (
+                    {typeof window !== 'undefined' && window.innerWidth <= 768 ? (
+                      // MOBILE: Layout vertical forzado - imagen arriba, texto abajo, botones fijos
+                      <div style={{
+                        display: 'flex !important',
+                        flexDirection: 'column !important',
+                        width: '100% !important',
+                        gap: '16px !important'
+                      }}>
+                        {/* Imagen arriba - centrada y más grande */}
+                        <div style={{
+                          display: 'flex !important',
+                          justifyContent: 'center !important',
+                          alignItems: 'center !important',
+                          width: '100% !important',
+                          order: 1
+                        }}>
+                          {banner.image_url ? (
+                            <img 
+                              src={banner.image_url} 
+                              alt={banner.title || "Banner"} 
+                              style={{ 
+                                width: "100% !important",
+                                maxWidth: "200px !important",
+                                height: "120px !important",
+                                objectFit:"contain !important", 
+                                background:"#111827 !important",
+                                borderRadius:12,
+                                border:"1px solid #E5E7EB !important"
+                              }} 
+                            />
+                          ) : (
+                            <div style={{ 
+                              width: "100% !important",
+                              maxWidth: "200px !important",
+                              height: "120px !important",
+                              background:"#F3F4F6 !important", 
+                              borderRadius:12, 
+                              display:"flex !important", 
+                              alignItems:"center !important", 
+                              justifyContent:"center !important",
+                              color:"#9CA3AF !important",
+                              fontSize:14,
+                              border:"1px solid #E5E7EB !important"
+                            }}>
+                              Sin imagen
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Texto debajo de la imagen */}
+                        <div style={{
+                          textAlign: "center !important",
+                          order: 2,
+                          width: '100%'
+                        }}>
+                          <div style={{ fontWeight:700, fontSize:16, marginBottom:6 }}>
+                            {banner.title || "Sin título"}
+                          </div>
+                          {banner.description && (
+                            <div style={{ fontSize:13, color:"#6B7280", marginBottom:6, lineHeight: 1.4 }}>
+                              {banner.description}
+                            </div>
+                          )}
+                          {banner.link && (
+                            <div style={{ fontSize:12, color:"#2563EB", marginBottom:8, wordBreak: "break-all" }}>
+                              🔗 {banner.link}
+                            </div>
+                          )}
+                          <div style={{ 
+                            display:"inline-flex !important", 
+                            alignItems:"center !important", 
+                            justifyContent:"center !important",
+                            marginTop:8
+                          }}>
+                            <span style={{ 
+                              fontSize:12, 
+                              padding:"4px 12px", 
+                              borderRadius:16, 
+                              background:banner.active ? "#DCFCE7" : "#FEE2E2",
+                              color:banner.active ? "#166534" : "#991B1B",
+                              fontWeight:600
+                            }}>
+                              {banner.active ? "✅ Activo" : "❌ Inactivo"}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* Botones fijos abajo - tamaño absoluto independiente del texto */}
+                        <div style={{
+                          display: 'flex !important',
+                          flexDirection: 'row !important',
+                          justifyContent: 'center !important',
+                          gap: '16px !important',
+                          borderTop: '1px solid #E5E7EB !important',
+                          paddingTop: '20px !important',
+                          marginTop: '16px !important',
+                          order: 3,
+                          width: '100%',
+                          position: 'relative'
+                        }}>
+                          <button
+                            onClick={() => onEditBanner(banner)}
+                            style={{
+                              width: '140px !important',
+                              minWidth: '140px !important',
+                              maxWidth: '140px !important',
+                              height: '52px !important',
+                              padding: "0px !important",
+                              borderRadius: 10,
+                              fontSize: 14,
+                              fontWeight: 600,
+                              display: "flex !important",
+                              alignItems: "center !important",
+                              justifyContent: "center !important",
+                              cursor: "pointer",
+                              transition: "all 0.2s",
+                              border: "none !important",
+                              color: "white !important",
+                              background: "#3B82F6 !important",
+                              boxShadow: "0 3px 6px rgba(59, 130, 246, 0.25) !important",
+                              position: 'relative',
+                              overflow: 'hidden',
+                              whiteSpace: 'nowrap',
+                              textOverflow: 'ellipsis'
+                            }}
+                            onMouseOver={(e) => {
+                              e.target.style.background = "#2563EB !important";
+                              e.target.style.transform = "translateY(-2px) !important";
+                              e.target.style.boxShadow = "0 6px 12px rgba(59, 130, 246, 0.35) !important";
+                            }}
+                            onMouseOut={(e) => {
+                              e.target.style.background = "#3B82F6 !important";
+                              e.target.style.transform = "translateY(0) !important";
+                              e.target.style.boxShadow = "0 3px 6px rgba(59, 130, 246, 0.25) !important";
+                            }}
+                            title="Editar banner"
+                          >
+                            <span style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              fontSize: '14px',
+                              fontWeight: '600'
+                            }}>
+                              ✏️ Editar
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => onDeleteBanner(banner.id)}
+                            style={{
+                              width: '140px !important',
+                              minWidth: '140px !important',
+                              maxWidth: '140px !important',
+                              height: '52px !important',
+                              padding: "0px !important",
+                              borderRadius: 10,
+                              fontSize: 14,
+                              fontWeight: 600,
+                              display: "flex !important",
+                              alignItems: "center !important",
+                              justifyContent: "center !important",
+                              cursor: "pointer",
+                              transition: "all 0.2s",
+                              border: "none !important",
+                              color: "white !important",
+                              background: "#DC2626 !important",
+                              boxShadow: "0 3px 6px rgba(220, 38, 38, 0.25) !important",
+                              position: 'relative',
+                              overflow: 'hidden',
+                              whiteSpace: 'nowrap',
+                              textOverflow: 'ellipsis'
+                            }}
+                            onMouseOver={(e) => {
+                              e.target.style.background = "#B91C1C !important";
+                              e.target.style.transform = "translateY(-2px) !important";
+                              e.target.style.boxShadow = "0 6px 12px rgba(220, 38, 38, 0.35) !important";
+                            }}
+                            onMouseOut={(e) => {
+                              e.target.style.background = "#DC2626 !important";
+                              e.target.style.transform = "translateY(0) !important";
+                              e.target.style.boxShadow = "0 3px 6px rgba(220, 38, 38, 0.25) !important";
+                            }}
+                            title="Eliminar banner"
+                          >
+                            <span style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              fontSize: '14px',
+                              fontWeight: '600'
+                            }}>
+                              🗑️ Eliminar
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      // DESKTOP: Layout original de 3 columnas
+                      <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                        {/* Imagen miniatura */}
+                        <div style={{ flexShrink: 0 }}>
+                          {banner.image_url ? (
+                            <img 
+                              src={banner.image_url} 
+                              alt={banner.title || "Banner"} 
+                              style={{ 
+                                width:120, 
+                                height:60, 
+                                objectFit:"contain", 
+                                background:"#111827",
+                                borderRadius:8,
+                                border:"1px solid #E5E7EB"
+                              }} 
+                            />
+                          ) : (
+                            <div style={{ 
+                              width:120, 
+                              height:60, 
+                              background:"#F3F4F6", 
+                              borderRadius:8, 
+                              display:"flex", 
+                              alignItems:"center", 
+                              justifyContent:"center",
+                              color:"#9CA3AF",
+                              fontSize:12
+                            }}>
+                              Sin imagen
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Información */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight:600, fontSize:14, marginBottom:4 }}>
+                            {banner.title || "Sin título"}
+                          </div>
+                          {banner.description && (
+                            <div style={{ fontSize:12, color:"#6B7280", marginBottom:4 }}>
+                              {banner.description}
+                            </div>
+                          )}
+                          {banner.link && (
+                            <div style={{ fontSize:12, color:"#2563EB", marginBottom:4 }}>
+                              🔗 {banner.link}
+                            </div>
+                          )}
+                          <div style={{ 
+                            display:"flex", 
+                            alignItems:"center", 
+                            gap:8, 
+                            marginTop:8
+                          }}>
+                            <span style={{ 
+                              fontSize:11, 
+                              padding:"2px 8px", 
+                              borderRadius:12, 
+                              background:banner.active ? "#DCFCE7" : "#FEE2E2",
+                              color:banner.active ? "#166534" : "#991B1B",
+                              fontWeight:600
+                            }}>
+                              {banner.active ? "✅ Activo" : "❌ Inactivo"}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* Acciones - desktop */}
                         <div style={{ 
-                          width:120, 
-                          height:60, 
-                          background:"#F3F4F6", 
-                          borderRadius:8, 
-                          display:"flex", 
-                          alignItems:"center", 
-                          justifyContent:"center",
-                          color:"#9CA3AF",
-                          fontSize:12
+                          display:"flex",
+                          flexDirection:"column",
+                          gap:6,
+                          alignItems:"flex-start"
                         }}>
-                          Sin imagen
+                          <button
+                            onClick={() => onEditBanner(banner)}
+                            style={{
+                              padding:"6px 10px",
+                              borderRadius:6,
+                              border:"1px solid #3B82F6",
+                              background:"#3B82F6",
+                              color:"white",
+                              fontWeight:600,
+                              cursor:"pointer",
+                              fontSize:12,
+                              transition:"background 0.2s",
+                              display:"flex",
+                              alignItems:"center",
+                              justifyContent:"center",
+                              width:36,
+                              height:36,
+                              flexShrink:0
+                            }}
+                            onMouseOver={(e) => e.target.style.background = "#2563EB"}
+                            onMouseOut={(e) => e.target.style.background = "#3B82F6"}
+                            title="Editar banner"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => onDeleteBanner(banner.id)}
+                            style={{
+                              padding:"6px 10px",
+                              borderRadius:6,
+                              border:"1px solid #DC2626",
+                              background:"#DC2626",
+                              color:"white",
+                              fontWeight:600,
+                              cursor:"pointer",
+                              fontSize:12,
+                              transition:"background 0.2s",
+                              display:"flex",
+                              alignItems:"center",
+                              justifyContent:"center",
+                              width:36,
+                              height:36,
+                              flexShrink:0
+                            }}
+                            onMouseOver={(e) => e.target.style.background = "#B91C1C"}
+                            onMouseOut={(e) => e.target.style.background = "#DC2626"}
+                            title="Eliminar banner"
+                          >
+                            🗑️
+                          </button>
                         </div>
-                      )}
-                    </div>
-                    
-                    {/* Información */}
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontWeight:600, fontSize:14, marginBottom:4 }}>
-                        {banner.title || "Sin título"}
                       </div>
-                      {banner.description && (
-                        <div style={{ fontSize:12, color:"#6B7280", marginBottom:4 }}>
-                          {banner.description}
-                        </div>
-                      )}
-                      {banner.link && (
-                        <div style={{ fontSize:12, color:"#2563EB", marginBottom:4 }}>
-                          🔗 {banner.link}
-                        </div>
-                      )}
-                      <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:8 }}>
-                        <span style={{ 
-                          fontSize:11, 
-                          padding:"2px 8px", 
-                          borderRadius:12, 
-                          background:banner.active ? "#DCFCE7" : "#FEE2E2",
-                          color:banner.active ? "#166534" : "#991B1B",
-                          fontWeight:600
-                        }}>
-                          {banner.active ? "✅ Activo" : "❌ Inactivo"}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    {/* Acciones */}
-                    <div style={{ display:"flex", gap:6, alignItems:"flex-start" }}>
-                      <button
-                        onClick={() => onEditBanner(banner)}
-                        style={{
-                          padding:"6px 10px",
-                          borderRadius:6,
-                          border:"1px solid #3B82F6",
-                          background:"#3B82F6",
-                          color:"white",
-                          fontWeight:600,
-                          cursor:"pointer",
-                          fontSize:12,
-                          transition:"background 0.2s"
-                        }}
-                        onMouseOver={(e) => e.target.style.background = "#2563EB"}
-                        onMouseOut={(e) => e.target.style.background = "#3B82F6"}
-                        title="Editar banner"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        onClick={() => onDeleteBanner(banner.id)}
-                        style={{
-                          padding:"6px 10px",
-                          borderRadius:6,
-                          border:"1px solid #DC2626",
-                          background:"#DC2626",
-                          color:"white",
-                          fontWeight:600,
-                          cursor:"pointer",
-                          fontSize:12,
-                          transition:"background 0.2s"
-                        }}
-                        onMouseOver={(e) => e.target.style.background = "#B91C1C"}
-                        onMouseOut={(e) => e.target.style.background = "#DC2626"}
-                        title="Eliminar banner"
-                      >
-                        🗑️
-                      </button>
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -6987,6 +7315,122 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;500;600;700;800;900&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  /* Cards de banners en móviles - selectores específicos */
+  @media (max-width: 768px) {
+    .banner-card {
+      overflow: hidden !important;
+      border: "1px solid #E5E7EB" !important;
+      border-radius: 12px !important;
+      padding: 16px !important;
+      background: white !important;
+      position: relative !important;
+    }
+    
+    .banner-card .banner-card-content {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 12px !important;
+    }
+    
+    .banner-card .banner-card-main {
+      display: flex !important;
+      gap: 12px !important;
+      align-items: flex-start !important;
+    }
+    
+    .banner-card .banner-card-image {
+      flex-shrink: 0 !important;
+      width: 80px !important;
+      height: 60px !important;
+      object-fit: contain !important;
+      background: #111827 !important;
+      border-radius: 8px !important;
+      border: 1px solid #E5E7EB !important;
+    }
+    
+    .banner-card .banner-card-info {
+      flex: 1 !important;
+      min-width: 0 !important;
+    }
+    
+    .banner-card .banner-card-title {
+      font-weight: 600 !important;
+      font-size: 14px !important;
+      margin-bottom: 4px !important;
+    }
+    
+    .banner-card .banner-card-description {
+      font-size: 12px !important;
+      color: #6B7280 !important;
+      margin-bottom: 4px !important;
+    }
+    
+    .banner-card .banner-card-link {
+      font-size: 12px !important;
+      color: #2563EB !important;
+      margin-bottom: 4px !important;
+    }
+    
+    .banner-card .banner-card-status {
+      font-size: 11px !important;
+      padding: 2px 8px !important;
+      border-radius: 12px !important;
+      font-weight: 600 !important;
+      display: inline-block !important;
+    }
+    
+    .banner-card .banner-card-divider {
+      height: 1px !important;
+      background: #E5E7EB !important;
+      margin: 8px 0 !important;
+    }
+    
+    .banner-card .banner-actions-container {
+      display: flex !important;
+      flex-direction: row !important;
+      gap: 12px !important;
+      align-items: center !important;
+      justify-content: center !important;
+      width: 100% !important;
+      margin-top: 12px !important;
+    }
+    
+    .banner-card .banner-action-btn {
+      min-width: 100px !important;
+      max-width: none !important;
+      width: auto !important;
+      height: 44px !important;
+      padding: 10px 16px !important;
+      border-radius: 8px !important;
+      font-size: 13px !important;
+      font-weight: 600 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer !important;
+      transition: all 0.2s !important;
+      border: none !important;
+      color: white !important;
+      flex: 1 !important;
+    }
+    
+    .banner-card .banner-action-btn.edit {
+      background: #3B82F6 !important;
+    }
+    
+    .banner-card .banner-action-btn.edit:hover {
+      background: #2563EB !important;
+    }
+    
+    .banner-card .banner-action-btn.delete {
+      background: #DC2626 !important;
+    }
+    
+    .banner-card .banner-action-btn.delete:hover {
+      background: #B91C1C !important;
+    }
+  }
 
   .overlay { position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:400; opacity:0; pointer-events:none; transition:opacity 0.25s; }
   .overlay.show { opacity:1; pointer-events:all; }
