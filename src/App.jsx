@@ -115,6 +115,9 @@ export default function StarFamilyApp() {
   // Estado para controlar acordeón de FAQs
   const [expandedFaq, setExpandedFaq] = useState(null);
   
+  // Estado para controlar menú hamburguesa móvil
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
   const [shippingInfo, setShippingInfo] = useState({
     title: "ENVÍOS GRATIS",
     description: "Recibí tu pedido sin costo de envío coordinando día y zona",
@@ -290,6 +293,32 @@ export default function StarFamilyApp() {
       showToast('❌ Error al cambiar estado del producto', 'error');
     }
   };
+
+  // Efecto para mostrar botón admin oculto con scroll
+  useEffect(() => {
+    let scrollTimer = null;
+    
+    const handleScroll = () => {
+      const adminBtn = document.getElementById('mobile-admin-btn');
+      if (!adminBtn) return;
+      
+      // Mostrar botón si se hizo scroll hacia abajo más de 100px
+      if (window.scrollY > 100) {
+        adminBtn.style.display = 'block';
+        setTimeout(() => {
+          adminBtn.style.opacity = '1';
+        }, 100);
+      } else {
+        adminBtn.style.opacity = '0';
+        setTimeout(() => {
+          adminBtn.style.display = 'none';
+        }, 300);
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   
   // Función para filtrar productos del panel admin
@@ -2882,8 +2911,15 @@ export default function StarFamilyApp() {
       {/* HEADER */}
       <header style={{ background:"#111111", position:"sticky", top:0, zIndex:500, boxShadow:"0 2px 16px rgba(0,0,0,0.4)" }}>
         <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 16px", height:62, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={() => { setView("shop"); setCat("Todos"); }}>
-            <div style={{ borderRadius:"50%", width:44, height:44, display:"flex", alignItems:"center", justifyContent:"center", border:"2.5px solid #F5A623", flexShrink:0, overflow:"hidden", background:"#111" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={() => { setView("shop"); setCat("Todos"); setMobileMenuOpen(false); }}>
+            <div 
+              style={{ borderRadius:"50%", width:44, height:44, display:"flex", alignItems:"center", justifyContent:"center", border:"2.5px solid #F5A623", flexShrink:0, overflow:"hidden", background:"#111" }}
+              onDoubleClick={() => {
+                setView("admin");
+                setMobileMenuOpen(false);
+                showToast("🔐 Acceso admin activado", "success");
+              }}
+            >
               <img src="https://bedccnjylrnkacaxtusv.supabase.co/storage/v1/object/public/imagenes/274300884_477506477168087_6457824232979322157_n.jpg" alt="Star Family Logo" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
             </div>
             <div>
@@ -2891,16 +2927,443 @@ export default function StarFamilyApp() {
               <div style={{ color:"#F5A623", fontSize:8, letterSpacing:4, fontWeight:700 }}>CALIDAD Y CONFIANZA</div>
             </div>
           </div>
-          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-            <button onClick={() => setView(view==="admin"?"shop":"admin")} className="btn-ghost" style={{ fontSize:12, padding:"7px 13px" }}>
-              {view==="admin" ? "🛒 Tienda" : "⚙️ Admin"}
+          
+          {/* Desktop Navigation */}
+          <div className="desktop-nav" style={{ display:"flex", gap:8, alignItems:"center" }}>
+            <button 
+              onClick={() => { 
+                const kitElement = document.getElementById('kit-gastronomico');
+                if (kitElement) {
+                  kitElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }} 
+              className="btn-ghost" 
+              style={{ fontSize:12, padding:"7px 13px" }}
+            >
+              🔥 Kit
+            </button>
+            <button 
+              onClick={() => { 
+                const shippingElement = document.getElementById('envios-gratis');
+                if (shippingElement) {
+                  shippingElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }} 
+              className="btn-ghost" 
+              style={{ fontSize:12, padding:"7px 13px" }}
+            >
+              🚚 Envíos
+            </button>
+            <button 
+              onClick={() => { 
+                const faqsElement = document.getElementById('faqs-section');
+                if (faqsElement) {
+                  faqsElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }} 
+              className="btn-ghost" 
+              style={{ fontSize:12, padding:"7px 13px" }}
+            >
+              ❓ FAQs
+            </button>
+            <button 
+              onClick={() => { 
+                const contactoElement = document.getElementById('contacto');
+                if (contactoElement) {
+                  contactoElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }} 
+              className="btn-ghost" 
+              style={{ fontSize:12, padding:"7px 13px" }}
+            >
+              📞 Contacto
             </button>
             <button onClick={() => setCartOpen(true)} className="btn-red" style={{ position:"relative", display:"flex", alignItems:"center", gap:6, padding:"8px 16px" }}>
               🛒
               {cartCount > 0 && <span style={{ background:"#F5A623", color:"#111", borderRadius:"50%", width:20, height:20, display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:800 }}>{cartCount}</span>}
             </button>
+            <button 
+              onClick={() => setView("admin")} 
+              className="btn-ghost" 
+              style={{ fontSize:11, padding:"6px 10px", opacity:0.7 }}
+              title="Acceso Administrador"
+            >
+              ⚙️
+            </button>
           </div>
+          
+          {/* Mobile Menu Button */}
+          <button 
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="mobile-menu-button"
+            style={{ 
+              display: "flex",
+              flexDirection: "column", 
+              gap: 4, 
+              background: "none", 
+              border: "none", 
+              cursor: "pointer",
+              padding: 8
+            }}
+          >
+            <span style={{ 
+              width: 25, 
+              height: 3, 
+              background: "#F5A623", 
+              borderRadius: 2,
+              transition: "all 0.3s ease",
+              transform: mobileMenuOpen ? "rotate(45deg) translate(5px, 5px)" : "rotate(0deg)"
+            }}></span>
+            <span style={{ 
+              width: 25, 
+              height: 3, 
+              background: "#F5A623", 
+              borderRadius: 2,
+              transition: "all 0.3s ease",
+              opacity: mobileMenuOpen ? 0 : 1
+            }}></span>
+            <span style={{ 
+              width: 25, 
+              height: 3, 
+              background: "#F5A623", 
+              borderRadius: 2,
+              transition: "all 0.3s ease",
+              transform: mobileMenuOpen ? "rotate(-45deg) translate(7px, -6px)" : "rotate(0deg)"
+            }}></span>
+          </button>
         </div>
+        
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div style={{ 
+            position: "absolute", 
+            top: "100%", 
+            left: 0, 
+            right: 0, 
+            background: "linear-gradient(135deg, #111111, #222222)",
+            borderBottom: "2px solid #F5A623",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+            zIndex: 499
+          }}>
+            <div style={{ padding: "20px 16px" }}>
+              {/* Navigation Links - Secciones de la Tienda */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
+                <button
+                  onClick={() => { setView("shop"); setCat("Todos"); setMobileMenuOpen(false); }}
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    background: view === "shop" ? "rgba(245, 166, 35, 0.2)" : "rgba(255,255,255,0.1)",
+                    border: view === "shop" ? "1px solid #F5A623" : "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: 8,
+                    color: "white",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    transition: "all 0.3s ease"
+                  }}
+                >
+                  🛒 Catálogo de Productos
+                </button>
+                
+                <button
+                  onClick={() => { 
+                    // Scroll to Kit Gastronómico
+                    const kitElement = document.getElementById('kit-gastronomico');
+                    if (kitElement) {
+                      kitElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                    setMobileMenuOpen(false);
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    background: "rgba(255,255,255,0.1)",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: 8,
+                    color: "white",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    transition: "all 0.3s ease"
+                  }}
+                >
+                  🔥 Kit Gastronómico
+                </button>
+                
+                <button
+                  onClick={() => { 
+                    // Scroll to Envíos Gratis
+                    const shippingElement = document.getElementById('envios-gratis');
+                    if (shippingElement) {
+                      shippingElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                    setMobileMenuOpen(false);
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    background: "rgba(255,255,255,0.1)",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: 8,
+                    color: "white",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    transition: "all 0.3s ease"
+                  }}
+                >
+                  🚚 Envíos Gratis
+                </button>
+                
+                <button
+                  onClick={() => { 
+                    // Scroll to FAQs
+                    const faqsElement = document.getElementById('faqs-section');
+                    if (faqsElement) {
+                      faqsElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                    setMobileMenuOpen(false);
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    background: "rgba(255,255,255,0.1)",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: 8,
+                    color: "white",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    transition: "all 0.3s ease"
+                  }}
+                >
+                  ❓ Preguntas Frecuentes
+                </button>
+                
+                <button
+                  onClick={() => { 
+                    // Scroll to Contacto
+                    const contactoElement = document.getElementById('contacto');
+                    if (contactoElement) {
+                      contactoElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                    setMobileMenuOpen(false);
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    background: "rgba(255,255,255,0.1)",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: 8,
+                    color: "white",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    transition: "all 0.3s ease"
+                  }}
+                >
+                  📞 Contacto
+                </button>
+                
+                <button
+                  onClick={() => { 
+                    // Scroll to Quiénes Somos (primera sección del footer)
+                    const footerElement = document.querySelector('footer');
+                    if (footerElement) {
+                      footerElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                    setMobileMenuOpen(false);
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    background: "rgba(255,255,255,0.1)",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: 8,
+                    color: "white",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    transition: "all 0.3s ease"
+                  }}
+                >
+                  🏢 Quiénes Somos
+                </button>
+                
+                                
+                <button
+                  onClick={() => { setCartOpen(true); setMobileMenuOpen(false); }}
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    background: "rgba(245, 166, 35, 0.1)",
+                    border: "1px solid #F5A623",
+                    borderRadius: 8,
+                    color: "#F5A623",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    transition: "all 0.3s ease"
+                  }}
+                >
+                  <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    🛒 Carrito
+                  </span>
+                  {cartCount > 0 && (
+                    <span style={{ 
+                      background: "#F5A623", 
+                      color: "#111", 
+                      borderRadius: "50%", 
+                      width: 24, 
+                      height: 24, 
+                      display: "inline-flex", 
+                      alignItems: "center", 
+                      justifyContent: "center", 
+                      fontSize: 12, 
+                      fontWeight: 800 
+                    }}>
+                      {cartCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+              
+              {/* Divider */}
+              <div style={{ 
+                height: 1, 
+                background: "linear-gradient(90deg, transparent, rgba(245, 166, 35, 0.3), transparent)", 
+                margin: "20px 0" 
+              }}></div>
+              
+              {/* Quick Links */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ 
+                  color: "#F5A623", 
+                  fontSize: 12, 
+                  fontWeight: 600, 
+                  textTransform: "uppercase", 
+                  letterSpacing: 1,
+                  marginBottom: 8 
+                }}>
+                  Accesos Rápidos
+                </div>
+                
+                <button
+                  onClick={() => { 
+                    // Scroll to FAQs
+                    const faqsElement = document.getElementById('faqs-section');
+                    if (faqsElement) {
+                      faqsElement.scrollIntoView({ behavior: 'smooth' });
+                    }
+                    setMobileMenuOpen(false);
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "10px 16px",
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: 6,
+                    color: "rgba(255,255,255,0.8)",
+                    fontSize: 13,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    transition: "all 0.3s ease"
+                  }}
+                >
+                  ❓ Preguntas Frecuentes
+                </button>
+                
+                <button
+                  onClick={() => { 
+                    // Scroll to contact
+                    const footerElement = document.querySelector('footer');
+                    if (footerElement) {
+                      footerElement.scrollIntoView({ behavior: 'smooth' });
+                    }
+                    setMobileMenuOpen(false);
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "10px 16px",
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: 6,
+                    color: "rgba(255,255,255,0.8)",
+                    fontSize: 13,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    transition: "all 0.3s ease"
+                  }}
+                >
+                  📞 Contacto
+                </button>
+                
+                {/* Botón admin oculto - solo visible con scroll */}
+                <div 
+                  id="mobile-admin-btn"
+                  style={{
+                    display: "none",
+                    opacity: 0,
+                    transition: "opacity 0.3s ease"
+                  }}
+                >
+                  <button
+                    onClick={() => { 
+                      setView("admin"); 
+                      setMobileMenuOpen(false); 
+                      showToast("🔐 Acceso admin activado", "success");
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "8px 16px",
+                      background: "rgba(245, 166, 35, 0.1)",
+                      border: "1px solid rgba(245, 166, 35, 0.3)",
+                      borderRadius: 6,
+                      color: "#F5A623",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
+                      transition: "all 0.3s ease"
+                    }}
+                  >
+                    🔐 Admin
+                  </button>
+                </div>
+              </div>
+              
+                          </div>
+          </div>
+        )}
       </header>
 
       {view === "shop" ? (
@@ -3231,7 +3694,7 @@ export default function StarFamilyApp() {
             )}
 
             {/* KIT GASTRONÓMICO SECCIÓN */}
-            <div style={{ maxWidth:1200, margin:"40px auto 20px", padding:"0 16px" }}>
+            <div id="kit-gastronomico" style={{ maxWidth:1200, margin:"40px auto 20px", padding:"0 16px" }}>
               <div style={{ background:"white", borderRadius:16, padding:32, boxShadow:"0 2px 8px rgba(0,0,0,0.06)" }}>
                 <div style={{ textAlign:"center", marginBottom:24 }}>
                   <div style={{ fontSize:48, marginBottom:16 }}>🔥</div>
@@ -3293,7 +3756,7 @@ export default function StarFamilyApp() {
             </div>
 
             {/* ENVÍOS GRATIS SECCIÓN */}
-            <div style={{ maxWidth:1200, margin:"0 auto 40px", padding:"0 16px" }}>
+            <div id="envios-gratis" style={{ maxWidth:1200, margin:"0 auto 40px", padding:"0 16px" }}>
               <div style={{ background:"linear-gradient(135deg, #722F37 0%, #0f0f0f 100%)", borderRadius:20, padding:32, color:"white", textAlign:"center", boxShadow:"0 12px 40px rgba(114, 47, 55, 0.4)", border:"1px solid rgba(245, 166, 35, 0.1)" }}>
                 <div style={{ fontSize:48, marginBottom:16 }}>🚚</div>
                 <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, letterSpacing:3, marginBottom:8 }}>{shippingInfo.title}</h2>
@@ -3351,7 +3814,7 @@ export default function StarFamilyApp() {
           </div>
 
           {/* SECCIÓN DE FAQs */}
-          <div style={{ maxWidth:1200, margin:"0 auto", padding:"40px 20px" }}>
+          <div id="faqs-section" style={{ maxWidth:1200, margin:"0 auto", padding:"40px 20px" }}>
             <div style={{ background:"linear-gradient(135deg, #722F37, #0f0f0f)", borderRadius:20, padding:40, color:"white", textAlign:"center", boxShadow:"0 12px 40px rgba(114, 47, 55, 0.4)", border:"1px solid rgba(245, 166, 35, 0.1)" }}>
               <div style={{ fontSize:48, marginBottom:16 }}>❓</div>
               <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:3, marginBottom:8 }}>Preguntas Frecuentes</h2>
@@ -3644,7 +4107,7 @@ export default function StarFamilyApp() {
           </div>
 
           {/* Contacto */}
-          <div>
+          <div id="contacto">
             <h3 style={{ color:"white", fontSize:16, fontWeight:700, marginBottom:16, fontFamily:"'Poppins', sans-serif" }}>Contacto</h3>
             <div style={{ display:"flex", flexDirection:"column", gap:10, color:"#9CA3AF", fontSize:14, fontFamily:"'Poppins', sans-serif" }}>
               <a
@@ -5885,6 +6348,39 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                 ⚠️ Acceso denegado. Este usuario no tiene permisos de administrador.
               </div>
             )}
+            
+            {/* Botón Volver a la Tienda */}
+            <button
+              onClick={() => window.location.href = '/'}
+              style={{
+                width: "100%",
+                marginTop: 16,
+                padding: "12px 16px",
+                background: "transparent",
+                color: "#9CA3AF",
+                border: "1px solid #374151",
+                borderRadius: 9,
+                fontSize: 13,
+                fontWeight: 600,
+                fontFamily: "'Poppins', sans-serif",
+                cursor: "pointer",
+                transition: "all 0.15s",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8
+              }}
+              onMouseOver={(e) => {
+                e.target.style.borderColor = "#9CA3AF";
+                e.target.style.color = "white";
+              }}
+              onMouseOut={(e) => {
+                e.target.style.borderColor = "#374151";
+                e.target.style.color = "#9CA3AF";
+              }}
+            >
+              🛒 Volver a la Tienda
+            </button>
           </div>
         </div>
       </div>
@@ -9095,6 +9591,17 @@ const CSS = `
   .product-card:hover { transform:translateY(-5px); box-shadow:0 10px 28px rgba(0,0,0,0.13); }
   .product-card:hover img { transform:scale(1.06); }
   
+  /* Media queries para menú hamburguesa */
+  @media(max-width:768px) {
+    .desktop-nav { display: none !important; }
+    .mobile-menu-button { display: flex !important; }
+  }
+  
+  @media(min-width:769px) {
+    .desktop-nav { display: flex !important; }
+    .mobile-menu-button { display: none !important; }
+  }
+
   /* Imágenes de productos adaptadas SOLO para móviles */
   @media(max-width:640px) { 
     .product-card img { 
