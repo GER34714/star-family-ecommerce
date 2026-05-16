@@ -96,6 +96,46 @@ export default function StarFamilyApp() {
   const [categoryError, setCategoryError] = useState('');
   const [loadingCategories, setLoadingCategories] = useState(false);
   
+  // Estados para información del Kit Gastronómico y Envíos Gratis
+  const [kitInfo, setKitInfo] = useState({
+    title: "KIT GASTRONÓMICO COMPLETO",
+    description: "Equipá tu negocio con un combo pensado para gastronomía profesional. Ideal para locales de comida, rotiserías, cafeterías, panaderías y emprendimientos.",
+    image: "https://bedccnjylrnkacaxtusv.supabase.co/storage/v1/object/public/imagenes/8df0048c-a6db-4ee5-accb-c50f32572c8e.png",
+    products: [
+      { name: "Horno Industrial", description: "Potencia y eficiencia", price: "$980.000", icon: "🔥" },
+      { name: "Mantenedor Caliente", description: "Temperatura ideal", price: "$960.000", icon: "♨️" },
+      { name: "Base para Horno", description: "Seguridad y comodidad", price: "$180.000", icon: "🛠️" }
+    ],
+    financing: "7 cuotas semanales de $309.000",
+    financingTitle: "Financiación para Comercios",
+    shippingRequirement: "3 cajas de empanadas",
+    shippingRequirementText: "Mínimo para envío gratuito del Kit Gastronómico"
+  });
+  
+  const [shippingInfo, setShippingInfo] = useState({
+    title: "ENVÍOS GRATIS",
+    description: "Recibí tu pedido sin costo de envío coordinando día y zona",
+    requirement: "",
+    requirementText: "",
+    steps: [
+      { icon: "✅", text: "Comprá fácil" },
+      { icon: "📅", text: "Coordinamos día" },
+      { icon: "📍", text: "Entrega en zona" },
+      { icon: "📦", text: "Recibí sin cargo" }
+    ],
+    disclaimer: "*Promoción válida coordinando zona y día de entrega",
+    zones: [
+      { name: "Zona 1", description: "Pilar Centro y alrededores", cost: "Gratis", time: "30-45 min", days: "Lunes a Viernes" },
+      { name: "Zona 2", description: "Escobar, Tortuguitas, Del Viso", cost: "Gratis", time: "45-60 min", days: "Martes y Jueves" },
+      { name: "Zona 3", description: "Manuel Alberti y zonas industriales", cost: "Gratis", time: "60-75 min", days: "Miércoles y Viernes" }
+    ]
+  });
+  
+  // Estados para edición temporal y botón aplicar cambios
+  const [tempKitInfo, setTempKitInfo] = useState(kitInfo);
+  const [tempShippingInfo, setTempShippingInfo] = useState(shippingInfo);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
     
   // Estados para configuración de pago
   const [paymentSettings, setPaymentSettings] = useState({
@@ -3186,6 +3226,125 @@ export default function StarFamilyApp() {
                 totalItems={filtered.length}
               />
             )}
+
+            {/* KIT GASTRONÓMICO SECCIÓN */}
+            <div style={{ maxWidth:1200, margin:"40px auto 20px", padding:"0 16px" }}>
+              <div style={{ background:"white", borderRadius:16, padding:32, boxShadow:"0 2px 8px rgba(0,0,0,0.06)" }}>
+                <div style={{ textAlign:"center", marginBottom:24 }}>
+                  <div style={{ fontSize:48, marginBottom:16 }}>🔥</div>
+                  <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:3, color:"#111", marginBottom:8 }}>{kitInfo.title}</h2>
+                  <p style={{ color:"#6B7280", fontSize:14, maxWidth:600, margin:"0 auto", lineHeight:1.6 }}>
+                    {kitInfo.description}
+                  </p>
+                </div>
+
+                {/* Imagen del kit */}
+                <div style={{ textAlign:"center", marginBottom:24 }}>
+                  <img 
+                    src={kitInfo.image} 
+                    alt="Kit Gastronómico Completo" 
+                    style={{ maxWidth:"100%", height:"auto", borderRadius:12, boxShadow:"0 4px 12px rgba(0,0,0,0.1)", maxHeight:"300px" }}
+                  />
+                </div>
+
+                {/* Productos del kit */}
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:16, marginBottom:24 }}>
+                  {kitInfo.products.map((product, i) => (
+                    <div key={i} style={{ background:"#F9FAFB", borderRadius:8, padding:16, textAlign:"center" }}>
+                      <div style={{ fontSize:32, marginBottom:8 }}>{product.icon}</div>
+                      <h4 style={{ fontSize:14, fontWeight:700, color:"#111", marginBottom:4 }}>{product.name}</h4>
+                      <p style={{ color:"#6B7280", fontSize:12, margin:"0 0 8px 0" }}>{product.description}</p>
+                      <div style={{ fontSize:16, fontWeight:700, color:"#C41E3A" }}>{product.price}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Requisito de envío */}
+                {kitInfo.shippingRequirement && (
+                  <div style={{ background:"linear-gradient(135deg, #10B981 0%, #059669 100%)", borderRadius:8, padding:16, color:"white", textAlign:"center", marginBottom:16 }}>
+                    <div style={{ fontSize:18, fontWeight:700, marginBottom:8 }}>🚚 Envío Gratis</div>
+                    <div style={{ background:"rgba(255,255,255,0.2)", borderRadius:8, padding:12, border:"2px solid white", display:"inline-block", marginBottom:8 }}>
+                      <div style={{ fontSize:20, fontWeight:800, marginBottom:4 }}>
+                        📦 {kitInfo.shippingRequirement}
+                      </div>
+                      <div style={{ fontSize:14, margin:0 }}>
+                        {kitInfo.shippingRequirementText}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Financiación */}
+                <div style={{ background:"linear-gradient(135deg, #111111 0%, #374151 100%)", borderRadius:8, padding:16, color:"white", textAlign:"center", marginBottom:16 }}>
+                  <div style={{ fontSize:18, fontWeight:700, marginBottom:8 }}>{kitInfo.financingTitle}</div>
+                  <div style={{ fontSize:20, fontWeight:700, color:"#F5A623" }}>{kitInfo.financing}</div>
+                </div>
+
+                {/* Contacto */}
+                <div style={{ textAlign:"center" }}>
+                  <a href="tel:1124953641" style={{ background:"#C41E3A", color:"white", padding:"10px 20px", borderRadius:8, textDecoration:"none", fontWeight:600, fontSize:14, display:"inline-block" }}>
+                    📱 Consultar ahora
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* ENVÍOS GRATIS SECCIÓN */}
+            <div style={{ maxWidth:1200, margin:"0 auto 40px", padding:"0 16px" }}>
+              <div style={{ background:"linear-gradient(135deg, #10B981 0%, #059669 100%)", borderRadius:16, padding:24, color:"white", textAlign:"center" }}>
+                <div style={{ fontSize:48, marginBottom:16 }}>🚚</div>
+                <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, letterSpacing:3, marginBottom:8 }}>{shippingInfo.title}</h2>
+                <p style={{ fontSize:16, marginBottom:20 }}>
+                  {shippingInfo.description}
+                </p>
+                
+                {/* Requisito destacado */}
+                {shippingInfo.requirement && (
+                  <div style={{ background:"rgba(255,255,255,0.2)", borderRadius:12, padding:16, border:"2px solid white", display:"inline-block", marginBottom:20 }}>
+                    <div style={{ fontSize:24, fontWeight:800, marginBottom:4 }}>
+                      📦 {shippingInfo.requirement}
+                    </div>
+                    <p style={{ fontSize:14, margin:0 }}>
+                      {shippingInfo.requirementText}
+                    </p>
+                  </div>
+                )}
+
+                {/* Pasos */}
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))", gap:12, marginBottom:20 }}>
+                  {shippingInfo.steps.map((paso, i) => (
+                    <div key={i} style={{ background:"rgba(255,255,255,0.1)", borderRadius:8, padding:12 }}>
+                      <div style={{ fontSize:24, marginBottom:4 }}>{paso.icon}</div>
+                      <div style={{ fontSize:12 }}>{paso.text}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Zonas de envío */}
+                <div style={{ background:"rgba(255,255,255,0.1)", borderRadius:12, padding:20, marginBottom:20 }}>
+                  <h4 style={{ fontSize:18, fontWeight:700, marginBottom:16, textAlign:"center" }}>📍 Zonas de Cobertura</h4>
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:16 }}>
+                    {shippingInfo.zones.map((zone, i) => (
+                      <div key={i} style={{ background:"rgba(255,255,255,0.1)", borderRadius:8, padding:16, textAlign:"center" }}>
+                        <div style={{ fontSize:20, fontWeight:700, marginBottom:8, color:"#F5A623" }}>{zone.name}</div>
+                        <div style={{ fontSize:14, marginBottom:8, opacity:0.9 }}>{zone.description}</div>
+                        <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, marginBottom:6 }}>
+                          <span>⏱️ {zone.time}</span>
+                          <span style={{ color:"#10F981", fontWeight:700 }}>{zone.cost}</span>
+                        </div>
+                        <div style={{ fontSize:12, opacity:0.8, fontWeight:600 }}>
+                          📅 {zone.days}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ fontSize:12, opacity:0.9, marginBottom:16 }}>
+                  {shippingInfo.disclaimer}
+                </div>
+              </div>
+            </div>
           </div>
         </>
       ) : (
@@ -3281,6 +3440,16 @@ export default function StarFamilyApp() {
             onClearBannerImage={clearBannerImagePreview}
             onDeleteBanner={deleteBanner}
             onEditBanner={startEditBanner}
+            kitInfo={kitInfo}
+            setKitInfo={setKitInfo}
+            shippingInfo={shippingInfo}
+            setShippingInfo={setShippingInfo}
+            tempKitInfo={tempKitInfo}
+            setTempKitInfo={setTempKitInfo}
+            tempShippingInfo={tempShippingInfo}
+            setTempShippingInfo={setTempShippingInfo}
+            hasUnsavedChanges={hasUnsavedChanges}
+            setHasUnsavedChanges={setHasUnsavedChanges}
                       />
       )}
 
@@ -5420,7 +5589,7 @@ function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint
 // ADMIN PANEL
 // ═══════════════════════════════════════════════════════
 
-function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint, onDeleteRestorePoint, loadingRestorePoints, restorePointsError, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview, loadingPriceHistory, priceHistoryError, onToggleSuspension, onToggleActivation, adminCurrentPage, adminTotalPages, adminProductsPerPage, adminNextPage, adminPrevPage, adminGoToPage, totalFilteredProducts, paymentSettings, setPaymentSettings, loadingPaymentSettings, setLoadingPaymentSettings, banners, setBanners, loadingBanners, bannerForm, setBannerForm, editingBanner, setEditingBanner, bannerImagePreview, setBannerImagePreview, uploadingBannerImage, onBannerSubmit, onBannerImageSelect, onClearBannerImage, onDeleteBanner, onEditBanner }) {
+function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint, onDeleteRestorePoint, loadingRestorePoints, restorePointsError, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview, loadingPriceHistory, priceHistoryError, onToggleSuspension, onToggleActivation, adminCurrentPage, adminTotalPages, adminProductsPerPage, adminNextPage, adminPrevPage, adminGoToPage, totalFilteredProducts, paymentSettings, setPaymentSettings, loadingPaymentSettings, setLoadingPaymentSettings, banners, setBanners, loadingBanners, bannerForm, setBannerForm, editingBanner, setEditingBanner, bannerImagePreview, setBannerImagePreview, uploadingBannerImage, onBannerSubmit, onBannerImageSelect, onClearBannerImage, onDeleteBanner, onEditBanner, kitInfo, setKitInfo, shippingInfo, setShippingInfo, tempKitInfo, setTempKitInfo, tempShippingInfo, setTempShippingInfo, hasUnsavedChanges, setHasUnsavedChanges }) {
   const supabase = getSupabaseClient();
   
   // Cargar configuración de pago desde Supabase
@@ -5625,6 +5794,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
           ["list","📋 Productos"],
           ["add", editing?"✏️ Editar":"➕ Agregar"],
           ["banners","🎆 Banners"],
+          ["kit","🔥 Kit y Envíos"],
           ["payment","💳 Pagos"],
           ["prices","💰 Precios"],
           ["history","📜 Historial"],
@@ -7275,6 +7445,373 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
           loadingRestorePoints={loadingRestorePoints}
           restorePointsError={restorePointsError}
         />
+      )}
+
+      {/* TAB: KIT Y ENVÍOS */}
+      {adminTab === "kit" && (
+        <div style={{ background:"white", borderRadius:16, padding:24 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+            <h3 style={{ margin:0, fontWeight:800 }}>🔥 Administrar Kit Gastronómico y Envíos</h3>
+            {hasUnsavedChanges && (
+              <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                <span style={{ fontSize:12, color:"#F59E0B", fontWeight:600 }}>⚠️ Tiene cambios sin guardar</span>
+                <button 
+                  onClick={() => {
+                    setTempKitInfo(kitInfo);
+                    setTempShippingInfo(shippingInfo);
+                    setHasUnsavedChanges(false);
+                  }}
+                  style={{ padding:"6px 12px", background:"#6B7280", color:"white", border:"none", borderRadius:6, fontSize:12, cursor:"pointer" }}
+                >
+                  🔄 Descartar
+                </button>
+                <button 
+                  onClick={() => {
+                    setKitInfo(tempKitInfo);
+                    setShippingInfo(tempShippingInfo);
+                    setHasUnsavedChanges(false);
+                  }}
+                  style={{ padding:"8px 16px", background:"#059669", color:"white", border:"none", borderRadius:8, fontSize:13, cursor:"pointer", fontWeight:600 }}
+                >
+                  ✅ Aplicar Cambios
+                </button>
+              </div>
+            )}
+          </div>
+          
+          {/* Kit Gastronómico */}
+          <div style={{ marginBottom:32, padding:20, border:"1px solid #E5E7EB", borderRadius:12 }}>
+            <h4 style={{ margin:"0 0 16px", fontWeight:700, color:"#111", fontSize:18 }}>🔥 Kit Gastronómico</h4>
+            
+            <div style={{ display:"grid", gap:16, marginBottom:20 }}>
+              <div>
+                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Título</label>
+                <input 
+                  type="text" 
+                  value={tempKitInfo.title}
+                  onChange={(e) => {
+                    setTempKitInfo({...tempKitInfo, title: e.target.value});
+                    setHasUnsavedChanges(true);
+                  }}
+                  style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14 }}
+                />
+              </div>
+              
+              <div>
+                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Descripción</label>
+                <textarea 
+                  value={tempKitInfo.description}
+                  onChange={(e) => {
+                    setTempKitInfo({...tempKitInfo, description: e.target.value});
+                    setHasUnsavedChanges(true);
+                  }}
+                  rows={3}
+                  style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14, resize:"vertical" }}
+                />
+              </div>
+              
+              <div>
+                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Imagen URL</label>
+                <input 
+                  type="text" 
+                  value={tempKitInfo.image}
+                  onChange={(e) => {
+                    setTempKitInfo({...tempKitInfo, image: e.target.value});
+                    setHasUnsavedChanges(true);
+                  }}
+                  style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14 }}
+                />
+              </div>
+            </div>
+
+            <div style={{ marginBottom:16 }}>
+              <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:12 }}>Productos del Kit</label>
+              <div style={{ display:"grid", gap:12 }}>
+                {tempKitInfo.products.map((product, index) => (
+                  <div key={index} style={{ display:"grid", gridTemplateColumns:"40px 1fr 1fr 100px auto", gap:8, alignItems:"center", padding:12, background:"#F9FAFB", borderRadius:8 }}>
+                    <div style={{ fontSize:20, textAlign:"center" }}>{product.icon}</div>
+                    <input 
+                      type="text" 
+                      value={product.name}
+                      onChange={(e) => {
+                        const newProducts = [...tempKitInfo.products];
+                        newProducts[index].name = e.target.value;
+                        setTempKitInfo({...tempKitInfo, products: newProducts});
+                        setHasUnsavedChanges(true);
+                      }}
+                      placeholder="Nombre"
+                      style={{ padding:"6px 10px", border:"1px solid #E5E7EB", borderRadius:6, fontSize:13 }}
+                    />
+                    <input 
+                      type="text" 
+                      value={product.description}
+                      onChange={(e) => {
+                        const newProducts = [...tempKitInfo.products];
+                        newProducts[index].description = e.target.value;
+                        setTempKitInfo({...tempKitInfo, products: newProducts});
+                        setHasUnsavedChanges(true);
+                      }}
+                      placeholder="Descripción"
+                      style={{ padding:"6px 10px", border:"1px solid #E5E7EB", borderRadius:6, fontSize:13 }}
+                    />
+                    <input 
+                      type="text" 
+                      value={product.price}
+                      onChange={(e) => {
+                        const newProducts = [...tempKitInfo.products];
+                        newProducts[index].price = e.target.value;
+                        setTempKitInfo({...tempKitInfo, products: newProducts});
+                        setHasUnsavedChanges(true);
+                      }}
+                      placeholder="Precio"
+                      style={{ padding:"6px 10px", border:"1px solid #E5E7EB", borderRadius:6, fontSize:13 }}
+                    />
+                    <input 
+                      type="text" 
+                      value={product.icon}
+                      onChange={(e) => {
+                        const newProducts = [...tempKitInfo.products];
+                        newProducts[index].icon = e.target.value;
+                        setTempKitInfo({...tempKitInfo, products: newProducts});
+                        setHasUnsavedChanges(true);
+                      }}
+                      placeholder="Icono"
+                      maxLength={2}
+                      style={{ width:"50px", padding:"6px 10px", border:"1px solid #E5E7EB", borderRadius:6, fontSize:13, textAlign:"center" }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:16 }}>
+              <div>
+                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Título Financiación</label>
+                <input 
+                  type="text" 
+                  value={tempKitInfo.financingTitle}
+                  onChange={(e) => {
+                    setTempKitInfo({...tempKitInfo, financingTitle: e.target.value});
+                    setHasUnsavedChanges(true);
+                  }}
+                  style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14 }}
+                />
+              </div>
+              <div>
+                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Texto Financiación</label>
+                <input 
+                  type="text" 
+                  value={tempKitInfo.financing}
+                  onChange={(e) => {
+                    setTempKitInfo({...tempKitInfo, financing: e.target.value});
+                    setHasUnsavedChanges(true);
+                  }}
+                  style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14 }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+              <div>
+                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Requisito de Envío</label>
+                <input 
+                  type="text" 
+                  value={tempKitInfo.shippingRequirement || ""}
+                  onChange={(e) => {
+                    setTempKitInfo({...tempKitInfo, shippingRequirement: e.target.value});
+                    setHasUnsavedChanges(true);
+                  }}
+                  placeholder="Ej: 3 cajas de empanadas"
+                  style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14 }}
+                />
+              </div>
+              <div>
+                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Texto Requisito Envío</label>
+                <input 
+                  type="text" 
+                  value={tempKitInfo.shippingRequirementText || ""}
+                  onChange={(e) => {
+                    setTempKitInfo({...tempKitInfo, shippingRequirementText: e.target.value});
+                    setHasUnsavedChanges(true);
+                  }}
+                  placeholder="Ej: Mínimo para envío gratuito del Kit"
+                  style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14 }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Envíos Gratis */}
+          <div style={{ padding:20, border:"1px solid #E5E7EB", borderRadius:12 }}>
+            <h4 style={{ margin:"0 0 16px", fontWeight:700, color:"#111", fontSize:18 }}>🚚 Envíos Gratis</h4>
+            
+            <div style={{ display:"grid", gap:16, marginBottom:20 }}>
+              <div>
+                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Título</label>
+                <input 
+                  type="text" 
+                  value={tempShippingInfo.title}
+                  onChange={(e) => {
+                    setTempShippingInfo({...tempShippingInfo, title: e.target.value});
+                    setHasUnsavedChanges(true);
+                  }}
+                  style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14 }}
+                />
+              </div>
+              
+              <div>
+                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Descripción</label>
+                <textarea 
+                  value={tempShippingInfo.description}
+                  onChange={(e) => {
+                    setTempShippingInfo({...tempShippingInfo, description: e.target.value});
+                    setHasUnsavedChanges(true);
+                  }}
+                  rows={2}
+                  style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14, resize:"vertical" }}
+                />
+              </div>
+              
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+                <div>
+                  <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Requisito</label>
+                  <input 
+                    type="text" 
+                    value={tempShippingInfo.requirement}
+                    onChange={(e) => {
+                      setTempShippingInfo({...tempShippingInfo, requirement: e.target.value});
+                      setHasUnsavedChanges(true);
+                    }}
+                    style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Texto Requisito</label>
+                  <input 
+                    type="text" 
+                    value={tempShippingInfo.requirementText}
+                    onChange={(e) => {
+                      setTempShippingInfo({...tempShippingInfo, requirementText: e.target.value});
+                      setHasUnsavedChanges(true);
+                    }}
+                    style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14 }}
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Aclaración</label>
+                <input 
+                  type="text" 
+                  value={tempShippingInfo.disclaimer}
+                  onChange={(e) => {
+                    setTempShippingInfo({...tempShippingInfo, disclaimer: e.target.value});
+                    setHasUnsavedChanges(true);
+                  }}
+                  style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14 }}
+                />
+              </div>
+            </div>
+
+            <div style={{ marginBottom:16 }}>
+              <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:12 }}>Zonas de Envío</label>
+              <div style={{ display:"grid", gap:12 }}>
+                {tempShippingInfo.zones.map((zone, index) => (
+                  <div key={index} style={{ display:"grid", gridTemplateColumns:"80px 1fr 80px 80px 100px auto", gap:8, alignItems:"center", padding:12, background:"#F0FDF4", borderRadius:8 }}>
+                    <input 
+                      type="text" 
+                      value={zone.name}
+                      onChange={(e) => {
+                        const newZones = [...tempShippingInfo.zones];
+                        newZones[index].name = e.target.value;
+                        setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                        setHasUnsavedChanges(true);
+                      }}
+                      placeholder="Zona"
+                      style={{ padding:"6px 10px", border:"1px solid #BBF7D0", borderRadius:6, fontSize:13, background:"white" }}
+                    />
+                    <input 
+                      type="text" 
+                      value={zone.description}
+                      onChange={(e) => {
+                        const newZones = [...tempShippingInfo.zones];
+                        newZones[index].description = e.target.value;
+                        setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                        setHasUnsavedChanges(true);
+                      }}
+                      placeholder="Descripción"
+                      style={{ padding:"6px 10px", border:"1px solid #BBF7D0", borderRadius:6, fontSize:13, background:"white" }}
+                    />
+                    <input 
+                      type="text" 
+                      value={zone.cost}
+                      onChange={(e) => {
+                        const newZones = [...tempShippingInfo.zones];
+                        newZones[index].cost = e.target.value;
+                        setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                        setHasUnsavedChanges(true);
+                      }}
+                      placeholder="Costo"
+                      style={{ padding:"6px 10px", border:"1px solid #BBF7D0", borderRadius:6, fontSize:13, background:"white" }}
+                    />
+                    <input 
+                      type="text" 
+                      value={zone.time}
+                      onChange={(e) => {
+                        const newZones = [...tempShippingInfo.zones];
+                        newZones[index].time = e.target.value;
+                        setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                        setHasUnsavedChanges(true);
+                      }}
+                      placeholder="Tiempo"
+                      style={{ padding:"6px 10px", border:"1px solid #BBF7D0", borderRadius:6, fontSize:13, background:"white" }}
+                    />
+                    <input 
+                      type="text" 
+                      value={zone.days || ""}
+                      onChange={(e) => {
+                        const newZones = [...tempShippingInfo.zones];
+                        newZones[index].days = e.target.value;
+                        setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                        setHasUnsavedChanges(true);
+                      }}
+                      placeholder="Días"
+                      style={{ padding:"6px 10px", border:"1px solid #BBF7D0", borderRadius:6, fontSize:13, background:"white" }}
+                    />
+                    <button 
+                      onClick={() => {
+                        const newZones = tempShippingInfo.zones.filter((_, i) => i !== index);
+                        setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                        setHasUnsavedChanges(true);
+                      }}
+                      style={{ padding:"6px 12px", background:"#DC2626", color:"white", border:"none", borderRadius:6, fontSize:12, cursor:"pointer" }}
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                ))}
+              </div>
+              
+              <button 
+                onClick={() => {
+                  const newZones = [...tempShippingInfo.zones, { name: "", description: "", cost: "Gratis", time: "30-45 min", days: "" }];
+                  setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                  setHasUnsavedChanges(true);
+                }}
+                style={{ marginTop:12, padding:"8px 16px", background:"#059669", color:"white", border:"none", borderRadius:8, fontSize:13, cursor:"pointer" }}
+              >
+                ➕ Agregar Zona
+              </button>
+            </div>
+          </div>
+
+          <div style={{ marginTop:24, padding:16, background:"#FEF3C7", borderRadius:8, border:"1px solid #F59E0B" }}>
+            <div style={{ fontSize:13, color:"#92400E", fontWeight:600, marginBottom:4 }}>💡 Información</div>
+            <div style={{ fontSize:12, color:"#78350F", lineHeight:1.5 }}>
+              Los cambios se aplican solo cuando hacés clic en "Aplicar Cambios". Podés editar precios, textos, días de entrega por zona y modificar toda la información del Kit Gastronómico.
+            </div>
+          </div>
+        </div>
       )}
 
       {/* TAB: EXCEL */}

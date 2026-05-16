@@ -70,11 +70,11 @@ const BannerSection = ({ banners = [], loading = false }) => {
       style={{ 
         position: "relative", 
         width: "100%", 
-        height: isMobile ? "250px" : "300px", 
+        height: isMobile ? "350px" : "400px", 
         overflow: "hidden", 
-        borderRadius: "12px",
+        borderRadius: "0px",
         margin: "16px 0",
-        background: "#000"
+        background: "transparent"
       }}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
@@ -100,10 +100,10 @@ const BannerSection = ({ banners = [], loading = false }) => {
             alt={currentBanner.title || "Banner"}
             style={{
               width: "100%",
-              height: isMobile ? "42%" : "100%",
-              objectFit: "contain",
+              height: isMobile ? "70%" : "100%",
+              objectFit: "cover",
               objectPosition: isMobile ? "top center" : "center",
-              background: "#000"
+              background: "transparent"
             }}
           />
           
@@ -115,7 +115,7 @@ const BannerSection = ({ banners = [], loading = false }) => {
                 bottom: 0,
                 left: 0,
                 right: 0,
-                minHeight: isMobile ? "58%" : "auto",
+                minHeight: isMobile ? "30%" : "auto",
                 background: isMobile ? "linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.75))" : "linear-gradient(to top, rgba(0,0,0,0.8), transparent)",
                 padding: isMobile ? "14px 16px 26px" : "20px",
                 color: "white"
