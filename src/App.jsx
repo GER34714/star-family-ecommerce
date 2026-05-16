@@ -7449,19 +7449,40 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
 
       {/* TAB: KIT Y ENVÍOS */}
       {adminTab === "kit" && (
-        <div style={{ background:"white", borderRadius:16, padding:24 }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
-            <h3 style={{ margin:0, fontWeight:800 }}>🔥 Administrar Kit Gastronómico y Envíos</h3>
-            {hasUnsavedChanges && (
-              <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                <span style={{ fontSize:12, color:"#F59E0B", fontWeight:600 }}>⚠️ Tiene cambios sin guardar</span>
+        <div style={{ background:"white", borderRadius:12, padding:"12px", maxWidth:"100%", margin:0 }}>
+          {/* Header con alerta de cambios */}
+          {hasUnsavedChanges && (
+            <div style={{ 
+              background:"linear-gradient(135deg, #F59E0B, #D97706)", 
+              color:"white", 
+              padding:"16px", 
+              borderRadius:12, 
+              marginBottom:16,
+              border:"2px solid #F59E0B",
+              boxShadow:"0 4px 12px rgba(245, 158, 11, 0.3)"
+            }}>
+              <div style={{ textAlign:"center", marginBottom:12 }}>
+                <div style={{ fontSize:16, fontWeight:700, marginBottom:4 }}>⚠️ Tenés cambios sin guardar</div>
+                <div style={{ fontSize:13, opacity:0.9 }}>Los cambios no se verán en la tienda hasta que los apliques</div>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
                 <button 
                   onClick={() => {
                     setTempKitInfo(kitInfo);
                     setTempShippingInfo(shippingInfo);
                     setHasUnsavedChanges(false);
                   }}
-                  style={{ padding:"6px 12px", background:"#6B7280", color:"white", border:"none", borderRadius:6, fontSize:12, cursor:"pointer" }}
+                  style={{ 
+                    padding:"12px 8px", 
+                    background:"rgba(255,255,255,0.2)", 
+                    color:"white", 
+                    border:"1px solid rgba(255,255,255,0.3)", 
+                    borderRadius:8, 
+                    fontSize:13, 
+                    cursor:"pointer", 
+                    fontWeight:600,
+                    transition:"all 0.2s"
+                  }}
                 >
                   🔄 Descartar
                 </button>
@@ -7471,344 +7492,793 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                     setShippingInfo(tempShippingInfo);
                     setHasUnsavedChanges(false);
                   }}
-                  style={{ padding:"8px 16px", background:"#059669", color:"white", border:"none", borderRadius:8, fontSize:13, cursor:"pointer", fontWeight:600 }}
+                  style={{ 
+                    padding:"12px 8px", 
+                    background:"white", 
+                    color:"#D97706", 
+                    border:"none", 
+                    borderRadius:8, 
+                    fontSize:13, 
+                    cursor:"pointer", 
+                    fontWeight:700,
+                    transition:"all 0.2s"
+                  }}
                 >
                   ✅ Aplicar Cambios
                 </button>
               </div>
-            )}
-          </div>
-          
-          {/* Kit Gastronómico */}
-          <div style={{ marginBottom:32, padding:20, border:"1px solid #E5E7EB", borderRadius:12 }}>
-            <h4 style={{ margin:"0 0 16px", fontWeight:700, color:"#111", fontSize:18 }}>🔥 Kit Gastronómico</h4>
-            
-            <div style={{ display:"grid", gap:16, marginBottom:20 }}>
-              <div>
-                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Título</label>
-                <input 
-                  type="text" 
-                  value={tempKitInfo.title}
-                  onChange={(e) => {
-                    setTempKitInfo({...tempKitInfo, title: e.target.value});
-                    setHasUnsavedChanges(true);
-                  }}
-                  style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14 }}
-                />
-              </div>
-              
-              <div>
-                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Descripción</label>
-                <textarea 
-                  value={tempKitInfo.description}
-                  onChange={(e) => {
-                    setTempKitInfo({...tempKitInfo, description: e.target.value});
-                    setHasUnsavedChanges(true);
-                  }}
-                  rows={3}
-                  style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14, resize:"vertical" }}
-                />
-              </div>
-              
-              <div>
-                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Imagen URL</label>
-                <input 
-                  type="text" 
-                  value={tempKitInfo.image}
-                  onChange={(e) => {
-                    setTempKitInfo({...tempKitInfo, image: e.target.value});
-                    setHasUnsavedChanges(true);
-                  }}
-                  style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14 }}
-                />
-              </div>
             </div>
+          )}
 
-            <div style={{ marginBottom:16 }}>
-              <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:12 }}>Productos del Kit</label>
-              <div style={{ display:"grid", gap:12 }}>
-                {tempKitInfo.products.map((product, index) => (
-                  <div key={index} style={{ display:"grid", gridTemplateColumns:"40px 1fr 1fr 100px auto", gap:8, alignItems:"center", padding:12, background:"#F9FAFB", borderRadius:8 }}>
-                    <div style={{ fontSize:20, textAlign:"center" }}>{product.icon}</div>
-                    <input 
-                      type="text" 
-                      value={product.name}
-                      onChange={(e) => {
-                        const newProducts = [...tempKitInfo.products];
-                        newProducts[index].name = e.target.value;
-                        setTempKitInfo({...tempKitInfo, products: newProducts});
-                        setHasUnsavedChanges(true);
-                      }}
-                      placeholder="Nombre"
-                      style={{ padding:"6px 10px", border:"1px solid #E5E7EB", borderRadius:6, fontSize:13 }}
-                    />
-                    <input 
-                      type="text" 
-                      value={product.description}
-                      onChange={(e) => {
-                        const newProducts = [...tempKitInfo.products];
-                        newProducts[index].description = e.target.value;
-                        setTempKitInfo({...tempKitInfo, products: newProducts});
-                        setHasUnsavedChanges(true);
-                      }}
-                      placeholder="Descripción"
-                      style={{ padding:"6px 10px", border:"1px solid #E5E7EB", borderRadius:6, fontSize:13 }}
-                    />
-                    <input 
-                      type="text" 
-                      value={product.price}
-                      onChange={(e) => {
-                        const newProducts = [...tempKitInfo.products];
-                        newProducts[index].price = e.target.value;
-                        setTempKitInfo({...tempKitInfo, products: newProducts});
-                        setHasUnsavedChanges(true);
-                      }}
-                      placeholder="Precio"
-                      style={{ padding:"6px 10px", border:"1px solid #E5E7EB", borderRadius:6, fontSize:13 }}
-                    />
-                    <input 
-                      type="text" 
-                      value={product.icon}
-                      onChange={(e) => {
-                        const newProducts = [...tempKitInfo.products];
-                        newProducts[index].icon = e.target.value;
-                        setTempKitInfo({...tempKitInfo, products: newProducts});
-                        setHasUnsavedChanges(true);
-                      }}
-                      placeholder="Icono"
-                      maxLength={2}
-                      style={{ width:"50px", padding:"6px 10px", border:"1px solid #E5E7EB", borderRadius:6, fontSize:13, textAlign:"center" }}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:16 }}>
-              <div>
-                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Título Financiación</label>
-                <input 
-                  type="text" 
-                  value={tempKitInfo.financingTitle}
-                  onChange={(e) => {
-                    setTempKitInfo({...tempKitInfo, financingTitle: e.target.value});
-                    setHasUnsavedChanges(true);
-                  }}
-                  style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14 }}
-                />
-              </div>
-              <div>
-                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Texto Financiación</label>
-                <input 
-                  type="text" 
-                  value={tempKitInfo.financing}
-                  onChange={(e) => {
-                    setTempKitInfo({...tempKitInfo, financing: e.target.value});
-                    setHasUnsavedChanges(true);
-                  }}
-                  style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14 }}
-                />
-              </div>
-            </div>
-
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
-              <div>
-                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Requisito de Envío</label>
-                <input 
-                  type="text" 
-                  value={tempKitInfo.shippingRequirement || ""}
-                  onChange={(e) => {
-                    setTempKitInfo({...tempKitInfo, shippingRequirement: e.target.value});
-                    setHasUnsavedChanges(true);
-                  }}
-                  placeholder="Ej: 3 cajas de empanadas"
-                  style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14 }}
-                />
-              </div>
-              <div>
-                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Texto Requisito Envío</label>
-                <input 
-                  type="text" 
-                  value={tempKitInfo.shippingRequirementText || ""}
-                  onChange={(e) => {
-                    setTempKitInfo({...tempKitInfo, shippingRequirementText: e.target.value});
-                    setHasUnsavedChanges(true);
-                  }}
-                  placeholder="Ej: Mínimo para envío gratuito del Kit"
-                  style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14 }}
-                />
-              </div>
-            </div>
+          {/* Tabs internas para mobile */}
+          <div style={{ 
+            display:"flex", 
+            background:"#F3F4F6", 
+            borderRadius:8, 
+            padding:"4px", 
+            marginBottom:16,
+            gap:4
+          }}>
+            <button
+              onClick={() => {}}
+              style={{ 
+                flex:1, 
+                padding:"8px", 
+                background:"white", 
+                border:"none", 
+                borderRadius:6, 
+                fontSize:12, 
+                fontWeight:600, 
+                color:"#111", 
+                cursor:"pointer",
+                boxShadow:"0 1px 3px rgba(0,0,0,0.1)"
+              }}
+            >
+              🔥 Kit
+            </button>
+            <button
+              onClick={() => {}}
+              style={{ 
+                flex:1, 
+                padding:"8px", 
+                background:"transparent", 
+                border:"none", 
+                borderRadius:6, 
+                fontSize:12, 
+                fontWeight:600, 
+                color:"#6B7280", 
+                cursor:"pointer"
+              }}
+            >
+              🚚 Envíos
+            </button>
           </div>
 
-          {/* Envíos Gratis */}
-          <div style={{ padding:20, border:"1px solid #E5E7EB", borderRadius:12 }}>
-            <h4 style={{ margin:"0 0 16px", fontWeight:700, color:"#111", fontSize:18 }}>🚚 Envíos Gratis</h4>
-            
-            <div style={{ display:"grid", gap:16, marginBottom:20 }}>
-              <div>
-                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Título</label>
-                <input 
-                  type="text" 
-                  value={tempShippingInfo.title}
-                  onChange={(e) => {
-                    setTempShippingInfo({...tempShippingInfo, title: e.target.value});
-                    setHasUnsavedChanges(true);
-                  }}
-                  style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14 }}
-                />
-              </div>
+          {/* Sección Kit Gastronómico */}
+          <div style={{ marginBottom:20 }}>
+            <div style={{ background:"white", border:"1px solid #E5E7EB", borderRadius:12, padding:16, marginBottom:16 }}>
+              <h3 style={{ margin:"0 0 16px", fontSize:18, fontWeight:700, color:"#111", textAlign:"center" }}>
+                🔥 Kit Gastronómico
+              </h3>
               
-              <div>
-                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Descripción</label>
-                <textarea 
-                  value={tempShippingInfo.description}
-                  onChange={(e) => {
-                    setTempShippingInfo({...tempShippingInfo, description: e.target.value});
-                    setHasUnsavedChanges(true);
-                  }}
-                  rows={2}
-                  style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14, resize:"vertical" }}
-                />
-              </div>
-              
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+              {/* Campos principales */}
+              <div style={{ display:"grid", gap:16, marginBottom:20 }}>
                 <div>
-                  <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Requisito</label>
+                  <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:8 }}>📝 Título Principal</label>
                   <input 
                     type="text" 
-                    value={tempShippingInfo.requirement}
+                    value={tempKitInfo.title}
                     onChange={(e) => {
-                      setTempShippingInfo({...tempShippingInfo, requirement: e.target.value});
+                      setTempKitInfo({...tempKitInfo, title: e.target.value});
                       setHasUnsavedChanges(true);
                     }}
-                    style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14 }}
+                    style={{ 
+                      width:"100%", 
+                      padding:"14px 12px", 
+                      border:"2px solid #E5E7EB", 
+                      borderRadius:8, 
+                      fontSize:15, 
+                      fontWeight:500,
+                      boxSizing:"border-box",
+                      transition:"border-color 0.2s"
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = "#C41E3A"}
+                    onBlur={(e) => e.target.style.borderColor = "#E5E7EB"}
                   />
                 </div>
+                
                 <div>
-                  <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Texto Requisito</label>
-                  <input 
-                    type="text" 
-                    value={tempShippingInfo.requirementText}
+                  <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:8 }}>📄 Descripción</label>
+                  <textarea 
+                    value={tempKitInfo.description}
                     onChange={(e) => {
-                      setTempShippingInfo({...tempShippingInfo, requirementText: e.target.value});
+                      setTempKitInfo({...tempKitInfo, description: e.target.value});
                       setHasUnsavedChanges(true);
                     }}
-                    style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14 }}
+                    rows={4}
+                    style={{ 
+                      width:"100%", 
+                      padding:"14px 12px", 
+                      border:"2px solid #E5E7EB", 
+                      borderRadius:8, 
+                      fontSize:14, 
+                      resize:"vertical", 
+                      boxSizing:"border-box",
+                      fontFamily:"inherit",
+                      lineHeight:1.5,
+                      transition:"border-color 0.2s"
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = "#C41E3A"}
+                    onBlur={(e) => e.target.style.borderColor = "#E5E7EB"}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:8 }}>🖼️ URL de la Imagen</label>
+                  <input 
+                    type="text" 
+                    value={tempKitInfo.image}
+                    onChange={(e) => {
+                      setTempKitInfo({...tempKitInfo, image: e.target.value});
+                      setHasUnsavedChanges(true);
+                    }}
+                    style={{ 
+                      width:"100%", 
+                      padding:"14px 12px", 
+                      border:"2px solid #E5E7EB", 
+                      borderRadius:8, 
+                      fontSize:14, 
+                      boxSizing:"border-box",
+                      transition:"border-color 0.2s"
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = "#C41E3A"}
+                    onBlur={(e) => e.target.style.borderColor = "#E5E7EB"}
                   />
                 </div>
               </div>
-              
-              <div>
-                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Aclaración</label>
-                <input 
-                  type="text" 
-                  value={tempShippingInfo.disclaimer}
-                  onChange={(e) => {
-                    setTempShippingInfo({...tempShippingInfo, disclaimer: e.target.value});
-                    setHasUnsavedChanges(true);
-                  }}
-                  style={{ width:"100%", padding:"8px 12px", border:"1px solid #E5E7EB", borderRadius:8, fontSize:14 }}
-                />
-              </div>
-            </div>
 
-            <div style={{ marginBottom:16 }}>
-              <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:12 }}>Zonas de Envío</label>
-              <div style={{ display:"grid", gap:12 }}>
-                {tempShippingInfo.zones.map((zone, index) => (
-                  <div key={index} style={{ display:"grid", gridTemplateColumns:"80px 1fr 80px 80px 100px auto", gap:8, alignItems:"center", padding:12, background:"#F0FDF4", borderRadius:8 }}>
-                    <input 
-                      type="text" 
-                      value={zone.name}
-                      onChange={(e) => {
-                        const newZones = [...tempShippingInfo.zones];
-                        newZones[index].name = e.target.value;
-                        setTempShippingInfo({...tempShippingInfo, zones: newZones});
-                        setHasUnsavedChanges(true);
-                      }}
-                      placeholder="Zona"
-                      style={{ padding:"6px 10px", border:"1px solid #BBF7D0", borderRadius:6, fontSize:13, background:"white" }}
-                    />
-                    <input 
-                      type="text" 
-                      value={zone.description}
-                      onChange={(e) => {
-                        const newZones = [...tempShippingInfo.zones];
-                        newZones[index].description = e.target.value;
-                        setTempShippingInfo({...tempShippingInfo, zones: newZones});
-                        setHasUnsavedChanges(true);
-                      }}
-                      placeholder="Descripción"
-                      style={{ padding:"6px 10px", border:"1px solid #BBF7D0", borderRadius:6, fontSize:13, background:"white" }}
-                    />
-                    <input 
-                      type="text" 
-                      value={zone.cost}
-                      onChange={(e) => {
-                        const newZones = [...tempShippingInfo.zones];
-                        newZones[index].cost = e.target.value;
-                        setTempShippingInfo({...tempShippingInfo, zones: newZones});
-                        setHasUnsavedChanges(true);
-                      }}
-                      placeholder="Costo"
-                      style={{ padding:"6px 10px", border:"1px solid #BBF7D0", borderRadius:6, fontSize:13, background:"white" }}
-                    />
-                    <input 
-                      type="text" 
-                      value={zone.time}
-                      onChange={(e) => {
-                        const newZones = [...tempShippingInfo.zones];
-                        newZones[index].time = e.target.value;
-                        setTempShippingInfo({...tempShippingInfo, zones: newZones});
-                        setHasUnsavedChanges(true);
-                      }}
-                      placeholder="Tiempo"
-                      style={{ padding:"6px 10px", border:"1px solid #BBF7D0", borderRadius:6, fontSize:13, background:"white" }}
-                    />
-                    <input 
-                      type="text" 
-                      value={zone.days || ""}
-                      onChange={(e) => {
-                        const newZones = [...tempShippingInfo.zones];
-                        newZones[index].days = e.target.value;
-                        setTempShippingInfo({...tempShippingInfo, zones: newZones});
-                        setHasUnsavedChanges(true);
-                      }}
-                      placeholder="Días"
-                      style={{ padding:"6px 10px", border:"1px solid #BBF7D0", borderRadius:6, fontSize:13, background:"white" }}
-                    />
-                    <button 
-                      onClick={() => {
-                        const newZones = tempShippingInfo.zones.filter((_, i) => i !== index);
-                        setTempShippingInfo({...tempShippingInfo, zones: newZones});
-                        setHasUnsavedChanges(true);
-                      }}
-                      style={{ padding:"6px 12px", background:"#DC2626", color:"white", border:"none", borderRadius:6, fontSize:12, cursor:"pointer" }}
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                ))}
+              {/* Productos del Kit */}
+              <div style={{ marginBottom:20 }}>
+                <div style={{ fontSize:16, fontWeight:700, color:"#111", marginBottom:12, textAlign:"center" }}>
+                  📦 Productos del Kit
+                </div>
+                <div style={{ display:"grid", gap:16 }}>
+                  {tempKitInfo.products.map((product, index) => (
+                    <div key={index} style={{ 
+                      background:"linear-gradient(135deg, #F9FAFB, #F3F4F6)", 
+                      border:"1px solid #E5E7EB", 
+                      borderRadius:12, 
+                      padding:16,
+                      position:"relative"
+                    }}>
+                      {/* Header del producto */}
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                          <div style={{ fontSize:24 }}>{product.icon}</div>
+                          <input 
+                            type="text" 
+                            value={product.icon}
+                            onChange={(e) => {
+                              const newProducts = [...tempKitInfo.products];
+                              newProducts[index].icon = e.target.value;
+                              setTempKitInfo({...tempKitInfo, products: newProducts});
+                              setHasUnsavedChanges(true);
+                            }}
+                            placeholder="Icono"
+                            maxLength={2}
+                            style={{ 
+                              width:"70px", 
+                              padding:"8px", 
+                              border:"1px solid #D1D5DB", 
+                              borderRadius:6, 
+                              fontSize:14, 
+                              textAlign:"center",
+                              fontWeight:600,
+                              background:"white"
+                            }}
+                          />
+                        </div>
+                        <div style={{ fontSize:12, color:"#6B7280", fontWeight:600 }}>
+                          Producto #{index + 1}
+                        </div>
+                      </div>
+                      
+                      {/* Campos del producto */}
+                      <div style={{ display:"grid", gap:12 }}>
+                        <input 
+                          type="text" 
+                          value={product.name}
+                          onChange={(e) => {
+                            const newProducts = [...tempKitInfo.products];
+                            newProducts[index].name = e.target.value;
+                            setTempKitInfo({...tempKitInfo, products: newProducts});
+                            setHasUnsavedChanges(true);
+                          }}
+                          placeholder="📛 Nombre del producto"
+                          style={{ 
+                            width:"100%", 
+                            padding:"12px", 
+                            border:"1px solid #D1D5DB", 
+                            borderRadius:8, 
+                            fontSize:14, 
+                            fontWeight:500,
+                            boxSizing:"border-box",
+                            background:"white"
+                          }}
+                        />
+                        <input 
+                          type="text" 
+                          value={product.description}
+                          onChange={(e) => {
+                            const newProducts = [...tempKitInfo.products];
+                            newProducts[index].description = e.target.value;
+                            setTempKitInfo({...tempKitInfo, products: newProducts});
+                            setHasUnsavedChanges(true);
+                          }}
+                          placeholder="📝 Descripción breve"
+                          style={{ 
+                            width:"100%", 
+                            padding:"12px", 
+                            border:"1px solid #D1D5DB", 
+                            borderRadius:8, 
+                            fontSize:14, 
+                            boxSizing:"border-box",
+                            background:"white"
+                          }}
+                        />
+                        <input 
+                          type="text" 
+                          value={product.price}
+                          onChange={(e) => {
+                            const newProducts = [...tempKitInfo.products];
+                            newProducts[index].price = e.target.value;
+                            setTempKitInfo({...tempKitInfo, products: newProducts});
+                            setHasUnsavedChanges(true);
+                          }}
+                          placeholder="💰 Precio"
+                          style={{ 
+                            width:"100%", 
+                            padding:"12px", 
+                            border:"1px solid #D1D5DB", 
+                            borderRadius:8, 
+                            fontSize:14, 
+                            fontWeight:600,
+                            color:"#C41E3A",
+                            boxSizing:"border-box",
+                            background:"white"
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              
-              <button 
-                onClick={() => {
-                  const newZones = [...tempShippingInfo.zones, { name: "", description: "", cost: "Gratis", time: "30-45 min", days: "" }];
-                  setTempShippingInfo({...tempShippingInfo, zones: newZones});
-                  setHasUnsavedChanges(true);
-                }}
-                style={{ marginTop:12, padding:"8px 16px", background:"#059669", color:"white", border:"none", borderRadius:8, fontSize:13, cursor:"pointer" }}
-              >
-                ➕ Agregar Zona
-              </button>
+
+              {/* Financiación */}
+              <div style={{ background:"linear-gradient(135deg, #111111, #374151)", borderRadius:12, padding:16, marginBottom:16 }}>
+                <div style={{ fontSize:16, fontWeight:700, color:"white", marginBottom:12, textAlign:"center" }}>
+                  💳 Financiación
+                </div>
+                <div style={{ display:"grid", gap:12 }}>
+                  <input 
+                    type="text" 
+                    value={tempKitInfo.financingTitle}
+                    onChange={(e) => {
+                      setTempKitInfo({...tempKitInfo, financingTitle: e.target.value});
+                      setHasUnsavedChanges(true);
+                    }}
+                    placeholder="Título de financiación"
+                    style={{ 
+                      width:"100%", 
+                      padding:"12px", 
+                      border:"1px solid #4B5563", 
+                      borderRadius:8, 
+                      fontSize:14, 
+                      background:"rgba(255,255,255,0.1)",
+                      color:"white",
+                      boxSizing:"border-box"
+                    }}
+                  />
+                  <input 
+                    type="text" 
+                    value={tempKitInfo.financing}
+                    onChange={(e) => {
+                      setTempKitInfo({...tempKitInfo, financing: e.target.value});
+                      setHasUnsavedChanges(true);
+                    }}
+                    placeholder="Texto de financiación"
+                    style={{ 
+                      width:"100%", 
+                      padding:"12px", 
+                      border:"1px solid #4B5563", 
+                      borderRadius:8, 
+                      fontSize:14, 
+                      background:"rgba(255,255,255,0.1)",
+                      color:"white",
+                      boxSizing:"border-box"
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Requisito de envío */}
+              <div style={{ background:"linear-gradient(135deg, #10B981, #059669)", borderRadius:12, padding:16 }}>
+                <div style={{ fontSize:16, fontWeight:700, color:"white", marginBottom:12, textAlign:"center" }}>
+                  🚚 Requisito de Envío
+                </div>
+                <div style={{ display:"grid", gap:12 }}>
+                  <input 
+                    type="text" 
+                    value={tempKitInfo.shippingRequirement || ""}
+                    onChange={(e) => {
+                      setTempKitInfo({...tempKitInfo, shippingRequirement: e.target.value});
+                      setHasUnsavedChanges(true);
+                    }}
+                    placeholder="Ej: 3 cajas de empanadas"
+                    style={{ 
+                      width:"100%", 
+                      padding:"12px", 
+                      border:"1px solid #34D399", 
+                      borderRadius:8, 
+                      fontSize:14, 
+                      background:"rgba(255,255,255,0.9)",
+                      fontWeight:600,
+                      boxSizing:"border-box"
+                    }}
+                  />
+                  <input 
+                    type="text" 
+                    value={tempKitInfo.shippingRequirementText || ""}
+                    onChange={(e) => {
+                      setTempKitInfo({...tempKitInfo, shippingRequirementText: e.target.value});
+                      setHasUnsavedChanges(true);
+                    }}
+                    placeholder="Ej: Mínimo para envío gratuito del Kit"
+                    style={{ 
+                      width:"100%", 
+                      padding:"12px", 
+                      border:"1px solid #34D399", 
+                      borderRadius:8, 
+                      fontSize:14, 
+                      background:"rgba(255,255,255,0.9)",
+                      boxSizing:"border-box"
+                    }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
-          <div style={{ marginTop:24, padding:16, background:"#FEF3C7", borderRadius:8, border:"1px solid #F59E0B" }}>
-            <div style={{ fontSize:13, color:"#92400E", fontWeight:600, marginBottom:4 }}>💡 Información</div>
-            <div style={{ fontSize:12, color:"#78350F", lineHeight:1.5 }}>
-              Los cambios se aplican solo cuando hacés clic en "Aplicar Cambios". Podés editar precios, textos, días de entrega por zona y modificar toda la información del Kit Gastronómico.
+          {/* Sección Envíos Gratis */}
+          <div>
+            <div style={{ background:"white", border:"1px solid #E5E7EB", borderRadius:12, padding:16 }}>
+              <h3 style={{ margin:"0 0 16px", fontSize:18, fontWeight:700, color:"#111", textAlign:"center" }}>
+                🚚 Envíos Gratis
+              </h3>
+              
+              {/* Campos principales */}
+              <div style={{ display:"grid", gap:16, marginBottom:20 }}>
+                <div>
+                  <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:8 }}>📝 Título</label>
+                  <input 
+                    type="text" 
+                    value={tempShippingInfo.title}
+                    onChange={(e) => {
+                      setTempShippingInfo({...tempShippingInfo, title: e.target.value});
+                      setHasUnsavedChanges(true);
+                    }}
+                    style={{ 
+                      width:"100%", 
+                      padding:"14px 12px", 
+                      border:"2px solid #E5E7EB", 
+                      borderRadius:8, 
+                      fontSize:15, 
+                      fontWeight:500,
+                      boxSizing:"border-box"
+                    }}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:8 }}>📄 Descripción</label>
+                  <textarea 
+                    value={tempShippingInfo.description}
+                    onChange={(e) => {
+                      setTempShippingInfo({...tempShippingInfo, description: e.target.value});
+                      setHasUnsavedChanges(true);
+                    }}
+                    rows={3}
+                    style={{ 
+                      width:"100%", 
+                      padding:"14px 12px", 
+                      border:"2px solid #E5E7EB", 
+                      borderRadius:8, 
+                      fontSize:14, 
+                      resize:"vertical", 
+                      boxSizing:"border-box",
+                      fontFamily:"inherit",
+                      lineHeight:1.5
+                    }}
+                  />
+                </div>
+                
+                <div style={{ display:"grid", gap:12 }}>
+                  <div>
+                    <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:8 }}>📋 Requisito</label>
+                    <input 
+                      type="text" 
+                      value={tempShippingInfo.requirement}
+                      onChange={(e) => {
+                        setTempShippingInfo({...tempShippingInfo, requirement: e.target.value});
+                        setHasUnsavedChanges(true);
+                      }}
+                      style={{ 
+                        width:"100%", 
+                        padding:"14px 12px", 
+                        border:"2px solid #E5E7EB", 
+                        borderRadius:8, 
+                        fontSize:14, 
+                        boxSizing:"border-box"
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:8 }}>📝 Texto Requisito</label>
+                    <input 
+                      type="text" 
+                      value={tempShippingInfo.requirementText}
+                      onChange={(e) => {
+                        setTempShippingInfo({...tempShippingInfo, requirementText: e.target.value});
+                        setHasUnsavedChanges(true);
+                      }}
+                      style={{ 
+                        width:"100%", 
+                        padding:"14px 12px", 
+                        border:"2px solid #E5E7EB", 
+                        borderRadius:8, 
+                        fontSize:14, 
+                        boxSizing:"border-box"
+                      }}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:8 }}>⚠️ Aclaración</label>
+                  <input 
+                    type="text" 
+                    value={tempShippingInfo.disclaimer}
+                    onChange={(e) => {
+                      setTempShippingInfo({...tempShippingInfo, disclaimer: e.target.value});
+                      setHasUnsavedChanges(true);
+                    }}
+                    style={{ 
+                      width:"100%", 
+                      padding:"14px 12px", 
+                      border:"2px solid #E5E7EB", 
+                      borderRadius:8, 
+                      fontSize:14, 
+                      boxSizing:"border-box"
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Zonas de Envío - Diseño Mobile-First */}
+              <div>
+                <div style={{ fontSize:18, fontWeight:700, color:"#111", marginBottom:16, textAlign:"center" }}>
+                  📍 Zonas de Envío
+                </div>
+                
+                <div style={{ display:"grid", gap:20 }}>
+                  {tempShippingInfo.zones.map((zone, index) => (
+                    <div key={index} style={{ 
+                      background:"linear-gradient(135deg, #F0FDF4, #E6FFFA)", 
+                      border:"2px solid #10B981", 
+                      borderRadius:16, 
+                      padding:20,
+                      position:"relative",
+                      boxShadow:"0 4px 12px rgba(16, 185, 129, 0.15)"
+                    }}>
+                      {/* Header con número y eliminar */}
+                      <div style={{ 
+                        display:"flex", 
+                        justifyContent:"space-between", 
+                        alignItems:"center", 
+                        marginBottom:16,
+                        paddingBottom:12,
+                        borderBottom:"2px dashed #10B981"
+                      }}>
+                        <div style={{ 
+                          background:"#10B981", 
+                          color:"white", 
+                          padding:"8px 16px", 
+                          borderRadius:20, 
+                          fontSize:16, 
+                          fontWeight:700 
+                        }}>
+                          📍 Zona {index + 1}
+                        </div>
+                        <button 
+                          onClick={() => {
+                            const newZones = tempShippingInfo.zones.filter((_, i) => i !== index);
+                            setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                            setHasUnsavedChanges(true);
+                          }}
+                          style={{ 
+                            padding:"10px 16px", 
+                            background:"#EF4444", 
+                            color:"white", 
+                            border:"none", 
+                            borderRadius:12, 
+                            fontSize:14, 
+                            cursor:"pointer",
+                            fontWeight:700,
+                            boxShadow:"0 2px 8px rgba(239, 68, 68, 0.3)"
+                          }}
+                        >
+                          🗑️ Eliminar
+                        </button>
+                      </div>
+                      
+                      {/* Campos organizados verticalmente para móviles */}
+                      <div style={{ display:"grid", gap:16 }}>
+                        {/* Nombre de la zona - campo principal */}
+                        <div>
+                          <label style={{ 
+                            display:"block", 
+                            fontSize:13, 
+                            fontWeight:700, 
+                            color: "#047857", 
+                            marginBottom:8 
+                          }}>
+                            🏷️ Nombre de la Zona
+                          </label>
+                          <input 
+                            type="text" 
+                            value={zone.name}
+                            onChange={(e) => {
+                              const newZones = [...tempShippingInfo.zones];
+                              newZones[index].name = e.target.value;
+                              setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                              setHasUnsavedChanges(true);
+                            }}
+                            placeholder="Ej: Zona 1 - Pilar Centro"
+                            style={{ 
+                              width:"100%", 
+                              padding:"16px 14px", 
+                              border:"2px solid #10B981", 
+                              borderRadius:12, 
+                              fontSize:15, 
+                              fontWeight:600,
+                              background:"white",
+                              boxSizing:"border-box",
+                              transition:"border-color 0.2s"
+                            }}
+                            onFocus={(e) => e.target.style.borderColor = "#059669"}
+                            onBlur={(e) => e.target.style.borderColor = "#10B981"}
+                          />
+                        </div>
+                        
+                        {/* Descripción - campo grande */}
+                        <div>
+                          <label style={{ 
+                            display:"block", 
+                            fontSize:13, 
+                            fontWeight:700, 
+                            color: "#047857", 
+                            marginBottom:8 
+                          }}>
+                            📝 Descripción
+                          </label>
+                          <textarea 
+                            value={zone.description}
+                            onChange={(e) => {
+                              const newZones = [...tempShippingInfo.zones];
+                              newZones[index].description = e.target.value;
+                              setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                              setHasUnsavedChanges(true);
+                            }}
+                            placeholder="Ej: Pilar Centro y alrededores, incluye barrio norte"
+                            rows={3}
+                            style={{ 
+                              width:"100%", 
+                              padding:"16px 14px", 
+                              border:"2px solid #10B981", 
+                              borderRadius:12, 
+                              fontSize:14, 
+                              resize:"vertical", 
+                              background:"white",
+                              boxSizing:"border-box",
+                              fontFamily:"inherit",
+                              lineHeight:1.5,
+                              transition:"border-color 0.2s"
+                            }}
+                            onFocus={(e) => e.target.style.borderColor = "#059669"}
+                            onBlur={(e) => e.target.style.borderColor = "#10B981"}
+                          />
+                        </div>
+                        
+                        {/* Info rápida - cards */}
+                        <div style={{ 
+                          background:"linear-gradient(135deg, #F0FDF4, #D1FAE5)", 
+                          borderRadius:12, 
+                          padding:16, 
+                          border:"1px solid #BBF7D0"
+                        }}>
+                          <div style={{ 
+                            fontSize:14, 
+                            fontWeight:700, 
+                            color: "#047857", 
+                            marginBottom:12, 
+                            textAlign:"center" 
+                          }}>
+                            ⚡ Información de Entrega
+                          </div>
+                          <div style={{ display:"grid", gap:12 }}>
+                            <div>
+                              <label style={{ 
+                                display:"block", 
+                                fontSize:12, 
+                                fontWeight:600, 
+                                color: "#059669", 
+                                marginBottom:6 
+                              }}>
+                                💰 Costo
+                              </label>
+                              <input 
+                                type="text" 
+                                value={zone.cost}
+                                onChange={(e) => {
+                                  const newZones = [...tempShippingInfo.zones];
+                                  newZones[index].cost = e.target.value;
+                                  setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                                  setHasUnsavedChanges(true);
+                                }}
+                                placeholder="Gratis o $500"
+                                style={{ 
+                                  width:"100%", 
+                                  padding:"12px 14px", 
+                                  border:"1px solid #10B981", 
+                                  borderRadius:8, 
+                                  fontSize:14, 
+                                  fontWeight:600,
+                                  background:"white",
+                                  color:"#059669",
+                                  boxSizing:"border-box"
+                                }}
+                              />
+                            </div>
+                            
+                            <div>
+                              <label style={{ 
+                                display:"block", 
+                                fontSize:12, 
+                                fontWeight:600, 
+                                color: "#059669", 
+                                marginBottom:6 
+                              }}>
+                                ⏱️ Tiempo de Entrega
+                              </label>
+                              <input 
+                                type="text" 
+                                value={zone.time}
+                                onChange={(e) => {
+                                  const newZones = [...tempShippingInfo.zones];
+                                  newZones[index].time = e.target.value;
+                                  setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                                  setHasUnsavedChanges(true);
+                                }}
+                                placeholder="Ej: 30-45 min"
+                                style={{ 
+                                  width:"100%", 
+                                  padding:"12px 14px", 
+                                  border:"1px solid #10B981", 
+                                  borderRadius:8, 
+                                  fontSize:14, 
+                                  background:"white",
+                                  boxSizing:"border-box"
+                                }}
+                              />
+                            </div>
+                            
+                            <div>
+                              <label style={{ 
+                                display:"block", 
+                                fontSize:12, 
+                                fontWeight:600, 
+                                color: "#059669", 
+                                marginBottom:6 
+                              }}>
+                                📅 Días de Entrega
+                              </label>
+                              <input 
+                                type="text" 
+                                value={zone.days || ""}
+                                onChange={(e) => {
+                                  const newZones = [...tempShippingInfo.zones];
+                                  newZones[index].days = e.target.value;
+                                  setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                                  setHasUnsavedChanges(true);
+                                }}
+                                placeholder="Ej: Lunes a Viernes"
+                                style={{ 
+                                  width:"100%", 
+                                  padding:"12px 14px", 
+                                  border:"1px solid #10B981", 
+                                  borderRadius:8, 
+                                  fontSize:14, 
+                                  background:"white",
+                                  boxSizing:"border-box"
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Botón agregar zona - más grande y claro */}
+                <button 
+                  onClick={() => {
+                    const newZones = [...tempShippingInfo.zones, { name: "", description: "", cost: "Gratis", time: "30-45 min", days: "" }];
+                    setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                    setHasUnsavedChanges(true);
+                  }}
+                  style={{ 
+                    marginTop:24, 
+                    padding:"20px", 
+                    background:"linear-gradient(135deg, #10B981, #059669)", 
+                    color:"white", 
+                    border:"none", 
+                    borderRadius:16, 
+                    fontSize:16, 
+                    cursor:"pointer", 
+                    fontWeight:700,
+                    width:"100%", 
+                    boxSizing:"border-box",
+                    boxShadow:"0 6px 20px rgba(16, 185, 129, 0.4)",
+                    transition:"all 0.3s",
+                    textAlign:"center"
+                  }}
+                >
+                  ➕ Agregar Nueva Zona de Envío
+                </button>
+                
+                {/* Ayuda visual */}
+                <div style={{ 
+                  marginTop:16, 
+                  padding:16, 
+                  background:"linear-gradient(135deg, #FEF3C7, #FDE68A)", 
+                  borderRadius:12, 
+                  border:"1px solid #F59E0B",
+                  textAlign:"center"
+                }}>
+                  <div style={{ fontSize:13, color:"#92400E", fontWeight:700, marginBottom:8 }}>💡 Tip para móviles</div>
+                  <div style={{ fontSize:12, color:"#78350F", lineHeight:1.5 }}>
+                    Deslizá hacia abajo para ver todas las zonas. Cada zona tiene su propia tarjeta con todos los campos.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Información de ayuda */}
+          <div style={{ 
+            marginTop:20, 
+            padding:16, 
+            background:"linear-gradient(135deg, #FEF3C7, #FDE68A)", 
+            borderRadius:12, 
+            border:"1px solid #F59E0B",
+            textAlign:"center"
+          }}>
+            <div style={{ fontSize:14, color:"#92400E", fontWeight:700, marginBottom:8 }}>💡 ¿Cómo funciona?</div>
+            <div style={{ fontSize:12, color:"#78350F", lineHeight:1.6 }}>
+              <div style={{ marginBottom:8 }}>✍️ Editá cualquier campo y verás la alerta de cambios</div>
+              <div style={{ marginBottom:8 }}>✅ Hacé clic en "Aplicar Cambios" para guardar</div>
+              <div>🔄 Usá "Descartar" para revertir los cambios</div>
             </div>
           </div>
         </div>
