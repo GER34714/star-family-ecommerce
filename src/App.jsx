@@ -112,6 +112,9 @@ export default function StarFamilyApp() {
     shippingRequirementText: "Mínimo para envío gratuito del Kit Gastronómico"
   });
   
+  // Estado para controlar acordeón de FAQs
+  const [expandedFaq, setExpandedFaq] = useState(null);
+  
   const [shippingInfo, setShippingInfo] = useState({
     title: "ENVÍOS GRATIS",
     description: "Recibí tu pedido sin costo de envío coordinando día y zona",
@@ -3346,6 +3349,136 @@ export default function StarFamilyApp() {
               </div>
             </div>
           </div>
+
+          {/* SECCIÓN DE FAQs */}
+          <div style={{ maxWidth:1200, margin:"0 auto", padding:"40px 20px" }}>
+            <div style={{ background:"linear-gradient(135deg, #722F37, #0f0f0f)", borderRadius:20, padding:40, color:"white", textAlign:"center", boxShadow:"0 12px 40px rgba(114, 47, 55, 0.4)", border:"1px solid rgba(245, 166, 35, 0.1)" }}>
+              <div style={{ fontSize:48, marginBottom:16 }}>❓</div>
+              <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:3, marginBottom:8 }}>Preguntas Frecuentes</h2>
+              <p style={{ fontSize:16, marginBottom:32, opacity:0.9 }}>
+                Encontrá respuestas rápidas a las consultas más comunes
+              </p>
+              
+              <div style={{ maxWidth:800, margin:"0 auto" }}>
+                {[
+                  {
+                    question: "¿Cómo realizo un pedido?",
+                    answer: "Es muy fácil. Seleccioná los productos que querés, agregalos al carrito y completá el formulario de contacto. Te contactaremos para coordinar el envío según las zonas disponibles."
+                  },
+                  {
+                    question: "¿Cuáles son las zonas de envío?",
+                    answer: `Realizamos envíos en: ${shippingInfo.zones.map((zone, i) => 
+                      `${zone.name} (${zone.description})`
+                    ).join(', ')}. Cada zona tiene sus propios días y tiempos de entrega.`
+                  },
+                  {
+                    question: "¿Qué medios de pago aceptan?",
+                    answer: "Aceptamos Mercado Pago con todas las tarjetas, transferencia bancaria y efectivo. Todas las opciones son seguras y confiables."
+                  },
+                  {
+                    question: "¿Hay pedido mínimo?",
+                    answer: kitInfo.shippingRequirement ? 
+                      `Para envíos gratis del Kit Gastronómico se requiere un mínimo de ${kitInfo.shippingRequirement}. ${kitInfo.shippingRequirementText || ''}` :
+                      "Consultá por promociones especiales y requisitos de envío según tu zona."
+                  },
+                  {
+                    question: "¿Cuánto tarda el envío?",
+                    answer: `Los tiempos varían según la zona: ${shippingInfo.zones.map((zone, i) => 
+                      `${zone.name}: ${zone.time}`
+                    ).join(', ')}. Los días de entrega son: ${shippingInfo.zones.map((zone, i) => 
+                      `${zone.name}: ${zone.days}`
+                    ).join(', ')}.`
+                  },
+                  {
+                    question: "¿Qué incluye el Kit Gastronómico?",
+                    answer: `El ${kitInfo.title} incluye: ${kitInfo.products.map((product, i) => 
+                      `${product.name} - ${product.description} (${product.price})`
+                    ).join(', ')}. También ofrecemos financiación: ${kitInfo.financing}.`
+                  },
+                  {
+                    question: "¿Puedo cancelar mi pedido?",
+                    answer: "Sí, podés cancelar tu pedido antes de que sea despachado. Comunicate con nosotros lo antes posible por WhatsApp, Instagram o email para coordinar la cancelación."
+                  },
+                  {
+                    question: "¿Ofrecen garantía en los productos?",
+                    answer: "Sí, todos nuestros productos cuentan con garantía según el tipo de producto. Consultá los términos específicos para hornos industriales, mantenedores y accesorios."
+                  }
+                ].map((faq, index) => (
+                  <div key={index} style={{ marginBottom:12 }}>
+                    <button
+                      onClick={() => setExpandedFaq(expandedFaq === index ? null : index)}
+                      style={{
+                        width:"100%",
+                        background:"rgba(255,255,255,0.1)",
+                        border:"1px solid rgba(245, 166, 35, 0.2)",
+                        borderRadius:12,
+                        padding:"16px 20px",
+                        color:"white",
+                        fontSize:16,
+                        fontWeight:600,
+                        cursor:"pointer",
+                        display:"flex",
+                        justifyContent:"space-between",
+                        alignItems:"center",
+                        transition:"all 0.3s ease",
+                        textAlign:"left"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = "rgba(255,255,255,0.15)";
+                        e.target.style.borderColor = "rgba(245, 166, 35, 0.4)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = "rgba(255,255,255,0.1)";
+                        e.target.style.borderColor = "rgba(245, 166, 35, 0.2)";
+                      }}
+                    >
+                      <span>{faq.question}</span>
+                      <span style={{ fontSize:20, transition:"transform 0.3s ease", transform: expandedFaq === index ? "rotate(180deg)" : "rotate(0deg)" }}>
+                        ▼
+                      </span>
+                    </button>
+                    
+                    {expandedFaq === index && (
+                      <div style={{
+                        background:"rgba(255,255,255,0.05)",
+                        border:"1px solid rgba(245, 166, 35, 0.1)",
+                        borderTop:"none",
+                        borderRadius:"0 0 12px 12px",
+                        padding:"16px 20px",
+                        color:"rgba(255,255,255,0.9)",
+                        fontSize:14,
+                        lineHeight:1.6,
+                        animation: "slideDown 0.3s ease"
+                      }}>
+                        {faq.answer}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              
+              <div style={{ marginTop:32, padding:16, background:"rgba(245, 166, 35, 0.1)", borderRadius:8, border:"1px solid rgba(245, 166, 35, 0.2)" }}>
+                <div style={{ fontSize:14, color:"#F5A623", fontWeight:600, marginBottom:8 }}>¿No encontraste tu respuesta?</div>
+                <div style={{ fontSize:13, color:"rgba(255,255,255,0.8)" }}>
+                  Contactanos directamente por WhatsApp, Instagram o email y te responderemos a la brevedad.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Estilos para animación del acordeón */}
+          <style>{`
+            @keyframes slideDown {
+              from {
+                opacity: 0;
+                max-height: 0;
+              }
+              to {
+                opacity: 1;
+                max-height: 200px;
+              }
+            }
+          `}</style>
         </>
       ) : (
         <AdminPanel 
@@ -5800,7 +5933,8 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
           ["history","📜 Historial"],
           ["restore","🔄 Restauración"],
           ["excel","📊 Excel"],
-          ["help","📚 Ayuda"]
+          ["help","📚 Ayuda"],
+          ["terms","📋 Términos"]
         ].map(([t,label]) => (
           <button key={t} onClick={() => setAdminTab(t)} style={{ background:adminTab===t?"#C41E3A":"white", color:adminTab===t?"white":"#374151", border:adminTab===t?"none":"1px solid #E5E7EB", borderRadius:10, padding:"8px 16px", cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Poppins',sans-serif" }}>
             {label}
@@ -8473,6 +8607,336 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                   <strong>Email:</strong> ciborg347@gmail.com<br/>
                   <strong>Instagram:</strong> @ciborg347<br/>
                   <strong>Horario:</strong> Lunes a Viernes 9:00-18:00
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: TÉRMINOS Y CONDICIONES */}
+      {adminTab === "terms" && (
+        <div style={{ background:"white", borderRadius:16, padding:24 }}>
+          <h3 style={{ margin:"0 0 6px", fontWeight:800 }}>📋 Términos y Condiciones del Servicio</h3>
+          <p style={{ color:"#6B7280", fontSize:14, marginBottom:24 }}>Información legal y condiciones del servicio Ciborg 347</p>
+          
+          <div style={{ display:"grid", gap:24 }}>
+            {/* SECCIÓN 1: INFORMACIÓN DEL SERVICIO */}
+            <div style={{ background:"linear-gradient(135deg, rgba(114, 47, 55, 0.05), rgba(15, 15, 15, 0.05))", borderRadius:12, padding:20, border:"1px solid rgba(245, 166, 35, 0.1)" }}>
+              <div style={{ fontSize:20, fontWeight:700, color:"#722F37", marginBottom:12 }}>## Información del Servicio — Ciborg 347</div>
+              
+              <div style={{ color:"#374151", fontSize:14, lineHeight:1.6, marginBottom:16 }}>
+                Este sistema fue desarrollado y es mantenido por Ciborg 347.
+              </div>
+              
+              <div style={{ color:"#374151", fontSize:14, lineHeight:1.6, marginBottom:16 }}>
+                Para soporte técnico, consultas o reportes de errores podés contactarte mediante:
+              </div>
+              
+              <div style={{ background:"white", borderRadius:8, padding:16, border:"1px solid rgba(245, 166, 35, 0.2)" }}>
+                <div style={{ display:"grid", gap:8 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>📧</div>
+                    <span style={{ color:"#374151", fontSize:14 }}>Email</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>📷</div>
+                    <span style={{ color:"#374151", fontSize:14 }}>Instagram</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>📱</div>
+                    <span style={{ color:"#374151", fontSize:14 }}>WhatsApp</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* SECCIÓN 2: EVOLUCIÓN Y ESCALABILIDAD */}
+            <div style={{ background:"linear-gradient(135deg, rgba(114, 47, 55, 0.05), rgba(15, 15, 15, 0.05))", borderRadius:12, padding:20, border:"1px solid rgba(245, 166, 35, 0.1)" }}>
+              <div style={{ fontSize:20, fontWeight:700, color:"#722F37", marginBottom:12 }}>## Evolución y Escalabilidad del Sistema</div>
+              
+              <div style={{ color:"#374151", fontSize:14, lineHeight:1.6, marginBottom:16 }}>
+                La plataforma se encuentra en constante desarrollo y podrá seguir incorporando nuevas funcionalidades, herramientas y sistemas orientados a mejorar la experiencia, automatización y rendimiento del negocio.
+              </div>
+              
+              <div style={{ color:"#374151", fontSize:14, lineHeight:1.6, marginBottom:16 }}>
+                Entre las futuras implementaciones pueden incluirse:
+              </div>
+              
+              <div style={{ background:"rgba(245, 166, 35, 0.1)", borderRadius:8, padding:16, border:"1px solid rgba(245, 166, 35, 0.2)" }}>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(250px, 1fr))", gap:12 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>📦</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>sistemas de control de stock</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🛍️</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>gestión avanzada de productos</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🤖</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>automatización de pedidos</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🎯</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>sistemas de captación de leads</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>📊</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>estadísticas y métricas</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>📈</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>herramientas de marketing</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>⚙️</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>paneles administrativos avanzados</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🔗</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>integraciones externas</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🔒</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>mejoras de seguridad</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>⚡</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>optimizaciones visuales y funcionales</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🚀</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>nuevas tecnologías aplicadas al ecommerce</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div style={{ color:"#374151", fontSize:14, lineHeight:1.6, marginTop:16 }}>
+                Las funcionalidades actuales y futuras podrán variar según las necesidades del proyecto y evolución de la plataforma.
+              </div>
+            </div>
+
+            {/* SECCIÓN 3: CONDICIONES DEL SERVICIO */}
+            <div style={{ background:"linear-gradient(135deg, rgba(114, 47, 55, 0.05), rgba(15, 15, 15, 0.05))", borderRadius:12, padding:20, border:"1px solid rgba(245, 166, 35, 0.1)" }}>
+              <div style={{ fontSize:20, fontWeight:700, color:"#722F37", marginBottom:12 }}>## Condiciones del Servicio</div>
+              
+              <div style={{ color:"#374151", fontSize:14, lineHeight:1.6, marginBottom:16 }}>
+                El valor de mantenimiento, mensualidad o servicios asociados podrá modificarse en cualquier momento según:
+              </div>
+              
+              <div style={{ background:"white", borderRadius:8, padding:16, border:"1px solid rgba(245, 166, 35, 0.2)" }}>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:12 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🔄</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>actualizaciones implementadas</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>⬆️</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>mejoras del sistema</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>💰</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>costos operativos</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🖥️</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>infraestructura</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🌐</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>hosting</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>📈</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>escalabilidad</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🔒</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>seguridad</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🆕</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>nuevas funcionalidades incorporadas</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div style={{ background:"rgba(245, 166, 35, 0.1)", borderRadius:8, padding:12, border:"1px solid rgba(245, 166, 35, 0.2)", marginTop:16 }}>
+                <div style={{ fontWeight:600, color:"#F5A623", marginBottom:4 }}>⚠️ Importante</div>
+                <div style={{ color:"#6B7280", fontSize:13, lineHeight:1.5 }}>
+                  Las modificaciones podrán realizarse con o sin previo aviso.
+                </div>
+              </div>
+            </div>
+
+            {/* SECCIÓN 4: DISPONIBILIDAD DEL SISTEMA */}
+            <div style={{ background:"linear-gradient(135deg, rgba(114, 47, 55, 0.05), rgba(15, 15, 15, 0.05))", borderRadius:12, padding:20, border:"1px solid rgba(245, 166, 35, 0.1)" }}>
+              <div style={{ fontSize:20, fontWeight:700, color:"#722F37", marginBottom:12 }}>## Disponibilidad del Sistema</div>
+              
+              <div style={{ color:"#374151", fontSize:14, lineHeight:1.6, marginBottom:16 }}>
+                Si bien se trabaja constantemente para garantizar estabilidad y funcionamiento continuo, el sistema puede presentar:
+              </div>
+              
+              <div style={{ background:"white", borderRadius:8, padding:16, border:"1px solid rgba(245, 166, 35, 0.2)" }}>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:12 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>⏸️</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>interrupciones temporales</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🔧</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>mantenimiento programado</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>⚠️</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>errores inesperados</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🌐</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>caídas de servicios externos</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🖥️</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>fallas de hosting</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>📡</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>problemas de conectividad</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🛡️</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>ataques informáticos</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🔀</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>situaciones ajenas al control del desarrollador</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div style={{ background:"rgba(245, 166, 35, 0.1)", borderRadius:8, padding:12, border:"1px solid rgba(245, 166, 35, 0.2)", marginTop:16 }}>
+                <div style={{ fontWeight:600, color:"#F5A623", marginBottom:4 }}>📋 Limitación</div>
+                <div style={{ color:"#6B7280", fontSize:13, lineHeight:1.5 }}>
+                  Ciborg 347 no garantiza disponibilidad ininterrumpida del servicio las 24 horas.
+                </div>
+              </div>
+            </div>
+
+            {/* SECCIÓN 5: LIMITACIÓN DE RESPONSABILIDAD */}
+            <div style={{ background:"linear-gradient(135deg, rgba(114, 47, 55, 0.05), rgba(15, 15, 15, 0.05))", borderRadius:12, padding:20, border:"1px solid rgba(245, 166, 35, 0.1)" }}>
+              <div style={{ fontSize:20, fontWeight:700, color:"#722F37", marginBottom:12 }}>## Limitación de Responsabilidad</div>
+              
+              <div style={{ color:"#374151", fontSize:14, lineHeight:1.6, marginBottom:16 }}>
+                Ciborg 347 actúa exclusivamente como proveedor tecnológico, desarrollador y mantenedor del sistema.
+              </div>
+              
+              <div style={{ color:"#374151", fontSize:14, lineHeight:1.6, marginBottom:16 }}>
+                No es responsable por:
+              </div>
+              
+              <div style={{ background:"white", borderRadius:8, padding:16, border:"1px solid rgba(245, 166, 35, 0.2)" }}>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:12 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🛍️</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>productos publicados</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>💰</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>precios cargados</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>💼</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>operaciones comerciales</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🧾</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>ventas realizadas</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🧾</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>facturación</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🚚</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>envíos</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>📦</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>stock</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>📝</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>contenido cargado por terceros</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>💸</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>pérdidas económicas derivadas del uso del sistema</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🔗</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>inconvenientes ocasionados por servicios externos o ataques maliciosos</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div style={{ background:"rgba(245, 166, 35, 0.1)", borderRadius:8, padding:12, border:"1px solid rgba(245, 166, 35, 0.2)", marginTop:16 }}>
+                <div style={{ fontWeight:600, color:"#F5A623", marginBottom:4 }}>🎯 Responsabilidad</div>
+                <div style={{ color:"#6B7280", fontSize:13, lineHeight:1.5 }}>
+                  La responsabilidad comercial y operativa corresponde exclusivamente al titular del comercio.
+                </div>
+              </div>
+            </div>
+
+            {/* SECCIÓN 6: ACTUALIZACIONES */}
+            <div style={{ background:"linear-gradient(135deg, rgba(114, 47, 55, 0.05), rgba(15, 15, 15, 0.05))", borderRadius:12, padding:20, border:"1px solid rgba(245, 166, 35, 0.1)" }}>
+              <div style={{ fontSize:20, fontWeight:700, color:"#722F37", marginBottom:12 }}>## Actualizaciones</div>
+              
+              <div style={{ color:"#374151", fontSize:14, lineHeight:1.6, marginBottom:16 }}>
+                La plataforma podrá recibir modificaciones visuales, técnicas y funcionales sin previo aviso con el objetivo de mejorar:
+              </div>
+              
+              <div style={{ background:"white", borderRadius:8, padding:16, border:"1px solid rgba(245, 166, 35, 0.2)" }}>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:12 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🛡️</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>estabilidad</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>⚡</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>rendimiento</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>🔒</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>seguridad</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>👤</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>experiencia de usuario</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ fontSize:16, color:"#F5A623" }}>📈</div>
+                    <span style={{ color:"#374151", fontSize:13 }}>capacidad de escalabilidad del sistema</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* SECCIÓN 7: AVISO FINAL */}
+            <div style={{ background:"linear-gradient(135deg, #722F37, #0f0f0f)", borderRadius:12, padding:20, color:"white" }}>
+              <div style={{ fontSize:20, fontWeight:700, marginBottom:12 }}>📋 Aviso Importante</div>
+              
+              <div style={{ color:"rgba(255,255,255,0.9)", fontSize:14, lineHeight:1.6, marginBottom:16 }}>
+                Al utilizar esta plataforma, aceptás los términos y condiciones aquí establecidos. El uso continuo del servicio constituye aceptación de cualquier modificación futura de estos términos.
+              </div>
+              
+              <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+                <div style={{ fontSize:24 }}>🤖</div>
+                <div>
+                  <div style={{ fontWeight:600, color:"#F5A623", marginBottom:4 }}>Ciborg 347</div>
+                  <div style={{ color:"rgba(255,255,255,0.8)", fontSize:13 }}>
+                    Desarrollador y mantenedor del sistema
+                  </div>
                 </div>
               </div>
             </div>
