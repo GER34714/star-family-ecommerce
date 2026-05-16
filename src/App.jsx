@@ -23,7 +23,7 @@ import {
 const CATS = ["Todos","Frescos","Completos","Panchos Armados","Hamburguesas","Pizzas y Empanadas","Medialunas y Chipas","Combos"];
 const ADMIN_CATS = CATS.filter(c => c !== "Todos");
 const CAT_EMOJI = { "Frescos":"🌭","Completos":"🌭","Panchos Armados":"🌭","Hamburguesas":"🍔","Pizzas y Empanadas":"🍕","Medialunas y Chipas":"🥐","Combos":"📦" };
-const CAT_COLOR = { "Frescos":"#E53E3E","Completos":"#DD6B20","Panchos Armados":"#D97706","Hamburguesas":"#7C3AED","Pizzas y Empanadas":"#2563EB","Medialunas y Chipas":"#059669","Combos":"#C41E3A","Todos":"#C41E3A" };
+const CAT_COLOR = { "Frescos":"#E53E3E","Completos":"#DD6B20","Panchos Armados":"#D97706","Hamburguesas":"#7C3AED","Pizzas y Empanadas":"#2563EB","Medialunas y Chipas":"#D97706","Combos":"#C41E3A","Todos":"#C41E3A" };
 
 // ⚠️ ELIMINADO: SEED_PRODUCTS - La única fuente de datos es Supabase
 // const SEED_PRODUCTS = [ ... ]; // Eliminado para evitar sobrescribir datos reales
@@ -3261,10 +3261,10 @@ export default function StarFamilyApp() {
 
                 {/* Requisito de envío */}
                 {kitInfo.shippingRequirement && (
-                  <div style={{ background:"linear-gradient(135deg, #10B981 0%, #059669 100%)", borderRadius:8, padding:16, color:"white", textAlign:"center", marginBottom:16 }}>
+                  <div style={{ background:"linear-gradient(135deg, #722F37 0%, #0f0f0f 100%)", borderRadius:12, padding:20, color:"white", textAlign:"center", marginBottom:20, boxShadow:"0 8px 32px rgba(114, 47, 55, 0.4)" }}>
                     <div style={{ fontSize:18, fontWeight:700, marginBottom:8 }}>🚚 Envío Gratis</div>
-                    <div style={{ background:"rgba(255,255,255,0.2)", borderRadius:8, padding:12, border:"2px solid white", display:"inline-block", marginBottom:8 }}>
-                      <div style={{ fontSize:20, fontWeight:800, marginBottom:4 }}>
+                    <div style={{ background:"rgba(245, 166, 35, 0.2)", borderRadius:12, padding:16, border:"2px solid rgba(245, 166, 35, 0.5)", display:"inline-block", marginBottom:8 }}>
+                      <div style={{ fontSize:20, fontWeight:800, marginBottom:4, color:"#F5A623" }}>
                         📦 {kitInfo.shippingRequirement}
                       </div>
                       <div style={{ fontSize:14, margin:0 }}>
@@ -3291,7 +3291,7 @@ export default function StarFamilyApp() {
 
             {/* ENVÍOS GRATIS SECCIÓN */}
             <div style={{ maxWidth:1200, margin:"0 auto 40px", padding:"0 16px" }}>
-              <div style={{ background:"linear-gradient(135deg, #10B981 0%, #059669 100%)", borderRadius:16, padding:24, color:"white", textAlign:"center" }}>
+              <div style={{ background:"linear-gradient(135deg, #722F37 0%, #0f0f0f 100%)", borderRadius:20, padding:32, color:"white", textAlign:"center", boxShadow:"0 12px 40px rgba(114, 47, 55, 0.4)", border:"1px solid rgba(245, 166, 35, 0.1)" }}>
                 <div style={{ fontSize:48, marginBottom:16 }}>🚚</div>
                 <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, letterSpacing:3, marginBottom:8 }}>{shippingInfo.title}</h2>
                 <p style={{ fontSize:16, marginBottom:20 }}>
@@ -3300,8 +3300,8 @@ export default function StarFamilyApp() {
                 
                 {/* Requisito destacado */}
                 {shippingInfo.requirement && (
-                  <div style={{ background:"rgba(255,255,255,0.2)", borderRadius:12, padding:16, border:"2px solid white", display:"inline-block", marginBottom:20 }}>
-                    <div style={{ fontSize:24, fontWeight:800, marginBottom:4 }}>
+                  <div style={{ background:"rgba(245, 166, 35, 0.2)", borderRadius:12, padding:16, border:"2px solid rgba(245, 166, 35, 0.5)", display:"inline-block", marginBottom:20 }}>
+                    <div style={{ fontSize:24, fontWeight:800, marginBottom:4, color:"#F5A623" }}>
                       📦 {shippingInfo.requirement}
                     </div>
                     <p style={{ fontSize:14, margin:0 }}>
@@ -4405,7 +4405,7 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
           
           <div style={{ display:"flex", justifyContent:"space-between", marginBottom:14, padding:"12px 14px", background:"#1F2937", borderRadius:12 }}>
             <span style={{ fontWeight:700, color:"white" }}>Total del pedido</span>
-            <span style={{ fontWeight:900, fontSize:20, color:"#10B981" }}>{fmt(total)}</span>
+            <span style={{ fontWeight:900, fontSize:20, color:"#F5A623" }}>{fmt(total)}</span>
           </div>
           
           {/* PAYMENT METHOD SELECTION */}
@@ -4661,7 +4661,7 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
                         onClick={() => copyToClipboard(paymentSettings.cbu, 'CBU')}
                         style={{
                           padding:"6px 10px",
-                          background:"#10B981",
+                          background:"linear-gradient(135deg, #722F37, #0f0f0f)",
                           color:"white",
                           border:"none",
                           borderRadius:6,
@@ -4701,7 +4701,7 @@ function CartDrawer({ cart, onRemove, onUpdateQuantity, onClose, total, onClear,
                         onClick={() => copyToClipboard(paymentSettings.alias, 'Alias')}
                         style={{
                           padding:"6px 10px",
-                          background:"#10B981",
+                          background:"linear-gradient(135deg, #722F37, #0f0f0f)",
                           color:"white",
                           border:"none",
                           borderRadius:6,
@@ -5401,8 +5401,8 @@ function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint
             width:"100%",
             padding:12,
             borderRadius:8,
-            border:"1px solid #059669",
-            background:"#059669",
+            border:"1px solid rgba(245, 166, 35, 0.3)",
+            background:"linear-gradient(135deg, #722F37, #0f0f0f)",
             color:"white",
             fontWeight:600,
             cursor:"pointer",
@@ -5414,7 +5414,7 @@ function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint
         >
           📍 Crear punto de restauración manual
         </button>
-        <div style={{ fontSize:11, color:"#059669", marginTop:8, textAlign:"center" }}>
+        <div style={{ fontSize:11, color:"#F5A623", marginTop:8, textAlign:"center" }}>
           Crea un backup instantáneo del estado actual
         </div>
       </div>
@@ -5557,7 +5557,7 @@ function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint
                   width:8,
                   height:8,
                   borderRadius:"50%",
-                  background:"#059669",
+                  background:"linear-gradient(135deg, #722F37, #0f0f0f)",
                   animation: "pulse 2s infinite"
                 }} />
               )}
@@ -5997,7 +5997,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                     {/* Badge de estado activo/inactivo */}
                     {p?.active ? (
                       <span style={{
-                        background:"#10B981",
+                        background:"linear-gradient(135deg, #722F37, #0f0f0f)",
                         color:"white",
                         fontSize:10,
                         fontWeight:700,
@@ -6264,7 +6264,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
               {suggestedCategory && (
                 <div style={{ 
                   fontSize:11, 
-                  color:"#059669", 
+                  color:"#F5A623", 
                   marginTop:4,
                   display: 'flex',
                   alignItems: 'center',
@@ -7397,7 +7397,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
               onClick={savePaymentSettings}
               style={{
                 padding:"12px 24px",
-                background:"#10B981",
+                background:"linear-gradient(135deg, #722F37, #0f0f0f)",
                 color:"white",
                 border:"none",
                 borderRadius:8,
@@ -7964,40 +7964,24 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                 </div>
               </div>
 
-              {/* Zonas de Envío - Diseño Mobile-First */}
+              {/* Zonas de Envío */}
               <div>
-                <div style={{ fontSize:18, fontWeight:700, color:"#111", marginBottom:16, textAlign:"center" }}>
+                <div style={{ fontSize:16, fontWeight:700, color:"#111", marginBottom:12, textAlign:"center" }}>
                   📍 Zonas de Envío
                 </div>
-                
-                <div style={{ display:"grid", gap:20 }}>
+                <div style={{ display:"grid", gap:16 }}>
                   {tempShippingInfo.zones.map((zone, index) => (
                     <div key={index} style={{ 
-                      background:"linear-gradient(135deg, #F0FDF4, #E6FFFA)", 
-                      border:"2px solid #10B981", 
-                      borderRadius:16, 
-                      padding:20,
-                      position:"relative",
-                      boxShadow:"0 4px 12px rgba(16, 185, 129, 0.15)"
+                      background:"linear-gradient(135deg, #F0FDF4, #D1FAE5)", 
+                      border:"1px solid #BBF7D0", 
+                      borderRadius:12, 
+                      padding:16,
+                      position:"relative"
                     }}>
-                      {/* Header con número y eliminar */}
-                      <div style={{ 
-                        display:"flex", 
-                        justifyContent:"space-between", 
-                        alignItems:"center", 
-                        marginBottom:16,
-                        paddingBottom:12,
-                        borderBottom:"2px dashed #10B981"
-                      }}>
-                        <div style={{ 
-                          background:"#10B981", 
-                          color:"white", 
-                          padding:"8px 16px", 
-                          borderRadius:20, 
-                          fontSize:16, 
-                          fontWeight:700 
-                        }}>
-                          📍 Zona {index + 1}
+                      {/* Header de la zona */}
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+                        <div style={{ fontSize:14, fontWeight:700, color:"#F5A623" }}>
+                          📍 Zona #{index + 1}
                         </div>
                         <button 
                           onClick={() => {
@@ -8006,34 +7990,23 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                             setHasUnsavedChanges(true);
                           }}
                           style={{ 
-                            padding:"10px 16px", 
-                            background:"#EF4444", 
+                            padding:"8px 12px", 
+                            background:"#DC2626", 
                             color:"white", 
                             border:"none", 
-                            borderRadius:12, 
-                            fontSize:14, 
+                            borderRadius:6, 
+                            fontSize:12, 
                             cursor:"pointer",
-                            fontWeight:700,
-                            boxShadow:"0 2px 8px rgba(239, 68, 68, 0.3)"
+                            fontWeight:600
                           }}
                         >
                           🗑️ Eliminar
                         </button>
                       </div>
                       
-                      {/* Campos organizados verticalmente para móviles */}
-                      <div style={{ display:"grid", gap:16 }}>
-                        {/* Nombre de la zona - campo principal */}
-                        <div>
-                          <label style={{ 
-                            display:"block", 
-                            fontSize:13, 
-                            fontWeight:700, 
-                            color: "#047857", 
-                            marginBottom:8 
-                          }}>
-                            🏷️ Nombre de la Zona
-                          </label>
+                      {/* Campos de la zona */}
+                      <div style={{ display:"grid", gap:12 }}>
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 2fr", gap:8 }}>
                           <input 
                             type="text" 
                             value={zone.name}
@@ -8043,35 +8016,19 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                               setTempShippingInfo({...tempShippingInfo, zones: newZones});
                               setHasUnsavedChanges(true);
                             }}
-                            placeholder="Ej: Zona 1 - Pilar Centro"
+                            placeholder="Nombre zona"
                             style={{ 
-                              width:"100%", 
-                              padding:"16px 14px", 
-                              border:"2px solid #10B981", 
-                              borderRadius:12, 
-                              fontSize:15, 
+                              padding:"12px", 
+                              border:"1px solid #BBF7D0", 
+                              borderRadius:8, 
+                              fontSize:14, 
                               fontWeight:600,
                               background:"white",
-                              boxSizing:"border-box",
-                              transition:"border-color 0.2s"
+                              boxSizing:"border-box"
                             }}
-                            onFocus={(e) => e.target.style.borderColor = "#059669"}
-                            onBlur={(e) => e.target.style.borderColor = "#10B981"}
                           />
-                        </div>
-                        
-                        {/* Descripción - campo grande */}
-                        <div>
-                          <label style={{ 
-                            display:"block", 
-                            fontSize:13, 
-                            fontWeight:700, 
-                            color: "#047857", 
-                            marginBottom:8 
-                          }}>
-                            📝 Descripción
-                          </label>
-                          <textarea 
+                          <input 
+                            type="text" 
                             value={zone.description}
                             onChange={(e) => {
                               const newZones = [...tempShippingInfo.zones];
@@ -8079,148 +8036,83 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                               setTempShippingInfo({...tempShippingInfo, zones: newZones});
                               setHasUnsavedChanges(true);
                             }}
-                            placeholder="Ej: Pilar Centro y alrededores, incluye barrio norte"
-                            rows={3}
+                            placeholder="Descripción de la zona"
                             style={{ 
-                              width:"100%", 
-                              padding:"16px 14px", 
-                              border:"2px solid #10B981", 
-                              borderRadius:12, 
+                              padding:"12px", 
+                              border:"1px solid #BBF7D0", 
+                              borderRadius:8, 
                               fontSize:14, 
-                              resize:"vertical", 
                               background:"white",
-                              boxSizing:"border-box",
-                              fontFamily:"inherit",
-                              lineHeight:1.5,
-                              transition:"border-color 0.2s"
+                              boxSizing:"border-box"
                             }}
-                            onFocus={(e) => e.target.style.borderColor = "#059669"}
-                            onBlur={(e) => e.target.style.borderColor = "#10B981"}
                           />
                         </div>
-                        
-                        {/* Info rápida - cards */}
-                        <div style={{ 
-                          background:"linear-gradient(135deg, #F0FDF4, #D1FAE5)", 
-                          borderRadius:12, 
-                          padding:16, 
-                          border:"1px solid #BBF7D0"
-                        }}>
-                          <div style={{ 
-                            fontSize:14, 
-                            fontWeight:700, 
-                            color: "#047857", 
-                            marginBottom:12, 
-                            textAlign:"center" 
-                          }}>
-                            ⚡ Información de Entrega
-                          </div>
-                          <div style={{ display:"grid", gap:12 }}>
-                            <div>
-                              <label style={{ 
-                                display:"block", 
-                                fontSize:12, 
-                                fontWeight:600, 
-                                color: "#059669", 
-                                marginBottom:6 
-                              }}>
-                                💰 Costo
-                              </label>
-                              <input 
-                                type="text" 
-                                value={zone.cost}
-                                onChange={(e) => {
-                                  const newZones = [...tempShippingInfo.zones];
-                                  newZones[index].cost = e.target.value;
-                                  setTempShippingInfo({...tempShippingInfo, zones: newZones});
-                                  setHasUnsavedChanges(true);
-                                }}
-                                placeholder="Gratis o $500"
-                                style={{ 
-                                  width:"100%", 
-                                  padding:"12px 14px", 
-                                  border:"1px solid #10B981", 
-                                  borderRadius:8, 
-                                  fontSize:14, 
-                                  fontWeight:600,
-                                  background:"white",
-                                  color:"#059669",
-                                  boxSizing:"border-box"
-                                }}
-                              />
-                            </div>
-                            
-                            <div>
-                              <label style={{ 
-                                display:"block", 
-                                fontSize:12, 
-                                fontWeight:600, 
-                                color: "#059669", 
-                                marginBottom:6 
-                              }}>
-                                ⏱️ Tiempo de Entrega
-                              </label>
-                              <input 
-                                type="text" 
-                                value={zone.time}
-                                onChange={(e) => {
-                                  const newZones = [...tempShippingInfo.zones];
-                                  newZones[index].time = e.target.value;
-                                  setTempShippingInfo({...tempShippingInfo, zones: newZones});
-                                  setHasUnsavedChanges(true);
-                                }}
-                                placeholder="Ej: 30-45 min"
-                                style={{ 
-                                  width:"100%", 
-                                  padding:"12px 14px", 
-                                  border:"1px solid #10B981", 
-                                  borderRadius:8, 
-                                  fontSize:14, 
-                                  background:"white",
-                                  boxSizing:"border-box"
-                                }}
-                              />
-                            </div>
-                            
-                            <div>
-                              <label style={{ 
-                                display:"block", 
-                                fontSize:12, 
-                                fontWeight:600, 
-                                color: "#059669", 
-                                marginBottom:6 
-                              }}>
-                                📅 Días de Entrega
-                              </label>
-                              <input 
-                                type="text" 
-                                value={zone.days || ""}
-                                onChange={(e) => {
-                                  const newZones = [...tempShippingInfo.zones];
-                                  newZones[index].days = e.target.value;
-                                  setTempShippingInfo({...tempShippingInfo, zones: newZones});
-                                  setHasUnsavedChanges(true);
-                                }}
-                                placeholder="Ej: Lunes a Viernes"
-                                style={{ 
-                                  width:"100%", 
-                                  padding:"12px 14px", 
-                                  border:"1px solid #10B981", 
-                                  borderRadius:8, 
-                                  fontSize:14, 
-                                  background:"white",
-                                  boxSizing:"border-box"
-                                }}
-                              />
-                            </div>
-                          </div>
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
+                          <input 
+                            type="text" 
+                            value={zone.cost}
+                            onChange={(e) => {
+                              const newZones = [...tempShippingInfo.zones];
+                              newZones[index].cost = e.target.value;
+                              setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                              setHasUnsavedChanges(true);
+                            }}
+                            placeholder="💰 Costo"
+                            style={{ 
+                              padding:"12px", 
+                              border:"1px solid #BBF7D0", 
+                              borderRadius:8, 
+                              fontSize:14, 
+                              fontWeight:600,
+                              background:"white",
+                              color:"#F5A623",
+                              boxSizing:"border-box"
+                            }}
+                          />
+                          <input 
+                            type="text" 
+                            value={zone.time}
+                            onChange={(e) => {
+                              const newZones = [...tempShippingInfo.zones];
+                              newZones[index].time = e.target.value;
+                              setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                              setHasUnsavedChanges(true);
+                            }}
+                            placeholder="⏱️ Tiempo"
+                            style={{ 
+                              padding:"12px", 
+                              border:"1px solid #BBF7D0", 
+                              borderRadius:8, 
+                              fontSize:14, 
+                              background:"white",
+                              boxSizing:"border-box"
+                            }}
+                          />
+                          <input 
+                            type="text" 
+                            value={zone.days || ""}
+                            onChange={(e) => {
+                              const newZones = [...tempShippingInfo.zones];
+                              newZones[index].days = e.target.value;
+                              setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                              setHasUnsavedChanges(true);
+                            }}
+                            placeholder="📅 Días"
+                            style={{ 
+                              padding:"12px", 
+                              border:"1px solid #BBF7D0", 
+                              borderRadius:8, 
+                              fontSize:14, 
+                              background:"white",
+                              boxSizing:"border-box"
+                            }}
+                          />
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
                 
-                {/* Botón agregar zona - más grande y claro */}
                 <button 
                   onClick={() => {
                     const newZones = [...tempShippingInfo.zones, { name: "", description: "", cost: "Gratis", time: "30-45 min", days: "" }];
@@ -8228,39 +8120,23 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                     setHasUnsavedChanges(true);
                   }}
                   style={{ 
-                    marginTop:24, 
-                    padding:"20px", 
-                    background:"linear-gradient(135deg, #10B981, #059669)", 
+                    marginTop:16, 
+                    padding:"16px", 
+                    background:"linear-gradient(135deg, #059669, #047857)", 
                     color:"white", 
                     border:"none", 
-                    borderRadius:16, 
-                    fontSize:16, 
+                    borderRadius:12, 
+                    fontSize:15, 
                     cursor:"pointer", 
                     fontWeight:700,
                     width:"100%", 
                     boxSizing:"border-box",
-                    boxShadow:"0 6px 20px rgba(16, 185, 129, 0.4)",
-                    transition:"all 0.3s",
-                    textAlign:"center"
+                    boxShadow:"0 4px 12px rgba(5, 150, 105, 0.3)",
+                    transition:"all 0.2s"
                   }}
                 >
-                  ➕ Agregar Nueva Zona de Envío
+                  ➕ Agregar Nueva Zona
                 </button>
-                
-                {/* Ayuda visual */}
-                <div style={{ 
-                  marginTop:16, 
-                  padding:16, 
-                  background:"linear-gradient(135deg, #FEF3C7, #FDE68A)", 
-                  borderRadius:12, 
-                  border:"1px solid #F59E0B",
-                  textAlign:"center"
-                }}>
-                  <div style={{ fontSize:13, color:"#92400E", fontWeight:700, marginBottom:8 }}>💡 Tip para móviles</div>
-                  <div style={{ fontSize:12, color:"#78350F", lineHeight:1.5 }}>
-                    Deslizá hacia abajo para ver todas las zonas. Cada zona tiene su propia tarjeta con todos los campos.
-                  </div>
-                </div>
               </div>
             </div>
           </div>
