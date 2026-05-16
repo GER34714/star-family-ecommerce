@@ -3699,7 +3699,7 @@ function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, se
 
       {/* TABS */}
       <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
-        {[["list"," Productos"],["add", editing?" Editar":" Agregar"],["prices"," Precios"],["history"," Historial"],["restore"," Restauración"],["excel"," Excel"],["categories"," Categorías"],["shipping"," Envíos"]].map(([t,label]) => (
+        {[["list"," Productos"],["prices"," Precios"],["history"," Historial"],["restore"," Restauración"],["excel"," Excel"],["categories"," Categorías"],["shipping"," Envíos"]].map(([t,label]) => (
           <button key={t} onClick={() => setAdminTab(t)} style={{ background:adminTab===t?"#C41E3A":"white", color:adminTab===t?"white":"#374151", border:adminTab===t?"none":"1px solid #E5E7EB", borderRadius:10, padding:"8px 16px", cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Poppins',sans-serif" }}>
             {label}
           </button>
@@ -3727,12 +3727,12 @@ function AdminPanel({ products, form, setForm, editing, setEditing, adminTab, se
                   <div style={{ fontSize:12, color:"#9CA3AF", marginTop:1 }}>{p?.category} · <strong style={{ color:"#C41E3A" }}>{fmt(p?.price || 0)}</strong></div>
                 </div>
                 <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-                  <button onClick={() => onEdit(p)} style={{ background:"#EFF6FF", border:"none", borderRadius:8, padding:"7px 11px", cursor:"pointer", fontSize:14 }}>✏️</button>
+                  <button onClick={() => onEdit(p)} style={{ background:"#EFF6FF", border:"none", borderRadius:8, padding:"7px 11px", cursor:"pointer", fontSize:14, width:36, height:36, flexShrink:0 }}>✏️</button>
                   <button onClick={() => {
                     if (window.confirm(`¿Estás seguro que querés borrar "${p?.name || 'este producto'}"?\n\nEsta acción no se puede deshacer.`)) {
                       onDelete(p.id);
                     }
-                  }} style={{ background:"#FEE2E2", border:"none", borderRadius:8, padding:"7px 11px", cursor:"pointer", fontSize:14 }}>🗑️</button>
+                  }} style={{ background:"#FEE2E2", border:"none", borderRadius:8, padding:"7px 11px", cursor:"pointer", fontSize:14, width:36, height:36, flexShrink:0 }}>🗑️</button>
                 </div>
               </div>
             ))
