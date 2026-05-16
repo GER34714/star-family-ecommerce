@@ -4570,7 +4570,8 @@ function ProductCard({ p, onOpen, onAdd }) {
     image_url = '', 
     bulkInfo = '',
     description = '',
-    custom_badge = ''
+    custom_badge = '',
+    id = 0
   } = p || {};
   
   // PARCHE DE SEGURIDAD TOTAL: Log de depuración
@@ -4582,8 +4583,25 @@ function ProductCard({ p, onOpen, onAdd }) {
   // Lógica para el badge: mostrar etiqueta personalizada si existe, si no, no mostrar badge
   const badgeText = custom_badge && custom_badge.trim() !== '' ? custom_badge.trim() : null;
   
+  // Determinar desde qué lado entra la animación (alternar izquierda/derecha)
+  const slideDirection = id % 2 === 0 ? 'left' : 'right';
+  
   return (
-    <div className="product-card" onClick={onOpen}>
+    <motion.div 
+      className="product-card" 
+      onClick={onOpen}
+      initial={{ opacity: 0, x: slideDirection === 'left' ? -100 : 100 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ 
+        duration: 0.6, 
+        delay: (id % 6) * 0.1, // Stagger effect basado en el ID
+        ease: [0.25, 0.46, 0.45, 0.94] // Curva de easing suave
+      }}
+      whileHover={{ 
+        scale: 1.02, 
+        transition: { duration: 0.2 } 
+      }}
+    >
       {/* Image */}
       <div style={{ position:"relative", aspectRatio:"4/3", overflow:"hidden", background:`linear-gradient(135deg,${color}22,${color}44)` }}>
         {image_url && image_url.trim() !== ''
@@ -4603,7 +4621,7 @@ function ProductCard({ p, onOpen, onAdd }) {
           <button onClick={e => { e.stopPropagation(); onAdd(); }} className="btn-add-cart">+</button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
