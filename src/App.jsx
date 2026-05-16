@@ -5799,7 +5799,8 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
           ["prices","💰 Precios"],
           ["history","📜 Historial"],
           ["restore","🔄 Restauración"],
-          ["excel","📊 Excel"]
+          ["excel","📊 Excel"],
+          ["help","📚 Ayuda"]
         ].map(([t,label]) => (
           <button key={t} onClick={() => setAdminTab(t)} style={{ background:adminTab===t?"#C41E3A":"white", color:adminTab===t?"white":"#374151", border:adminTab===t?"none":"1px solid #E5E7EB", borderRadius:10, padding:"8px 16px", cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Poppins',sans-serif" }}>
             {label}
@@ -8183,6 +8184,297 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                 Salchichas x6 | Frescos | 19050 | Bulto x12 | Desc... | https://...<br/>
                 30 Panchos | Panchos Armados | 11700 | 30+30+1 | ... |
               </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: AYUDA */}
+      {adminTab === "help" && (
+        <div style={{ background:"white", borderRadius:16, padding:24 }}>
+          <h3 style={{ margin:"0 0 6px", fontWeight:800 }}>📚 Manual de Usuario - Panel de Administración</h3>
+          <p style={{ color:"#6B7280", fontSize:14, marginBottom:24 }}>Guía completa para administrar tu ecommerce Star Family</p>
+          
+          <div style={{ display:"grid", gap:20 }}>
+            {/* SECCIÓN 1: PRODUCTOS */}
+            <div style={{ background:"linear-gradient(135deg, rgba(114, 47, 55, 0.05), rgba(15, 15, 15, 0.05))", borderRadius:12, padding:20, border:"1px solid rgba(245, 166, 35, 0.1)" }}>
+              <div style={{ fontSize:20, fontWeight:700, color:"#722F37", marginBottom:12 }}>📋 Gestión de Productos</div>
+              
+              <div style={{ display:"grid", gap:12, marginBottom:16 }}>
+                <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                  <div style={{ fontSize:24, color:"#F5A623", minWidth:30 }}>1️⃣</div>
+                  <div>
+                    <div style={{ fontWeight:600, marginBottom:4, color:"#111" }}>Ver Productos</div>
+                    <div style={{ color:"#6B7280", fontSize:14, lineHeight:1.5 }}>
+                      En la pestaña "📋 Productos" podés ver todos tus productos. Usá los filtros para buscar por nombre, categoría o estado (activo/inactivo).
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                  <div style={{ fontSize:24, color:"#F5A623", minWidth:30 }}>2️⃣</div>
+                  <div>
+                    <div style={{ fontWeight:600, marginBottom:4, color:"#111" }}>Agregar Nuevo Producto</div>
+                    <div style={{ color:"#6B7280", fontSize:14, lineHeight:1.5 }}>
+                      Hacé clic en "+ Nuevo" o en la pestaña "➕ Agregar". Completá todos los campos: nombre, categoría, precio, bulto, descripción e imagen.
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                  <div style={{ fontSize:24, color:"#F5A623", minWidth:30 }}>3️⃣</div>
+                  <div>
+                    <div style={{ fontWeight:600, marginBottom:4, color:"#111" }}>Editar Productos</div>
+                    <div style={{ color:"#6B7280", fontSize:14, lineHeight:1.5 }}>
+                      Desde la lista de productos, hacé clic en "✏️ Editar" para modificar cualquier información. No olvides hacer clic en "💾 Guardar Cambios".
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                  <div style={{ fontSize:24, color:"#F5A623", minWidth:30 }}>4️⃣</div>
+                  <div>
+                    <div style={{ fontWeight:600, marginBottom:4, color:"#111" }}>Activar/Desactivar</div>
+                    <div style={{ color:"#6B7280", fontSize:14, lineHeight:1.5 }}>
+                      Usá los botones "🟢 Activo" / "🔴 Inactivo" para controlar si un producto se muestra en la tienda.
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div style={{ background:"rgba(245, 166, 35, 0.1)", borderRadius:8, padding:12, border:"1px solid rgba(245, 166, 35, 0.2)" }}>
+                <div style={{ fontWeight:600, color:"#F5A623", marginBottom:4 }}>💡 Tip Profesional</div>
+                <div style={{ color:"#6B7280", fontSize:13, lineHeight:1.5 }}>
+                  Mantené tus productos siempre actualizados con precios correctos y buenas imágenes para aumentar las ventas.
+                </div>
+              </div>
+            </div>
+
+            {/* SECCIÓN 2: KIT Y ENVÍOS */}
+            <div style={{ background:"linear-gradient(135deg, rgba(114, 47, 55, 0.05), rgba(15, 15, 15, 0.05))", borderRadius:12, padding:20, border:"1px solid rgba(245, 166, 35, 0.1)" }}>
+              <div style={{ fontSize:20, fontWeight:700, color:"#722F37", marginBottom:12 }}>🔥 Kit Gastronómico y Envíos</div>
+              
+              <div style={{ display:"grid", gap:12, marginBottom:16 }}>
+                <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                  <div style={{ fontSize:24, color:"#F5A623", minWidth:30 }}>🎯</div>
+                  <div>
+                    <div style={{ fontWeight:600, marginBottom:4, color:"#111" }}>Configurar Kit Gastronómico</div>
+                    <div style={{ color:"#6B7280", fontSize:14, lineHeight:1.5 }}>
+                      Editá el título, descripción, productos incluidos y financiación. Esta sección aparece en la tienda como un producto premium.
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                  <div style={{ fontSize:24, color:"#F5A623", minWidth:30 }}>🚚</div>
+                  <div>
+                    <div style={{ fontWeight:600, marginBottom:4, color:"#111" }}>Administrar Envíos Gratis</div>
+                    <div style={{ color:"#6B7280", fontSize:14, lineHeight:1.5 }}>
+                      Configurá los requisitos para envío gratuito y las zonas de entrega. Podés editar nombre, descripción, costo y días de entrega por zona.
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                  <div style={{ fontSize:24, color:"#F5A623", minWidth:30 }}>📍</div>
+                  <div>
+                    <div style={{ fontWeight:600, marginBottom:4, color:"#111" }}>Gestionar Zonas de Envío</div>
+                    <div style={{ color:"#6B7280", fontSize:14, lineHeight:1.5 }}>
+                      Agregá o eliminá zonas de envío. Cada zona puede tener su propio costo, tiempo de entrega y días disponibles.
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div style={{ background:"rgba(245, 166, 35, 0.1)", borderRadius:8, padding:12, border:"1px solid rgba(245, 166, 35, 0.2)" }}>
+                <div style={{ fontWeight:600, color:"#F5A623", marginBottom:4 }}>⚠️ Importante</div>
+                <div style={{ color:"#6B7280", fontSize:13, lineHeight:1.5 }}>
+                  Recordá hacer clic en "🔄 Aplicar Cambios" después de modificar la información para que se actualice en la tienda.
+                </div>
+              </div>
+            </div>
+
+            {/* SECCIÓN 3: BANNERS */}
+            <div style={{ background:"linear-gradient(135deg, rgba(114, 47, 55, 0.05), rgba(15, 15, 15, 0.05))", borderRadius:12, padding:20, border:"1px solid rgba(245, 166, 35, 0.1)" }}>
+              <div style={{ fontSize:20, fontWeight:700, color:"#722F37", marginBottom:12 }}>🎆 Gestión de Banners</div>
+              
+              <div style={{ display:"grid", gap:12, marginBottom:16 }}>
+                <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                  <div style={{ fontSize:24, color:"#F5A623", minWidth:30 }}>🖼️</div>
+                  <div>
+                    <div style={{ fontWeight:600, marginBottom:4, color:"#111" }}>Crear Banners Promocionales</div>
+                    <div style={{ color:"#6B7280", fontSize:14, lineHeight:1.5 }}>
+                      Subí imágenes promocionales que se mostrarán en la tienda principal. Configurá título, descripción y enlace.
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                  <div style={{ fontSize:24, color:"#F5A623", minWidth:30 }}>🎯</div>
+                  <div>
+                    <div style={{ fontWeight:600, marginBottom:4, color:"#111" }}>Orden y Visibilidad</div>
+                    <div style={{ color:"#6B7280", fontSize:14, lineHeight:1.5 }}>
+                      Controlá el orden de aparición y activá/desactivá banners según tus campañas promocionales.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* SECCIÓN 4: PAGOS */}
+            <div style={{ background:"linear-gradient(135deg, rgba(114, 47, 55, 0.05), rgba(15, 15, 15, 0.05))", borderRadius:12, padding:20, border:"1px solid rgba(245, 166, 35, 0.1)" }}>
+              <div style={{ fontSize:20, fontWeight:700, color:"#722F37", marginBottom:12 }}>💳 Configuración de Pagos</div>
+              
+              <div style={{ display:"grid", gap:12, marginBottom:16 }}>
+                <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                  <div style={{ fontSize:24, color:"#F5A623", minWidth:30 }}>💳</div>
+                  <div>
+                    <div style={{ fontWeight:600, marginBottom:4, color:"#111" }}>Mercado Pago</div>
+                    <div style={{ color:"#6B7280", fontSize:14, lineHeight:1.5 }}>
+                      Activá/desactivá Mercado Pago como método de pago. Configurá tu Access Token para recibir pagos online.
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                  <div style={{ fontSize:24, color:"#F5A623", minWidth:30 }}>🏦</div>
+                  <div>
+                    <div style={{ fontWeight:600, marginBottom:4, color:"#111" }}>Transferencia Bancaria</div>
+                    <div style={{ color:"#6B7280", fontSize:14, lineHeight:1.5 }}>
+                      Habilitá pagos por transferencia y configurá los datos bancarios para que los clientes puedan realizar transferencias.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* SECCIÓN 5: IMPORTACIÓN EXCEL */}
+            <div style={{ background:"linear-gradient(135deg, rgba(114, 47, 55, 0.05), rgba(15, 15, 15, 0.05))", borderRadius:12, padding:20, border:"1px solid rgba(245, 166, 35, 0.1)" }}>
+              <div style={{ fontSize:20, fontWeight:700, color:"#722F37", marginBottom:12 }}>📊 Importación desde Excel</div>
+              
+              <div style={{ display:"grid", gap:12, marginBottom:16 }}>
+                <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                  <div style={{ fontSize:24, color:"#F5A623", minWidth:30 }}>📁</div>
+                  <div>
+                    <div style={{ fontWeight:600, marginBottom:4, color:"#111" }}>Formato Requerido</div>
+                    <div style={{ color:"#6B7280", fontSize:14, lineHeight:1.5 }}>
+                      Tu Excel debe tener las columnas: nombre, categoría, precio, bulto, descripción, imagen (URL).
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                  <div style={{ fontSize:24, color:"#F5A623", minWidth:30 }}>⚡</div>
+                  <div>
+                    <div style={{ fontWeight:600, marginBottom:4, color:"#111" }}>Importación Masiva</div>
+                    <div style={{ color:"#6B7280", fontSize:14, lineHeight:1.5 }}>
+                      Arrastrá o seleccioná tu archivo Excel para importar múltiples productos de una sola vez.
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div style={{ background:"rgba(245, 166, 35, 0.1)", borderRadius:8, padding:12, border:"1px solid rgba(245, 166, 35, 0.2)" }}>
+                <div style={{ fontWeight:600, color:"#F5A623", marginBottom:4 }}>📋 Ejemplo de Formato</div>
+                <div style={{ fontFamily:"monospace", fontSize:12, color:"#6B7280", lineHeight:1.5 }}>
+                  Salchichas x6 | Frescos | 19050 | Bulto x12 | Salchichas premium | https://imagen.jpg<br/>
+                  30 Panchos | Panchos Armados | 11700 | 30+30+1 | Panchos completos | https://imagen.jpg
+                </div>
+              </div>
+            </div>
+
+            {/* SECCIÓN 6: TIPS Y BUENAS PRÁCTICAS */}
+            <div style={{ background:"linear-gradient(135deg, #722F37, #0f0f0f)", borderRadius:12, padding:20, color:"white" }}>
+              <div style={{ fontSize:20, fontWeight:700, marginBottom:12 }}>💡 Tips Profesionales</div>
+              
+              <div style={{ display:"grid", gap:12 }}>
+                <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                  <div style={{ fontSize:24, minWidth:30 }}>🎯</div>
+                  <div>
+                    <div style={{ fontWeight:600, marginBottom:4, color:"#F5A623" }}>Optimización de Imágenes</div>
+                    <div style={{ color:"rgba(255,255,255,0.9)", fontSize:14, lineHeight:1.5 }}>
+                      Usá imágenes de alta calidad (800x800px) y peso optimizado para mejor rendimiento.
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                  <div style={{ fontSize:24, minWidth:30 }}>💰</div>
+                  <div>
+                    <div style={{ fontWeight:600, marginBottom:4, color:"#F5A623" }}>Estrategia de Precios</div>
+                    <div style={{ color:"rgba(255,255,255,0.9)", fontSize:14, lineHeight:1.5 }}>
+                      Mantené precios competitivos y considerá descuentos por volumen para aumentar las ventas.
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                  <div style={{ fontSize:24, minWidth:30 }}>📱</div>
+                  <div>
+                    <div style={{ fontWeight:600, marginBottom:4, color:"#F5A623" }}>Experiencia Mobile</div>
+                    <div style={{ color:"rgba(255,255,255,0.9)", fontSize:14, lineHeight:1.5 }}>
+                      Recordá que muchos clientes compran desde celulares. Asegurate que las imágenes se vean bien en móviles.
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                  <div style={{ fontSize:24, minWidth:30 }}>🚀</div>
+                  <div>
+                    <div style={{ fontWeight:600, marginBottom:4, color:"#F5A623" }}>Actualización Constante</div>
+                    <div style={{ color:"rgba(255,255,255,0.9)", fontSize:14, lineHeight:1.5 }}>
+                      Mantené tu catálogo actualizado y agregá nuevos productos regularmente para mantener el interés.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* SECCIÓN 7: SOPORTE */}
+            <div style={{ background:"rgba(245, 166, 35, 0.1)", borderRadius:12, padding:20, border:"1px solid rgba(245, 166, 35, 0.2)" }}>
+              <div style={{ fontSize:20, fontWeight:700, color:"#F5A623", marginBottom:12 }}>🆘 Soporte y Ayuda</div>
+              
+              <div style={{ display:"grid", gap:12 }}>
+                <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                  <div style={{ fontSize:24, color:"#F5A623", minWidth:30 }}>💬</div>
+                  <div>
+                    <div style={{ fontWeight:600, marginBottom:4, color:"#111" }}>¿Necesitas Ayuda?</div>
+                    <div style={{ color:"#6B7280", fontSize:14, lineHeight:1.5 }}>
+                      Si tenés problemas técnicos o dudas, no dudes en contactarnos. Estamos para ayudarte.
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                  <div style={{ fontSize:24, color:"#F5A623", minWidth:30 }}>📞</div>
+                  <div>
+                    <div style={{ fontWeight:600, marginBottom:4, color:"#111" }}>Contacto Rápido</div>
+                    <div style={{ color:"#6B7280", fontSize:14, lineHeight:1.5 }}>
+                      Podés comunicarte directamente con el equipo de soporte técnico para resolver cualquier inconveniente.
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                  <div style={{ fontSize:24, color:"#F5A623", minWidth:30 }}>🎓</div>
+                  <div>
+                    <div style={{ fontWeight:600, marginBottom:4, color:"#111" }}>Capacitación</div>
+                    <div style={{ color:"#6B7280", fontSize:14, lineHeight:1.5 }}>
+                      Ofrecemos capacitación personalizada para que saques el máximo provecho de tu panel de administración.
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div style={{ marginTop:16, padding:12, background:"white", borderRadius:8, border:"1px solid rgba(245, 166, 35, 0.3)" }}>
+                <div style={{ fontWeight:600, color:"#722F37", marginBottom:8 }}>📧 Contacto de Soporte</div>
+                <div style={{ color:"#6B7280", fontSize:13, lineHeight:1.5 }}>
+                  <strong>WhatsApp:</strong> 11-6449-9481<br/>
+                  <strong>Email:</strong> ciborg347@gmail.com<br/>
+                  <strong>Instagram:</strong> @ciborg347<br/>
+                  <strong>Horario:</strong> Lunes a Viernes 9:00-18:00
+                </div>
+              </div>
             </div>
           </div>
         </div>
