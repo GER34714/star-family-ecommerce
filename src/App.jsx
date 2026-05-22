@@ -2878,6 +2878,13 @@ export default function StarFamilyApp() {
     return (
       <div style={{ minHeight:"100vh", background:"#F4F4F5", fontFamily:"'Poppins', sans-serif", display:"flex", alignItems:"center", justifyContent:"center" }}>
         <style>{CSS}</style>
+      <style>{`
+        @media (max-width: 767px) {
+          .mobile-floating-cart {
+            display: flex !important;
+          }
+        }
+      `}</style>
         <div style={{ textAlign:"center" }}>
           <div style={{ width:80, height:80, margin:"0 auto 20px", borderRadius:"50%", overflow:"hidden", border:"3px solid #F5A623", animation:"spin 2s linear infinite" }}>
             <img src="https://bedccnjylrnkacaxtusv.supabase.co/storage/v1/object/public/imagenes/274300884_477506477168087_6457824232979322157_n.jpg" alt="Star Family Logo" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
@@ -3209,45 +3216,6 @@ export default function StarFamilyApp() {
                   🏢 Quiénes Somos
                 </button>
                 
-                                
-                <button
-                  onClick={() => { setCartOpen(true); setMobileMenuOpen(false); }}
-                  style={{
-                    width: "100%",
-                    padding: "12px 16px",
-                    background: "rgba(245, 166, 35, 0.1)",
-                    border: "1px solid #F5A623",
-                    borderRadius: 8,
-                    color: "#F5A623",
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    transition: "all 0.3s ease"
-                  }}
-                >
-                  <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    🛒 Carrito
-                  </span>
-                  {cartCount > 0 && (
-                    <span style={{ 
-                      background: "#F5A623", 
-                      color: "#111", 
-                      borderRadius: "50%", 
-                      width: 24, 
-                      height: 24, 
-                      display: "inline-flex", 
-                      alignItems: "center", 
-                      justifyContent: "center", 
-                      fontSize: 12, 
-                      fontWeight: 800 
-                    }}>
-                      {cartCount}
-                    </span>
-                  )}
-                </button>
               </div>
               
               {/* Divider */}
@@ -4066,6 +4034,16 @@ export default function StarFamilyApp() {
             <div style={{ color:"#9CA3AF", fontSize:14, lineHeight:1.6 }}>
               Mayorista de productos de alta calidad para comercios y eventos.
             </div>
+            <button
+              onClick={() => {
+                setView("admin");
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                showToast("🔐 Acceso admin activado", "success");
+              }}
+              style={{ marginTop:16, padding:"10px 14px", background:"rgba(245, 166, 35, 0.12)", border:"1px solid rgba(245, 166, 35, 0.55)", borderRadius:8, color:"#F5A623", fontSize:13, fontWeight:700, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:8, fontFamily:"'Poppins', sans-serif" }}
+            >
+              🔐 Panel admin
+            </button>
           </div>
 
           {/* Navegación */}
@@ -4087,7 +4065,7 @@ export default function StarFamilyApp() {
           </div>
 
           {/* Redes sociales */}
-          <div>
+          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
             <h3 style={{ color:"white", fontSize:16, fontWeight:700, marginBottom:16, fontFamily:"'Poppins', sans-serif" }}>Síguenos</h3>
             <a
               href="https://www.instagram.com/starfamily.oficial/?hl=es"
@@ -4100,6 +4078,21 @@ export default function StarFamilyApp() {
               <div style={{ width:44, height:44, background:"linear-gradient(45deg, #E4405F, #C13584)", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.069-4.85.069-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.782 6.98 6.979 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.358-.2 6.782-2.618 6.979-6.98.058-1.281.072-1.689.072-4.948 0-3.259-.014-3.667-.072-4.947-.2-4.358-2.618-6.78-6.98-6.98-1.281-.059-1.689-.073-4.948-.073zm5.521 6.978a1.25 1.25 0 100 2.5 1.25 1.25 0 000-2.5zm-5.521 1.436a4.746 4.746 0 100 9.492 4.746 4.746 0 000-9.492zm0 7.834a3.088 3.088 0 110-6.176 3.088 3.088 0 010 6.176z"/>
+                </svg>
+              </div>
+              <span style={{ fontSize:14, fontWeight:600, fontFamily:"'Poppins', sans-serif" }}>@starfamily.oficial</span>
+            </a>
+            <a
+              href="https://www.tiktok.com/@starfamily.oficial"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display:"flex", alignItems:"center", gap:8, color:"white", textDecoration:"none", transition:"transform 0.2s" }}
+              onMouseOver={(e) => e.target.style.transform = "translateX(5px)"}
+              onMouseOut={(e) => e.target.style.transform = "translateX(0)"}
+            >
+              <div style={{ width:44, height:44, background:"#000000", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64c.298-.002.595.042.88.13V9.4a6.34 6.34 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52V6.74a4.85 4.85 0 01-1-.05z"/>
                 </svg>
               </div>
               <span style={{ fontSize:14, fontWeight:600, fontFamily:"'Poppins', sans-serif" }}>@starfamily.oficial</span>
@@ -4226,9 +4219,9 @@ export default function StarFamilyApp() {
             }}
             style={{
               position: 'fixed',
-              bottom: 80,
+              bottom: 180,
               right: 20,
-              zIndex: 500,
+              zIndex: 1300,
               maxWidth: 320
             }}
           >
@@ -4390,6 +4383,22 @@ export default function StarFamilyApp() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {view === "shop" && !hideFloatingButtons && (
+        <button
+          className="mobile-floating-cart"
+          onClick={() => setCartOpen(true)}
+          aria-label="Abrir carrito"
+          style={{ position:"fixed", right:18, bottom:92, zIndex:1200, width:58, height:58, borderRadius:"50%", border:"none", background:"linear-gradient(135deg, #C41E3A, #E53E3E)", color:"white", boxShadow:"0 8px 24px rgba(196, 30, 58, 0.45)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, cursor:"pointer" }}
+        >
+          🛒
+          {cartCount > 0 && (
+            <span style={{ position:"absolute", top:-5, right:-5, background:"#F5A623", color:"#111", borderRadius:"50%", minWidth:22, height:22, padding:"0 5px", display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:900, border:"2px solid white", boxSizing:"border-box" }}>
+              {cartCount}
+            </span>
+          )}
+        </button>
+      )}
 
       {/* CART OVERLAY */}
       <div className={`overlay ${cartOpen?"show":""}`} onClick={() => setCartOpen(false)} />
