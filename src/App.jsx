@@ -1050,6 +1050,7 @@ export default function StarFamilyApp() {
     const handleBeforeInstallPrompt = (e) => {
       console.log('📱 PWA: Evento beforeinstallprompt detectado');
       e.preventDefault();
+      window.deferredPrompt = e;
       setDeferredPrompt(e);
       setIsInstallable(true);
       
@@ -1109,14 +1110,16 @@ export default function StarFamilyApp() {
 
   // Función para instalar PWA manualmente
   const installPWA = async () => {
-    if (!deferredPrompt) {
+    const promptEvent = deferredPrompt || window.deferredPrompt;
+
+    if (!promptEvent) {
       showToast('⚠️ La instalación no está disponible en este navegador');
       return;
     }
 
     try {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
+      promptEvent.prompt();
+      const { outcome } = await promptEvent.userChoice;
       
       if (outcome === 'accepted') {
         console.log('📱 PWA: Usuario aceptó la instalación');
@@ -1127,6 +1130,7 @@ export default function StarFamilyApp() {
       }
       
       setDeferredPrompt(null);
+      window.deferredPrompt = null;
       setIsInstallable(false);
     } catch (error) {
       console.error('📱 PWA: Error en instalación:', error);
@@ -6214,6 +6218,7 @@ function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint
 
 function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint, onDeleteRestorePoint, loadingRestorePoints, restorePointsError, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview, loadingPriceHistory, priceHistoryError, onToggleSuspension, onToggleActivation, adminCurrentPage, adminTotalPages, adminProductsPerPage, adminNextPage, adminPrevPage, adminGoToPage, totalFilteredProducts, paymentSettings, setPaymentSettings, loadingPaymentSettings, setLoadingPaymentSettings, banners, setBanners, loadingBanners, bannerForm, setBannerForm, editingBanner, setEditingBanner, bannerImagePreview, setBannerImagePreview, uploadingBannerImage, onBannerSubmit, onBannerImageSelect, onClearBannerImage, onDeleteBanner, onEditBanner, kitInfo, setKitInfo, shippingInfo, setShippingInfo, tempKitInfo, setTempKitInfo, tempShippingInfo, setTempShippingInfo, hasUnsavedChanges, setHasUnsavedChanges }) {
   const supabase = getSupabaseClient();
+  const isSmallScreen = typeof window !== "undefined" && window.innerWidth <= 640;
   
   // Cargar configuración de pago desde Supabase
   const loadPaymentSettings = useCallback(async () => {
@@ -6445,23 +6450,26 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
       </div>
 
       {/* TABS */}
-      <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
+      <div style={{ display:"grid", gap:12, marginBottom:24 }}>
         {[
-          ["list","📋 Productos"],
-          ["add", editing?"✏️ Editar":"➕ Agregar"],
-          ["banners","🎆 Banners"],
-          ["kit","🔥 Kit y Envíos"],
-          ["payment","💳 Pagos"],
-          ["prices","💰 Precios"],
-          ["history","📜 Historial"],
-          ["restore","🔄 Restauración"],
-          ["excel","📊 Excel"],
-          ["help","📚 Ayuda"],
-          ["terms","📋 Términos"]
-        ].map(([t,label]) => (
-          <button key={t} onClick={() => setAdminTab(t)} style={{ background:adminTab===t?"#C41E3A":"white", color:adminTab===t?"white":"#374151", border:adminTab===t?"none":"1px solid #E5E7EB", borderRadius:10, padding:"8px 16px", cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Poppins',sans-serif" }}>
-            {label}
-          </button>
+          ["Catálogo", [["list","📋 Productos"], ["add", editing?"✏️ Editar":"➕ Agregar / Editar"]]],
+          ["Comercial", [["payment","💳 Pagos"], ["prices","💰 Precios"]]],
+          ["Contenido y envíos", [["banners","🎆 Banners"], ["kit","🔥 Kit y Envíos"]]],
+          ["Gestión", [["excel","📊 Excel"], ["history","📜 Historial"], ["restore","🔄 Restauración"]]],
+          ["Soporte", [["help","📚 Ayuda"], ["terms","📋 Términos"]]]
+        ].map(([section, tabs]) => (
+          <div key={section} style={{ background:"white", border:"1px solid #E5E7EB", borderRadius:14, padding:"12px 14px", boxShadow:"0 1px 3px rgba(0,0,0,0.04)" }}>
+            <div style={{ fontSize:11, fontWeight:800, color:"#6B7280", textTransform:"uppercase", letterSpacing:0.8, marginBottom:9 }}>
+              {section}
+            </div>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+              {tabs.map(([t,label]) => (
+                <button key={t} onClick={() => setAdminTab(t)} style={{ background:adminTab===t?"#C41E3A":"#F9FAFB", color:adminTab===t?"white":"#374151", border:adminTab===t?"none":"1px solid #E5E7EB", borderRadius:10, padding:"8px 16px", cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Poppins',sans-serif" }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
 
@@ -8107,7 +8115,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
 
       {/* TAB: KIT Y ENVÍOS */}
       {adminTab === "kit" && (
-        <div style={{ background:"white", borderRadius:12, padding:"12px", maxWidth:"100%", margin:0 }}>
+        <div style={{ background:"white", borderRadius:12, padding:isSmallScreen ? "8px" : "12px", maxWidth:"100%", margin:0 }}>
           {/* Header con alerta de cambios */}
           {hasUnsavedChanges && (
             <div style={{ 
@@ -8509,10 +8517,13 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
 
           {/* Sección Envíos Gratis */}
           <div>
-            <div style={{ background:"white", border:"1px solid #E5E7EB", borderRadius:12, padding:16 }}>
-              <h3 style={{ margin:"0 0 16px", fontSize:18, fontWeight:700, color:"#111", textAlign:"center" }}>
+            <div style={{ background:"white", border:"1px solid #E5E7EB", borderRadius:12, padding:isSmallScreen ? 12 : 16 }}>
+              <h3 style={{ margin:"0 0 6px", fontSize:isSmallScreen ? 17 : 18, fontWeight:700, color:"#111", textAlign:"center" }}>
                 🚚 Envíos Gratis
               </h3>
+              <div style={{ color:"#6B7280", fontSize:12, textAlign:"center", lineHeight:1.5, marginBottom:16 }}>
+                Editá el texto general y después cargá cada zona con costo, tiempo y días de entrega.
+              </div>
               
               {/* Campos principales */}
               <div style={{ display:"grid", gap:16, marginBottom:20 }}>
@@ -8627,19 +8638,24 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                 <div style={{ fontSize:16, fontWeight:700, color:"#111", marginBottom:12, textAlign:"center" }}>
                   📍 Zonas de Envío
                 </div>
-                <div style={{ display:"grid", gap:16 }}>
+                <div style={{ display:"grid", gap:isSmallScreen ? 12 : 16 }}>
                   {tempShippingInfo.zones.map((zone, index) => (
                     <div key={index} style={{ 
                       background:"linear-gradient(135deg, #F0FDF4, #D1FAE5)", 
                       border:"1px solid #BBF7D0", 
                       borderRadius:12, 
-                      padding:16,
+                      padding:isSmallScreen ? 12 : 16,
                       position:"relative"
                     }}>
                       {/* Header de la zona */}
-                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-                        <div style={{ fontSize:14, fontWeight:700, color:"#F5A623" }}>
-                          📍 Zona #{index + 1}
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:isSmallScreen ? "stretch" : "center", marginBottom:12, gap:10, flexDirection:isSmallScreen ? "column" : "row" }}>
+                        <div>
+                          <div style={{ fontSize:14, fontWeight:700, color:"#F5A623" }}>
+                            📍 Zona #{index + 1}
+                          </div>
+                          <div style={{ fontSize:11, color:"#047857", fontWeight:600, marginTop:2 }}>
+                            Datos visibles para el cliente
+                          </div>
                         </div>
                         <button 
                           onClick={() => {
@@ -8655,7 +8671,8 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                             borderRadius:6, 
                             fontSize:12, 
                             cursor:"pointer",
-                            fontWeight:600
+                            fontWeight:600,
+                            width:isSmallScreen ? "100%" : "auto"
                           }}
                         >
                           🗑️ Eliminar
@@ -8664,107 +8681,127 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                       
                       {/* Campos de la zona */}
                       <div style={{ display:"grid", gap:12 }}>
-                        <div style={{ display:"grid", gridTemplateColumns:"1fr 2fr", gap:8 }}>
-                          <input 
-                            type="text" 
-                            value={zone.name}
-                            onChange={(e) => {
-                              const newZones = [...tempShippingInfo.zones];
-                              newZones[index].name = e.target.value;
-                              setTempShippingInfo({...tempShippingInfo, zones: newZones});
-                              setHasUnsavedChanges(true);
-                            }}
-                            placeholder="Nombre zona"
-                            style={{ 
-                              padding:"12px", 
-                              border:"1px solid #BBF7D0", 
-                              borderRadius:8, 
-                              fontSize:14, 
-                              fontWeight:600,
-                              background:"white",
-                              boxSizing:"border-box"
-                            }}
-                          />
-                          <input 
-                            type="text" 
-                            value={zone.description}
-                            onChange={(e) => {
-                              const newZones = [...tempShippingInfo.zones];
-                              newZones[index].description = e.target.value;
-                              setTempShippingInfo({...tempShippingInfo, zones: newZones});
-                              setHasUnsavedChanges(true);
-                            }}
-                            placeholder="Descripción de la zona"
-                            style={{ 
-                              padding:"12px", 
-                              border:"1px solid #BBF7D0", 
-                              borderRadius:8, 
-                              fontSize:14, 
-                              background:"white",
-                              boxSizing:"border-box"
-                            }}
-                          />
+                        <div style={{ display:"grid", gridTemplateColumns:isSmallScreen ? "1fr" : "1fr 2fr", gap:isSmallScreen ? 10 : 8 }}>
+                          <div>
+                            <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#047857", marginBottom:5 }}>Nombre de la zona</label>
+                            <input 
+                              type="text" 
+                              value={zone.name}
+                              onChange={(e) => {
+                                const newZones = [...tempShippingInfo.zones];
+                                newZones[index].name = e.target.value;
+                                setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                                setHasUnsavedChanges(true);
+                              }}
+                              placeholder="Ej: Zona 1"
+                              style={{ 
+                                width:"100%",
+                                padding:"12px", 
+                                border:"1px solid #BBF7D0", 
+                                borderRadius:8, 
+                                fontSize:14, 
+                                fontWeight:600,
+                                background:"white",
+                                boxSizing:"border-box"
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#047857", marginBottom:5 }}>Localidades o referencia</label>
+                            <input 
+                              type="text" 
+                              value={zone.description}
+                              onChange={(e) => {
+                                const newZones = [...tempShippingInfo.zones];
+                                newZones[index].description = e.target.value;
+                                setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                                setHasUnsavedChanges(true);
+                              }}
+                              placeholder="Ej: Pilar Centro y alrededores"
+                              style={{ 
+                                width:"100%",
+                                padding:"12px", 
+                                border:"1px solid #BBF7D0", 
+                                borderRadius:8, 
+                                fontSize:14, 
+                                background:"white",
+                                boxSizing:"border-box"
+                              }}
+                            />
+                          </div>
                         </div>
-                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
-                          <input 
-                            type="text" 
-                            value={zone.cost}
-                            onChange={(e) => {
-                              const newZones = [...tempShippingInfo.zones];
-                              newZones[index].cost = e.target.value;
-                              setTempShippingInfo({...tempShippingInfo, zones: newZones});
-                              setHasUnsavedChanges(true);
-                            }}
-                            placeholder="💰 Costo"
-                            style={{ 
-                              padding:"12px", 
-                              border:"1px solid #BBF7D0", 
-                              borderRadius:8, 
-                              fontSize:14, 
-                              fontWeight:600,
-                              background:"white",
-                              color:"#F5A623",
-                              boxSizing:"border-box"
-                            }}
-                          />
-                          <input 
-                            type="text" 
-                            value={zone.time}
-                            onChange={(e) => {
-                              const newZones = [...tempShippingInfo.zones];
-                              newZones[index].time = e.target.value;
-                              setTempShippingInfo({...tempShippingInfo, zones: newZones});
-                              setHasUnsavedChanges(true);
-                            }}
-                            placeholder="⏱️ Tiempo"
-                            style={{ 
-                              padding:"12px", 
-                              border:"1px solid #BBF7D0", 
-                              borderRadius:8, 
-                              fontSize:14, 
-                              background:"white",
-                              boxSizing:"border-box"
-                            }}
-                          />
-                          <input 
-                            type="text" 
-                            value={zone.days || ""}
-                            onChange={(e) => {
-                              const newZones = [...tempShippingInfo.zones];
-                              newZones[index].days = e.target.value;
-                              setTempShippingInfo({...tempShippingInfo, zones: newZones});
-                              setHasUnsavedChanges(true);
-                            }}
-                            placeholder="📅 Días"
-                            style={{ 
-                              padding:"12px", 
-                              border:"1px solid #BBF7D0", 
-                              borderRadius:8, 
-                              fontSize:14, 
-                              background:"white",
-                              boxSizing:"border-box"
-                            }}
-                          />
+                        <div style={{ display:"grid", gridTemplateColumns:isSmallScreen ? "1fr" : "1fr 1fr 1fr", gap:isSmallScreen ? 10 : 8 }}>
+                          <div>
+                            <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#047857", marginBottom:5 }}>Costo</label>
+                            <input 
+                              type="text" 
+                              value={zone.cost}
+                              onChange={(e) => {
+                                const newZones = [...tempShippingInfo.zones];
+                                newZones[index].cost = e.target.value;
+                                setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                                setHasUnsavedChanges(true);
+                              }}
+                              placeholder="Ej: Gratis"
+                              style={{ 
+                                width:"100%",
+                                padding:"12px", 
+                                border:"1px solid #BBF7D0", 
+                                borderRadius:8, 
+                                fontSize:14, 
+                                fontWeight:600,
+                                background:"white",
+                                color:"#F5A623",
+                                boxSizing:"border-box"
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#047857", marginBottom:5 }}>Tiempo estimado</label>
+                            <input 
+                              type="text" 
+                              value={zone.time}
+                              onChange={(e) => {
+                                const newZones = [...tempShippingInfo.zones];
+                                newZones[index].time = e.target.value;
+                                setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                                setHasUnsavedChanges(true);
+                              }}
+                              placeholder="Ej: 30-45 min"
+                              style={{ 
+                                width:"100%",
+                                padding:"12px", 
+                                border:"1px solid #BBF7D0", 
+                                borderRadius:8, 
+                                fontSize:14, 
+                                background:"white",
+                                boxSizing:"border-box"
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#047857", marginBottom:5 }}>Días de entrega</label>
+                            <input 
+                              type="text" 
+                              value={zone.days || ""}
+                              onChange={(e) => {
+                                const newZones = [...tempShippingInfo.zones];
+                                newZones[index].days = e.target.value;
+                                setTempShippingInfo({...tempShippingInfo, zones: newZones});
+                                setHasUnsavedChanges(true);
+                              }}
+                              placeholder="Ej: Lunes a viernes"
+                              style={{ 
+                                width:"100%",
+                                padding:"12px", 
+                                border:"1px solid #BBF7D0", 
+                                borderRadius:8, 
+                                fontSize:14, 
+                                background:"white",
+                                boxSizing:"border-box"
+                              }}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
