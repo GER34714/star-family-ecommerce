@@ -1084,14 +1084,18 @@ export default function StarFamilyApp() {
     const isIOS = /iPad|iPhone|iPod/.test(userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
     const isInAppBrowser = /Instagram|FBAN|FBAV|FBIOS|FB_IAB|Line|WhatsApp|TikTok/i.test(userAgent);
-    const isStandalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
-    const shouldShowFallbackPopup = !isStandalone && (
-      isMobile ||
-      isIOS ||
-      isInAppBrowser
-    );
+    const showFallbackInstallPopup = async () => {
+      const isStandalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+      const installedApps = navigator.getInstalledRelatedApps ? await navigator.getInstalledRelatedApps().catch(() => []) : [];
+      const isAlreadyInstalled = isStandalone || installedApps.length > 0;
+      const shouldShowFallbackPopup = !isAlreadyInstalled && (
+        isMobile ||
+        isIOS ||
+        isInAppBrowser
+      );
 
-    if (shouldShowFallbackPopup) {
+      if (!shouldShowFallbackPopup) return;
+
       console.log('📱 PWA: Mostrando popup informativo de instalación...');
       
       setTimeout(() => {
@@ -1109,7 +1113,9 @@ export default function StarFamilyApp() {
           }, 15000);
         }
       }, 2000);
-    }
+    };
+
+    showFallbackInstallPopup();
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
