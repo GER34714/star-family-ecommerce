@@ -1084,14 +1084,16 @@ export default function StarFamilyApp() {
     const userAgent = navigator.userAgent || "";
     const isIOS = /iPad|iPhone|iPod/.test(userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
+    const isAndroidChrome = /Android/i.test(userAgent) && /Chrome/i.test(userAgent) && !/Edg|OPR|SamsungBrowser/i.test(userAgent);
     const isInAppBrowser = /Instagram|FBAN|FBAV|FBIOS|FB_IAB|Line|WhatsApp|TikTok/i.test(userAgent);
     const showFallbackInstallPopup = async () => {
       const isStandalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+      if (isStandalone) localStorage.setItem('pwaInstalled', 'true');
       const installedApps = navigator.getInstalledRelatedApps ? await navigator.getInstalledRelatedApps().catch(() => []) : [];
       const wasInstalledHere = localStorage.getItem('pwaInstalled') === 'true';
       const isAlreadyInstalled = isStandalone || installedApps.length > 0 || wasInstalledHere;
       const shouldShowFallbackPopup = !isAlreadyInstalled && (
-        isMobile ||
+        (isMobile && !isAndroidChrome) ||
         isIOS ||
         isInAppBrowser
       );
