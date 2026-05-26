@@ -1080,13 +1080,21 @@ export default function StarFamilyApp() {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // FORZAR POPUP PARA TESTING EN LOCALHOST
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      console.log('🧪 PWA: Forzando popup para testing en localhost...');
+    const userAgent = navigator.userAgent || "";
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const isInAppBrowser = /Instagram|FBAN|FBAV|FBIOS|FB_IAB|Line|WhatsApp|TikTok/i.test(userAgent);
+    const isStandalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+    const shouldShowFallbackPopup = !isStandalone && (
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      isIOS ||
+      isInAppBrowser
+    );
+
+    if (shouldShowFallbackPopup) {
+      console.log('📱 PWA: Mostrando popup informativo de instalación...');
       
-      // Simular evento after de 2 segundos para testing
       setTimeout(() => {
-        console.log('🧪 PWA: Mostrando popup forzado para testing');
         setShowInstallPopup(true);
         setPopupPosition('floating');
         setIsInstallable(true);
