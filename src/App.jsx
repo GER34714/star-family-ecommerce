@@ -1099,14 +1099,15 @@ export default function StarFamilyApp() {
         setPopupPosition('floating');
         setIsInstallable(true);
         
-        // Mismo temporizador que el real
-        setTimeout(() => {
-          setPopupPosition('footer');
-        }, 8000);
-        
-        setTimeout(() => {
-          setShowInstallPopup(false);
-        }, 15000);
+        if (!isIOS && !isInAppBrowser) {
+          setTimeout(() => {
+            setPopupPosition('footer');
+          }, 8000);
+          
+          setTimeout(() => {
+            setShowInstallPopup(false);
+          }, 15000);
+        }
       }, 2000);
     }
 
@@ -4280,10 +4281,13 @@ export default function StarFamilyApp() {
             }}
             style={{
               position: 'fixed',
-              bottom: 180,
-              right: 20,
+              bottom: 90,
+              left: 16,
+              right: 16,
+              margin: "0 auto",
               zIndex: 1300,
-              maxWidth: 320
+              width: "calc(100vw - 32px)",
+              maxWidth: 360
             }}
           >
             <motion.div
