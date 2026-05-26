@@ -3054,9 +3054,38 @@ export default function StarFamilyApp() {
             background: "linear-gradient(135deg, #111111, #222222)",
             borderBottom: "2px solid #F5A623",
             boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
-            zIndex: 499
+            zIndex: 499,
+            maxHeight: "calc(100vh - 62px)",
+            overflowY: "auto"
           }}>
             <div style={{ padding: "20px 16px" }}>
+              <button
+                onClick={() => {
+                  installPWA();
+                  setMobileMenuOpen(false);
+                }}
+                style={{
+                  width: "100%",
+                  padding: "14px 16px",
+                  background: "linear-gradient(135deg, #F5A623, #D97706)",
+                  border: "1px solid rgba(245, 166, 35, 0.6)",
+                  borderRadius: 10,
+                  color: "#111111",
+                  fontSize: 15,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 10,
+                  marginBottom: 16,
+                  boxShadow: "0 4px 14px rgba(245, 166, 35, 0.25)",
+                  transition: "all 0.3s ease"
+                }}
+              >
+                📱 Instalar app
+              </button>
+
               {/* Navigation Links - Secciones de la Tienda */}
               <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
                 <button
@@ -3296,30 +3325,6 @@ export default function StarFamilyApp() {
                   📞 Contacto
                 </button>
 
-                <button
-                  onClick={() => {
-                    installPWA();
-                    setMobileMenuOpen(false);
-                  }}
-                  style={{
-                    width: "100%",
-                    padding: "10px 16px",
-                    background: "rgba(245, 166, 35, 0.15)",
-                    border: "1px solid rgba(245, 166, 35, 0.35)",
-                    borderRadius: 6,
-                    color: "#F5A623",
-                    fontSize: 13,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    transition: "all 0.3s ease"
-                  }}
-                >
-                  📱 Instalar app
-                </button>
-                
                 {/* Botón admin oculto - solo visible con scroll */}
                 <div 
                   id="mobile-admin-btn"
