@@ -3295,6 +3295,30 @@ export default function StarFamilyApp() {
                 >
                   📞 Contacto
                 </button>
+
+                <button
+                  onClick={() => {
+                    installPWA();
+                    setMobileMenuOpen(false);
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "10px 16px",
+                    background: "rgba(245, 166, 35, 0.15)",
+                    border: "1px solid rgba(245, 166, 35, 0.35)",
+                    borderRadius: 6,
+                    color: "#F5A623",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    transition: "all 0.3s ease"
+                  }}
+                >
+                  📱 Instalar app
+                </button>
                 
                 {/* Botón admin oculto - solo visible con scroll */}
                 <div 
