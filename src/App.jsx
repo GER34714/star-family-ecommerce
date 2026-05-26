@@ -1082,11 +1082,11 @@ export default function StarFamilyApp() {
 
     const userAgent = navigator.userAgent || "";
     const isIOS = /iPad|iPhone|iPod/.test(userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
     const isInAppBrowser = /Instagram|FBAN|FBAV|FBIOS|FB_IAB|Line|WhatsApp|TikTok/i.test(userAgent);
     const isStandalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
     const shouldShowFallbackPopup = !isStandalone && (
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1' ||
+      isMobile ||
       isIOS ||
       isInAppBrowser
     );
@@ -1125,6 +1125,7 @@ export default function StarFamilyApp() {
     const isStandalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
     const isInAppBrowser = /Instagram|FBAN|FBAV|FBIOS|FB_IAB|Line|WhatsApp|TikTok/i.test(userAgent);
     const isSafari = /^((?!chrome|android|crios|fxios|edgios).)*safari/i.test(userAgent);
+    const isChrome = /Chrome|CriOS/i.test(userAgent) && !/Edg|OPR|SamsungBrowser/i.test(userAgent);
 
     if (!promptEvent) {
       if (isStandalone) {
@@ -1133,8 +1134,10 @@ export default function StarFamilyApp() {
         showToast('📲 iPhone: tocá Compartir y luego “Agregar a pantalla de inicio”');
       } else if (isIOS || isInAppBrowser) {
         showToast('📲 Para instalar: abrí esta web en Safari y tocá Compartir → Agregar a inicio');
+      } else if (isChrome) {
+        showToast('📲 En Chrome: tocá el menú ⋮ y elegí “Instalar app” o “Agregar a pantalla principal”');
       } else {
-        showToast('📲 Para instalar: abrí la web en Chrome y usá el menú ⋮ → Instalar app');
+        showToast('📲 Para instalar: abrí esta web en Chrome y usá el menú ⋮ → Instalar app');
       }
       return;
     }
