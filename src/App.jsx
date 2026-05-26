@@ -1071,6 +1071,7 @@ export default function StarFamilyApp() {
 
     const handleAppInstalled = () => {
       console.log('📱 PWA: Aplicación instalada exitosamente');
+      localStorage.setItem('pwaInstalled', 'true');
       setDeferredPrompt(null);
       setIsInstallable(false);
       setShowInstallPopup(false);
@@ -1087,7 +1088,8 @@ export default function StarFamilyApp() {
     const showFallbackInstallPopup = async () => {
       const isStandalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
       const installedApps = navigator.getInstalledRelatedApps ? await navigator.getInstalledRelatedApps().catch(() => []) : [];
-      const isAlreadyInstalled = isStandalone || installedApps.length > 0;
+      const wasInstalledHere = localStorage.getItem('pwaInstalled') === 'true';
+      const isAlreadyInstalled = isStandalone || installedApps.length > 0 || wasInstalledHere;
       const shouldShowFallbackPopup = !isAlreadyInstalled && (
         isMobile ||
         isIOS ||
@@ -1154,6 +1156,7 @@ export default function StarFamilyApp() {
       
       if (outcome === 'accepted') {
         console.log('📱 PWA: Usuario aceptó la instalación');
+        localStorage.setItem('pwaInstalled', 'true');
         showToast('📱 Instalando aplicación...');
       } else {
         console.log('📱 PWA: Usuario rechazó la instalación');
