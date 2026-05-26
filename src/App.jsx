@@ -4281,7 +4281,7 @@ export default function StarFamilyApp() {
             }}
             style={{
               position: 'fixed',
-              bottom: 90,
+              bottom: 175,
               left: 16,
               right: 16,
               margin: "0 auto",
