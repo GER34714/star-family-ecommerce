@@ -1111,9 +1111,22 @@ export default function StarFamilyApp() {
   // Función para instalar PWA manualmente
   const installPWA = async () => {
     const promptEvent = deferredPrompt || window.deferredPrompt;
+    const userAgent = navigator.userAgent || "";
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const isStandalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+    const isInAppBrowser = /Instagram|FBAN|FBAV|FBIOS|FB_IAB|Line|WhatsApp|TikTok/i.test(userAgent);
+    const isSafari = /^((?!chrome|android|crios|fxios|edgios).)*safari/i.test(userAgent);
 
     if (!promptEvent) {
-      showToast('⚠️ La instalación no está disponible en este navegador');
+      if (isStandalone) {
+        showToast('✅ La app ya está instalada');
+      } else if (isIOS && isSafari) {
+        showToast('📲 iPhone: tocá Compartir y luego “Agregar a pantalla de inicio”');
+      } else if (isIOS || isInAppBrowser) {
+        showToast('📲 Para instalar: abrí esta web en Safari y tocá Compartir → Agregar a inicio');
+      } else {
+        showToast('📲 Para instalar: abrí la web en Chrome y usá el menú ⋮ → Instalar app');
+      }
       return;
     }
 
@@ -2914,7 +2927,7 @@ export default function StarFamilyApp() {
 
       {/* TOAST */}
       {toast && (
-        <div style={{ position:"fixed", top:80, left:"50%", transform:"translateX(-50%)", zIndex:9999, background: toast.type==="error"?"#FEE2E2":"#DCFCE7", color: toast.type==="error"?"#991B1B":"#166534", padding:"10px 20px", borderRadius:12, fontWeight:600, fontSize:14, boxShadow:"0 4px 12px rgba(0,0,0,0.15)", whiteSpace:"nowrap" }}>
+        <div style={{ position:"fixed", top:80, left:"50%", transform:"translateX(-50%)", zIndex:9999, background: toast.type==="error"?"#FEE2E2":"#DCFCE7", color: toast.type==="error"?"#991B1B":"#166534", padding:"10px 16px", borderRadius:12, fontWeight:600, fontSize:14, lineHeight:1.35, boxShadow:"0 4px 12px rgba(0,0,0,0.15)", width:"calc(100vw - 32px)", maxWidth:420, textAlign:"center", whiteSpace:"normal", overflowWrap:"break-word" }}>
           {toast.msg}
         </div>
       )}
@@ -2988,6 +3001,13 @@ export default function StarFamilyApp() {
               style={{ fontSize:12, padding:"7px 13px" }}
             >
               📞 Contacto
+            </button>
+            <button
+              onClick={installPWA}
+              className="btn-ghost"
+              style={{ fontSize:12, padding:"7px 13px", color:"#F5A623", borderColor:"#F5A623", fontWeight:800 }}
+            >
+              📱 Instalar app
             </button>
             <button onClick={() => setCartOpen(true)} className="btn-red" style={{ position:"relative", display:"flex", alignItems:"center", gap:6, padding:"8px 16px" }}>
               🛒
