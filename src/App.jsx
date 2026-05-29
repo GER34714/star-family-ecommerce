@@ -4862,9 +4862,9 @@ function ProductModal({ p, qty, setQty, onAdd, onClose }) {
   const badgeText = p?.custom_badge && p?.custom_badge.trim() !== '' ? p?.custom_badge.trim() : null;
   return (
     <div>
-      <div style={{ position:"relative", height:200, background:`linear-gradient(135deg,${color},${color}99)`, borderRadius:"14px 14px 0 0", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div style={{ position:"relative", height:350, background:`linear-gradient(135deg,${color},${color}99)`, borderRadius:"14px 14px 0 0", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" }}>
         {p?.image_url
-          ? <img src={p?.image_url} alt={p?.name || "Producto"} style={{ width:"100%", height:"100%", objectFit:"cover" }} onError={e => { e.target.src = "https://via.placeholder.com/300x200/f5a623/ffffff?text=Star+Family"; }} />
+          ? <img src={p?.image_url} alt={p?.name || "Producto"} style={{ width:"100%", height:"100%", objectFit:"contain" }} onError={e => { e.target.src = "https://via.placeholder.com/300x200/f5a623/ffffff?text=Star+Family"; }} />
           : <span style={{ fontSize:72 }}>{emoji}</span>
         }
         <button onClick={onClose} style={{ position:"absolute", top:12, right:12, background:"rgba(0,0,0,0.4)", color:"white", border:"none", borderRadius:8, width:36, height:36, cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
