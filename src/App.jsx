@@ -802,6 +802,103 @@ export default function StarFamilyApp() {
     }
   };
 
+  // ═══════════════════════════════════════════════════════
+  // GLOBAL REORDER (orden_global) - Admin Todos view
+  // ═══════════════════════════════════════════════════════
+
+  // Normalizar orden_global a secuencia 1,2,3... sin huecos
+  const normalizeOrdenGlobal = (productList) => {
+    const sorted = [...productList].sort((a, b) => (a.orden_global || 9999) - (b.orden_global || 9999));
+    return sorted.map((p, idx) => ({ ...p, orden_global: idx + 1 }));
+  };
+
+  // Batch save orden_global to Supabase
+  const batchSaveOrdenGlobal = async (changedProducts) => {
+    if (!changedProducts || changedProducts.length === 0) return;
+    try {
+      const supabase = getSupabaseClient();
+      if (!supabase) return;
+      // Update one by one (Supabase JS doesn't support bulk update with different values per row)
+      for (const p of changedProducts) {
+        const { error } = await supabase
+          .from('products')
+          .update({ orden_global: p.orden_global })
+          .eq('id', p.id);
+        if (error) console.error('Error updating orden_global for', p.id, error);
+      }
+      showToast(`✅ Orden global guardado (${changedProducts.length} productos)`, 'success');
+    } catch (err) {
+      console.error('Error batch saving orden_global:', err);
+      showToast('❌ Error guardando orden global', 'error');
+    }
+  };
+
+  // Swap orden_global between two products (used by up/down arrows)
+  const handleSwapOrdenGlobal = async (productA, productB) => {
+    const ordenA = productA.orden_global || 999;
+    const ordenB = productB.orden_global || 999;
+
+    const updated = products.map(p => {
+      if (p.id === productA.id) return { ...p, orden_global: ordenB };
+      if (p.id === productB.id) return { ...p, orden_global: ordenA };
+      return p;
+    });
+
+    setProducts(updated);
+    setStorageItem("roxy_products", updated);
+    await batchSaveOrdenGlobal([
+      { id: productA.id, orden_global: ordenB },
+      { id: productB.id, orden_global: ordenA }
+    ]);
+  };
+
+  // Manual orden_global input with collision detection + normalization
+  const handleUpdateOrdenGlobal = async (productId, rawValue) => {
+    const newVal = parseInt(rawValue, 10);
+    if (isNaN(newVal) || newVal < 1) return;
+
+    const targetProduct = products.find(p => p.id === productId);
+    if (!targetProduct) return;
+    const oldVal = targetProduct.orden_global || 999;
+    if (newVal === oldVal) return;
+
+    // Get all products sorted by current orden_global
+    let allProducts = [...products].sort((a, b) => (a.orden_global || 9999) - (b.orden_global || 9999));
+
+    // Check collision
+    const hasCollision = allProducts.some(p => p.id !== productId && (p.orden_global || 999) === newVal);
+
+    if (hasCollision) {
+      // Shift products at newVal and below up by 1 to make room
+      allProducts = allProducts.map(p => {
+        if (p.id === productId) return p; // skip target for now
+        const current = p.orden_global || 999;
+        if (current >= newVal) {
+          return { ...p, orden_global: current + 1 };
+        }
+        return p;
+      });
+    }
+
+    // Assign new value to target product
+    allProducts = allProducts.map(p =>
+      p.id === productId ? { ...p, orden_global: newVal } : p
+    );
+
+    // Normalize to sequential 1,2,3... based on current sort order
+    allProducts = normalizeOrdenGlobal(allProducts);
+
+    // Compute which products actually changed
+    const changed = allProducts.filter(p => {
+      const original = products.find(op => op.id === p.id);
+      return !original || (original.orden_global || 999) !== p.orden_global;
+    });
+
+    setProducts(allProducts);
+    setStorageItem("roxy_products", allProducts);
+    await batchSaveOrdenGlobal(changed);
+  };
+
   // Ocultar categoría de la tienda (si no tiene productos)
   const handleHideCategory = async (categoryName) => {
     if (!categoryName) return;
@@ -987,8 +1084,8 @@ export default function StarFamilyApp() {
     console.log("🔍 Debug - final filtered result:", filtered.length);
 
     if (cat === "Todos") {
-      // En "Todos", ordenar puramente por sort_order global (sin importar categoría)
-      return filtered.sort((a, b) => (a.sort_order || 9999) - (b.sort_order || 9999));
+      // En "Todos", ordenar por orden_global (orden global de admin)
+      return filtered.sort((a, b) => (a.orden_global || 9999) - (b.orden_global || 9999));
     }
 
     // Sort by category order first, then by product sort_order within category
@@ -2307,6 +2404,7 @@ export default function StarFamilyApp() {
           color
         )
       `)
+      .order('orden_global', { ascending: true })
       .order('sort_order', { ascending: true });
 
     console.log("📊 Respuesta Supabase:", { data: data?.length, error });
@@ -2353,6 +2451,7 @@ export default function StarFamilyApp() {
           category: p.categories?.name || p.categoria || "Frescos",
           custom_badge: p.custom_badge || "",
           sort_order: p.sort_order || 0,
+          orden_global: p.orden_global !== undefined && p.orden_global !== null ? p.orden_global : (p.sort_order || 999),
           active: p.active !== undefined ? p.active : true,
           suspended: p.suspended || false,
           status: p.status || 'published',
@@ -4208,6 +4307,8 @@ export default function StarFamilyApp() {
             loadAvailableCategories={loadAvailableCategories}
             showToast={showToast}
             onUpdateSortOrder={handleUpdateSortOrder}
+            onSwapOrdenGlobal={handleSwapOrdenGlobal}
+            onUpdateOrdenGlobal={handleUpdateOrdenGlobal}
                       />
       )}
 
@@ -6426,10 +6527,17 @@ function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint
 // ADMIN PANEL
 // ═══════════════════════════════════════════════════════
 
-function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, loadingPriceHistory, priceHistoryError, onMigrateImages, restorePoints, onCreateRestorePoint, onRestoreFromPoint, onDeleteRestorePoint, loadingRestorePoints, restorePointsError, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview, onToggleSuspension, onToggleActivation, adminCurrentPage, adminTotalPages, adminProductsPerPage, adminNextPage, adminPrevPage, adminGoToPage, totalFilteredProducts, paymentSettings, setPaymentSettings, loadingPaymentSettings, setLoadingPaymentSettings, banners, setBanners, loadingBanners, bannerForm, setBannerForm, editingBanner, setEditingBanner, bannerImagePreview, setBannerImagePreview, uploadingBannerImage, onBannerSubmit, onBannerImageSelect, onClearBannerImage, onDeleteBanner, onEditBanner, kitInfo, setKitInfo, shippingInfo, setShippingInfo, tempKitInfo, setTempKitInfo, tempShippingInfo, setTempShippingInfo, hasUnsavedChanges, setHasUnsavedChanges, onApplyKitShippingChanges, fullCategories, editingCategory, setEditingCategory, loadAvailableCategories, showToast, onUpdateSortOrder }) {
+function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, loadingPriceHistory, priceHistoryError, onMigrateImages, restorePoints, onCreateRestorePoint, onRestoreFromPoint, onDeleteRestorePoint, loadingRestorePoints, restorePointsError, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview, onToggleSuspension, onToggleActivation, adminCurrentPage, adminTotalPages, adminProductsPerPage, adminNextPage, adminPrevPage, adminGoToPage, totalFilteredProducts, paymentSettings, setPaymentSettings, loadingPaymentSettings, setLoadingPaymentSettings, banners, setBanners, loadingBanners, bannerForm, setBannerForm, editingBanner, setEditingBanner, bannerImagePreview, setBannerImagePreview, uploadingBannerImage, onBannerSubmit, onBannerImageSelect, onClearBannerImage, onDeleteBanner, onEditBanner, kitInfo, setKitInfo, shippingInfo, setShippingInfo, tempKitInfo, setTempKitInfo, tempShippingInfo, setTempShippingInfo, hasUnsavedChanges, setHasUnsavedChanges, onApplyKitShippingChanges, fullCategories, editingCategory, setEditingCategory, loadAvailableCategories, showToast, onUpdateSortOrder, onSwapOrdenGlobal, onUpdateOrdenGlobal }) {
   const supabase = getSupabaseClient();
   const isSmallScreen = typeof window !== "undefined" && window.innerWidth <= 640;
-  
+
+  // En vista "Todos" (sin filtro de categoría), ordenar por orden_global
+  const isTodosView = !adminFilters.category;
+  const displayProducts = useMemo(() => {
+    if (!isTodosView) return filteredProducts;
+    return [...filteredProducts].sort((a, b) => (a.orden_global || 9999) - (b.orden_global || 9999));
+  }, [filteredProducts, isTodosView]);
+
   // Cargar configuración de pago desde Supabase
   const loadPaymentSettings = useCallback(async () => {
     try {
@@ -6841,8 +6949,8 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
             </div>
           </div>
           <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-            {filteredProducts && filteredProducts.length > 0 ? (
-              filteredProducts.filter(Boolean).map(p => (
+            {displayProducts && displayProducts.length > 0 ? (
+              displayProducts.filter(Boolean).map((p, idx, arr) => (
               <div key={p.id} style={{ 
                 background:"white", 
                 borderRadius:12, 
@@ -6854,6 +6962,44 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                 opacity: p?.suspended ? 0.7 : 1,
                 border: p?.suspended ? "2px dashed #F59E0B" : "none"
               }}>
+                {isTodosView && (
+                  <div style={{ display:"flex", flexDirection:"column", gap:2, flexShrink:0 }}>
+                    <button
+                      onClick={() => idx > 0 && onSwapOrdenGlobal(p, arr[idx - 1])}
+                      disabled={idx === 0}
+                      style={{
+                        background: idx === 0 ? "#F3F4F6" : "#EFF6FF",
+                        border: "1px solid #BFDBFE",
+                        borderRadius: 4,
+                        padding: "2px 6px",
+                        cursor: idx === 0 ? "not-allowed" : "pointer",
+                        fontSize: 12,
+                        opacity: idx === 0 ? 0.4 : 1,
+                        lineHeight: 1
+                      }}
+                      title="Subir"
+                    >
+                      ⬆️
+                    </button>
+                    <button
+                      onClick={() => idx < arr.length - 1 && onSwapOrdenGlobal(p, arr[idx + 1])}
+                      disabled={idx === arr.length - 1}
+                      style={{
+                        background: idx === arr.length - 1 ? "#F3F4F6" : "#EFF6FF",
+                        border: "1px solid #BFDBFE",
+                        borderRadius: 4,
+                        padding: "2px 6px",
+                        cursor: idx === arr.length - 1 ? "not-allowed" : "pointer",
+                        fontSize: 12,
+                        opacity: idx === arr.length - 1 ? 0.4 : 1,
+                        lineHeight: 1
+                      }}
+                      title="Bajar"
+                    >
+                      ⬇️
+                    </button>
+                  </div>
+                )}
                 <div style={{ width:46, height:46, borderRadius:10, background:`${CAT_COLOR[p?.category]||"#C41E3A"}18`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0, overflow:"hidden" }}>
                   {p?.image_url ? <img src={p?.image_url} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" onError={e => { e.target.src = "https://via.placeholder.com/46x46/f5a623/ffffff?text=SF"; }} /> : (CAT_EMOJI[p?.category]||"🍖")}
                 </div>
@@ -6914,31 +7060,63 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                   <div style={{ fontSize:12, color:"#9CA3AF", marginTop:1, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
                     {p?.category} · <strong style={{ color:"#C41E3A" }}>{fmt(p?.price || 0)}</strong>
                     <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}>
-                      <span style={{ fontSize:10, color:"#9CA3AF" }}>Orden:</span>
-                      <input
-                        type="number"
-                        defaultValue={p?.sort_order || 0}
-                        onBlur={e => {
-                          const val = e.target.value;
-                          if (val !== String(p?.sort_order || 0)) {
-                            onUpdateSortOrder(p.id, val);
-                          }
-                        }}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') {
-                            e.target.blur();
-                          }
-                        }}
-                        style={{
-                          width: 48,
-                          padding: "2px 4px",
-                          borderRadius: 4,
-                          border: "1px solid #E5E7EB",
-                          fontSize: 11,
-                          fontFamily: "'Poppins',sans-serif",
-                          textAlign: "center"
-                        }}
-                      />
+                      {isTodosView ? (
+                        <>
+                          <span style={{ fontSize:10, color:"#9CA3AF" }}>Global:</span>
+                          <input
+                            type="number"
+                            defaultValue={p?.orden_global || 0}
+                            onBlur={e => {
+                              const val = e.target.value;
+                              if (val !== String(p?.orden_global || 0)) {
+                                onUpdateOrdenGlobal(p.id, val);
+                              }
+                            }}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                e.target.blur();
+                              }
+                            }}
+                            style={{
+                              width: 48,
+                              padding: "2px 4px",
+                              borderRadius: 4,
+                              border: "1px solid #E5E7EB",
+                              fontSize: 11,
+                              fontFamily: "'Poppins',sans-serif",
+                              textAlign: "center"
+                            }}
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <span style={{ fontSize:10, color:"#9CA3AF" }}>Orden:</span>
+                          <input
+                            type="number"
+                            defaultValue={p?.sort_order || 0}
+                            onBlur={e => {
+                              const val = e.target.value;
+                              if (val !== String(p?.sort_order || 0)) {
+                                onUpdateSortOrder(p.id, val);
+                              }
+                            }}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                e.target.blur();
+                              }
+                            }}
+                            style={{
+                              width: 48,
+                              padding: "2px 4px",
+                              borderRadius: 4,
+                              border: "1px solid #E5E7EB",
+                              fontSize: 11,
+                              fontFamily: "'Poppins',sans-serif",
+                              textAlign: "center"
+                            }}
+                          />
+                        </>
+                      )}
                     </span>
                   </div>
                 </div>
@@ -7047,7 +7225,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                 </div>
               </div>
             ))
-            ) : filteredProducts.length === 0 ? (
+            ) : displayProducts.length === 0 ? (
               <div style={{ textAlign:"center", padding:40, color:"#6B7280" }}>
                 <div style={{ fontSize:48, marginBottom:16 }}>🔍</div>
                 <div style={{ fontSize:18, fontWeight:600, marginBottom:8 }}>No se encontraron productos</div>
