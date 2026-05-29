@@ -6622,6 +6622,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
           ["Comercial", [["payment","💳 Pagos"], ["prices","💰 Precios"]]],
           ["Contenido y envíos", [["banners","🎆 Banners"], ["kit","🔥 Kit y Envíos"]]],
           ["Gestión", [["excel","📊 Excel"], ["history","📜 Historial"], ["restore","🔄 Restauración"]]],
+          ["Tienda", [["share","🔗 Compartir"]]],
           ["Soporte", [["help","📚 Ayuda"], ["terms","📋 Términos"]]]
         ].map(([section, tabs]) => (
           <div key={section} style={{ background:"white", border:"1px solid #E5E7EB", borderRadius:14, padding:"12px 14px", boxShadow:"0 1px 3px rgba(0,0,0,0.04)" }}>
@@ -9833,6 +9834,66 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                     Desarrollador y mantenedor del sistema
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: COMPARTIR */}
+      {adminTab === "share" && (
+        <div style={{ background:"white", borderRadius:16, padding:24 }}>
+          <h3 style={{ margin:"0 0 6px", fontWeight:800 }}>🔗 Compartir Tienda</h3>
+          <p style={{ color:"#6B7280", fontSize:14, marginBottom:24 }}>Compartí el enlace de tu tienda con clientes y amigos.</p>
+
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:24 }}>
+            {/* QR */}
+            <div style={{ textAlign:"center" }}>
+              <div style={{ fontWeight:700, color:"#374151", marginBottom:12, fontSize:14 }}>Escaneá para visitar la tienda</div>
+              <img
+                src="https://bedccnjylrnkacaxtusv.supabase.co/storage/v1/object/public/imagenes/qr-code.png"
+                alt="QR de la tienda"
+                style={{ width:220, height:220, borderRadius:12, border:"1px solid #E5E7EB" }}
+              />
+            </div>
+
+            {/* Link + Buttons */}
+            <div style={{ width:"100%", maxWidth:480, display:"flex", flexDirection:"column", gap:12 }}>
+              <div style={{ background:"#F9FAFB", borderRadius:10, padding:"12px 16px", border:"1px solid #E5E7EB", wordBreak:"break-all", fontSize:14, color:"#374151", textAlign:"center" }}>
+                {typeof window !== "undefined" ? window.location.origin : ""}
+              </div>
+
+              <div style={{ display:"flex", gap:10, flexWrap:"wrap", justifyContent:"center" }}>
+                <button
+                  onClick={async () => {
+                    const url = typeof window !== "undefined" ? window.location.origin : "";
+                    if (navigator.share) {
+                      try {
+                        await navigator.share({ title: "Star Family - Tienda Online", url });
+                      } catch (err) {
+                        if (err.name !== "AbortError") console.error(err);
+                      }
+                    } else if (navigator.clipboard) {
+                      try {
+                        await navigator.clipboard.writeText(url);
+                        alert("🔗 Enlace copiado al portapapeles");
+                      } catch (err) {
+                        console.error(err);
+                      }
+                    } else {
+                      const ta = document.createElement("textarea");
+                      ta.value = url;
+                      document.body.appendChild(ta);
+                      ta.select();
+                      document.execCommand("copy");
+                      document.body.removeChild(ta);
+                      alert("🔗 Enlace copiado al portapapeles");
+                    }
+                  }}
+                  style={{ padding:"10px 20px", background:"#C41E3A", color:"white", border:"none", borderRadius:8, cursor:"pointer", fontWeight:600, fontSize:14, fontFamily:"'Poppins',sans-serif" }}
+                >
+                  {navigator.share ? "📤 Compartir" : "📋 Copiar enlace"}
+                </button>
               </div>
             </div>
           </div>
