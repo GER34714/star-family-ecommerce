@@ -90,6 +90,7 @@ export default function StarFamilyApp() {
   const [adminTab, setAdminTab] = useState("list");
   const categoryScrollRef = useRef(null);
   const [isCategoryScrollPaused, setIsCategoryScrollPaused] = useState(false);
+  const isCategoryScrollPausedRef = useRef(false);
   const [form, setForm] = useState({ id:"", category:"", name:"", description:"", price:"", bulkInfo:"", image_url:"", custom_badge:"", sort_order:"" });
   const [editing, setEditing] = useState(false);
   
@@ -1095,6 +1096,47 @@ export default function StarFamilyApp() {
     animationId = requestAnimationFrame(step);
     return () => cancelAnimationFrame(animationId);
   }, [availableCategories, isCategoryScrollPaused]);
+
+  // Sincronizar ref de pausa
+  useEffect(() => {
+    isCategoryScrollPausedRef.current = isCategoryScrollPaused;
+  }, [isCategoryScrollPaused]);
+
+  // Color viaja con el scroll: selecciona la categoría más a la izquierda visible
+  useEffect(() => {
+    const container = categoryScrollRef.current;
+    if (!container) return;
+
+    let rafId;
+    const onScroll = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        if (!container || isCategoryScrollPausedRef.current) return;
+        const buttons = container.querySelectorAll('button');
+        const containerRect = container.getBoundingClientRect();
+        let leftmostCat = null;
+        let minLeft = Infinity;
+
+        buttons.forEach((btn) => {
+          const rect = btn.getBoundingClientRect();
+          if (rect.left >= containerRect.left && rect.left < minLeft) {
+            minLeft = rect.left;
+            leftmostCat = btn.textContent.trim();
+          }
+        });
+
+        if (leftmostCat) {
+          setCat(leftmostCat);
+        }
+      });
+    };
+
+    container.addEventListener('scroll', onScroll);
+    return () => {
+      container.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(rafId);
+    };
+  }, []);
 
   // Efecto para manejar instalación PWA
   useEffect(() => {
