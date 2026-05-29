@@ -416,7 +416,11 @@ export default function StarFamilyApp() {
 
   // Efecto para actualizar productos filtrados
   useEffect(() => {
-    const filtered = filterAdminProducts(products, adminFilters);
+    let filtered = filterAdminProducts(products, adminFilters);
+    // En vista sin categoría, ordenar por orden_global antes de paginar
+    if (!adminFilters.category) {
+      filtered = [...filtered].sort((a, b) => (a.orden_global || 9999) - (b.orden_global || 9999));
+    }
     setFilteredProducts(filtered);
     setAdminCurrentPage(1); // Resetear a página 1 cuando cambian los filtros
   }, [products, adminFilters]);
@@ -852,7 +856,7 @@ export default function StarFamilyApp() {
     ]);
   };
 
-  // Manual orden_global input with collision detection + normalization
+  // Manual orden_global input: swap values with the product that currently holds newVal
   const handleUpdateOrdenGlobal = async (productId, rawValue) => {
     const newVal = parseInt(rawValue, 10);
     if (isNaN(newVal) || newVal < 1) return;
@@ -862,40 +866,22 @@ export default function StarFamilyApp() {
     const oldVal = targetProduct.orden_global || 999;
     if (newVal === oldVal) return;
 
-    // Get all products sorted by current orden_global
-    let allProducts = [...products].sort((a, b) => (a.orden_global || 9999) - (b.orden_global || 9999));
+    // Find the other product that currently has this orden_global
+    const otherProduct = products.find(p => p.id !== productId && (p.orden_global || 999) === newVal);
 
-    // Check collision
-    const hasCollision = allProducts.some(p => p.id !== productId && (p.orden_global || 999) === newVal);
-
-    if (hasCollision) {
-      // Shift products at newVal and below up by 1 to make room
-      allProducts = allProducts.map(p => {
-        if (p.id === productId) return p; // skip target for now
-        const current = p.orden_global || 999;
-        if (current >= newVal) {
-          return { ...p, orden_global: current + 1 };
-        }
-        return p;
-      });
-    }
-
-    // Assign new value to target product
-    allProducts = allProducts.map(p =>
-      p.id === productId ? { ...p, orden_global: newVal } : p
-    );
-
-    // Normalize to sequential 1,2,3... based on current sort order
-    allProducts = normalizeOrdenGlobal(allProducts);
-
-    // Compute which products actually changed
-    const changed = allProducts.filter(p => {
-      const original = products.find(op => op.id === p.id);
-      return !original || (original.orden_global || 999) !== p.orden_global;
+    const updated = products.map(p => {
+      if (p.id === productId) return { ...p, orden_global: newVal };
+      if (otherProduct && p.id === otherProduct.id) return { ...p, orden_global: oldVal };
+      return p;
     });
 
-    setProducts(allProducts);
-    setStorageItem("roxy_products", allProducts);
+    setProducts(updated);
+    setStorageItem("roxy_products", updated);
+
+    const changed = [{ id: productId, orden_global: newVal }];
+    if (otherProduct) {
+      changed.push({ id: otherProduct.id, orden_global: oldVal });
+    }
     await batchSaveOrdenGlobal(changed);
   };
 
@@ -3852,38 +3838,12 @@ export default function StarFamilyApp() {
           <div id="product-grid" style={{ maxWidth:1200, margin:"0 auto", padding:"20px 12px 48px" }}>
             {/* Mostrar productos agrupados por categoría o paginados */}
             {cat === "Todos" ? (
-              // Vista "Todos" con paginación global
-              <>
-                {(() => {
-                  // Group paginated products by category, preserving category order on this page
-                  const grouped = {};
-                  const categoryOrderOnPage = [];
-                  
-                  paginatedData.forEach(p => {
-                    if (p && typeof p === 'object' && p.category && p.category.trim() && p.category !== 'null' && p.category !== null) {
-                      if (!grouped[p.category]) {
-                        grouped[p.category] = [];
-                        categoryOrderOnPage.push(p.category);
-                      }
-                      grouped[p.category].push(p);
-                    }
-                  });
-
-                  return categoryOrderOnPage.map((category) => (
-                    <div key={category} style={{ marginBottom:32 }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, paddingLeft:4 }}>
-                        <div style={{ background:CAT_COLOR[category] || "#C41E3A", width:4, height:26, borderRadius:2 }} />
-                        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:2, color:"#111" }}>{category.toUpperCase()}</span>
-                      </div>
-                      <div className="product-grid">
-                        {grouped[category]?.filter(p => p && typeof p === 'object' && p.id).map((product) => (
-                          <ProductCard key={product.id} p={product} onOpen={() => { setModal(product); setQty(1); }} onAdd={() => addToCart(product, 1)} />
-                        ))}
-                      </div>
-                    </div>
-                  ));
-                })()}
-              </>
+              // Vista "Todos": productos planos ordenados por orden_global
+              <div className="product-grid">
+                {paginatedData?.filter(p => p && typeof p === 'object' && p.id).map((product) => (
+                  <ProductCard key={product.id} p={product} showCategoryBadge={true} onOpen={() => { setModal(product); setQty(1); }} onAdd={() => addToCart(product, 1)} />
+                ))}
+              </div>
             ) : (
               // Vista de categoría específica con paginación
               (() => {
@@ -4879,7 +4839,7 @@ function PaginationControls({ currentPage, totalPages, setCurrentPage, totalItem
 // PRODUCT CARD
 // ═══════════════════════════════════════════════════════
 
-function ProductCard({ p, onOpen, onAdd }) {
+function ProductCard({ p, onOpen, onAdd, showCategoryBadge = false }) {
   // PARCHE DE SEGURIDAD TOTAL: Guarda inmediata
   if (!p) { 
     console.error("Se intentó renderizar un ProductCard sin datos"); 
@@ -4938,6 +4898,9 @@ function ProductCard({ p, onOpen, onAdd }) {
       </div>
       {/* Info */}
       <div style={{ padding:"10px 11px 12px" }}>
+        {showCategoryBadge && category && (
+          <div style={{ fontSize:9, fontWeight:700, color:color, background:`${color}15`, borderRadius:4, padding:"2px 6px", display:"inline-block", letterSpacing:0.3, marginBottom:4, textTransform:'uppercase' }}>{category}</div>
+        )}
         <div style={{ fontSize:13, fontWeight:700, color:"#111", lineHeight:1.3, marginBottom:3, minHeight:34, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{name || "Sin nombre"}</div>
         {bulkInfo && <div style={{ fontSize:10, color:"#9CA3AF", marginBottom:8, lineHeight:1.4, minHeight:24 }}>{bulkInfo}</div>}
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -6531,12 +6494,11 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
   const supabase = getSupabaseClient();
   const isSmallScreen = typeof window !== "undefined" && window.innerWidth <= 640;
 
-  // En vista "Todos" (sin filtro de categoría), ordenar por orden_global
-  const isTodosView = !adminFilters.category;
+  // En panel admin, siempre mostrar controles de orden_global independientemente de la categoría
+  const isTodosView = true;
   const displayProducts = useMemo(() => {
-    if (!isTodosView) return filteredProducts;
-    return [...filteredProducts].sort((a, b) => (a.orden_global || 9999) - (b.orden_global || 9999));
-  }, [filteredProducts, isTodosView]);
+    return filteredProducts;
+  }, [filteredProducts]);
 
   // Cargar configuración de pago desde Supabase
   const loadPaymentSettings = useCallback(async () => {
@@ -6951,7 +6913,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
           <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
             {displayProducts && displayProducts.length > 0 ? (
               displayProducts.filter(Boolean).map((p, idx, arr) => (
-              <div key={p.id} style={{ 
+              <div key={isTodosView ? `${p.id}-${p.orden_global || 0}` : p.id} style={{ 
                 background:"white", 
                 borderRadius:12, 
                 padding:"12px 16px", 
@@ -6962,44 +6924,6 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                 opacity: p?.suspended ? 0.7 : 1,
                 border: p?.suspended ? "2px dashed #F59E0B" : "none"
               }}>
-                {isTodosView && (
-                  <div style={{ display:"flex", flexDirection:"column", gap:2, flexShrink:0 }}>
-                    <button
-                      onClick={() => idx > 0 && onSwapOrdenGlobal(p, arr[idx - 1])}
-                      disabled={idx === 0}
-                      style={{
-                        background: idx === 0 ? "#F3F4F6" : "#EFF6FF",
-                        border: "1px solid #BFDBFE",
-                        borderRadius: 4,
-                        padding: "2px 6px",
-                        cursor: idx === 0 ? "not-allowed" : "pointer",
-                        fontSize: 12,
-                        opacity: idx === 0 ? 0.4 : 1,
-                        lineHeight: 1
-                      }}
-                      title="Subir"
-                    >
-                      ⬆️
-                    </button>
-                    <button
-                      onClick={() => idx < arr.length - 1 && onSwapOrdenGlobal(p, arr[idx + 1])}
-                      disabled={idx === arr.length - 1}
-                      style={{
-                        background: idx === arr.length - 1 ? "#F3F4F6" : "#EFF6FF",
-                        border: "1px solid #BFDBFE",
-                        borderRadius: 4,
-                        padding: "2px 6px",
-                        cursor: idx === arr.length - 1 ? "not-allowed" : "pointer",
-                        fontSize: 12,
-                        opacity: idx === arr.length - 1 ? 0.4 : 1,
-                        lineHeight: 1
-                      }}
-                      title="Bajar"
-                    >
-                      ⬇️
-                    </button>
-                  </div>
-                )}
                 <div style={{ width:46, height:46, borderRadius:10, background:`${CAT_COLOR[p?.category]||"#C41E3A"}18`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0, overflow:"hidden" }}>
                   {p?.image_url ? <img src={p?.image_url} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" onError={e => { e.target.src = "https://via.placeholder.com/46x46/f5a623/ffffff?text=SF"; }} /> : (CAT_EMOJI[p?.category]||"🍖")}
                 </div>
