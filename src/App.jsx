@@ -82,7 +82,7 @@ export default function StarFamilyApp() {
   // FLUJO DE DATOS: Inicialización segura con valores por defecto
   const [view, setView] = useState("shop");
   const [products, setProducts] = useState([]);
-  const [cat, setCat] = useState("");
+  const [cat, setCat] = useState("Todos");
   const [cart, setCart] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [modal, setModal] = useState(null);
@@ -682,8 +682,8 @@ export default function StarFamilyApp() {
       if ((!form.category || cat === "Todos") && names.length > 0) {
         setForm(prev => ({ ...prev, category: names[0] }));
       }
-      // Auto-seleccionar la primera categoría en la tienda si no hay ninguna
-      if ((!cat || cat === "Todos") && names.length > 0) {
+      // Auto-seleccionar la primera categoría en la tienda solo si no hay ninguna seleccionada
+      if (!cat && names.length > 0) {
         setCat(names[0]);
       }
     } catch (error) {
@@ -945,11 +945,15 @@ export default function StarFamilyApp() {
     
     let filtered = products.filter(p => 
       p && typeof p === 'object' && p.id && 
-      p.category && p.category.trim() !== '' && p.category !== 'null' && p.category !== null && // Excluir productos sin categoría
-      (
-        cat === "Todos" || p.category === cat
-      ) && !p.suspended && p.active // Filtrar productos suspendidos y activos en tienda pública
+      !p.suspended && p.active
     );
+
+    if (cat !== "Todos") {
+      filtered = filtered.filter(p => 
+        p.category && p.category.trim() !== '' && p.category !== 'null' && p.category !== null &&
+        p.category === cat
+      );
+    }
     
     console.log("🔍 Debug - filtered after basic filter:", filtered.length);
     console.log("🔍 Debug - suspended products:", products.filter(p => p.suspended).length);
@@ -981,8 +985,20 @@ export default function StarFamilyApp() {
     }
 
     console.log("🔍 Debug - final filtered result:", filtered.length);
-    return filtered.sort((a, b) => (a.sort_order || 9999) - (b.sort_order || 9999));
-  }, [products, cat, searchTerm, priceRange]);
+
+    // Sort by category order first, then by product sort_order within category
+    const categoryOrder = {};
+    fullCategories.forEach((c, index) => {
+      categoryOrder[c.name] = c.sort_order !== undefined && c.sort_order !== null ? c.sort_order : index;
+    });
+
+    return filtered.sort((a, b) => {
+      const orderA = categoryOrder[a.category] !== undefined ? categoryOrder[a.category] : 9999;
+      const orderB = categoryOrder[b.category] !== undefined ? categoryOrder[b.category] : 9999;
+      if (orderA !== orderB) return orderA - orderB;
+      return (a.sort_order || 9999) - (b.sort_order || 9999);
+    });
+  }, [products, cat, searchTerm, priceRange, fullCategories]);
 
   const totalPages = useMemo(() => Math.ceil(filtered.length / itemsPerPage), [filtered.length, itemsPerPage]);
 
@@ -2257,7 +2273,8 @@ export default function StarFamilyApp() {
   
   
   // Verificar si la categoría seleccionada aún existe en availableCategories
-  if (availableCategories.length > 0 && (!cat || !availableCategories.includes(cat))) {
+  // "Todos" es siempre válido aunque no esté en availableCategories
+  if (availableCategories.length > 0 && (!cat || (cat !== "Todos" && !availableCategories.includes(cat)))) {
     console.log('⚠️ Categoría inválida o vacía, cambiando a primera disponible:', availableCategories[0]);
     setCat(availableCategories[0]);
   }
@@ -3542,9 +3559,9 @@ export default function StarFamilyApp() {
               onMouseEnter={() => setIsCategoryScrollPaused(true)}
               onMouseLeave={() => setIsCategoryScrollPaused(false)}
             >
-              {/* Duplicar chips para loop visual suave */}
-              {[...availableCategories, ...availableCategories].map((c, i) => (
-                <button key={`${c}-${i}`} onClick={() => setCat(c)} style={{ background: cat===c ? CAT_COLOR[c]||"#C41E3A" : "transparent", color: cat===c ? "white" : "#555", border: cat===c ? "none" : "1.5px solid #E5E7EB", borderRadius:20, padding:"7px 16px", cursor:"pointer", fontSize:13, fontWeight:600, whiteSpace:"nowrap", flexShrink:0, fontFamily:"'Poppins',sans-serif", transition:"all 0.18s" }}>
+              {/* Todos + Duplicar chips para loop visual suave */}
+              {["Todos", ...availableCategories, ...availableCategories].map((c, i) => (
+                <button key={`${c}-${i}`} onClick={() => setCat(c)} style={{ background: cat===c ? (CAT_COLOR[c] || "#C41E3A") : "transparent", color: cat===c ? "white" : "#555", border: cat===c ? "none" : "1.5px solid #E5E7EB", borderRadius:20, padding:"7px 16px", cursor:"pointer", fontSize:13, fontWeight:600, whiteSpace:"nowrap", flexShrink:0, fontFamily:"'Poppins',sans-serif", transition:"all 0.18s" }}>
                   {c}
                 </button>
               ))}
@@ -3727,80 +3744,43 @@ export default function StarFamilyApp() {
           </div>
 
           {/* PRODUCT GRID CON PAGINACIÓN */}
-          <div style={{ maxWidth:1200, margin:"0 auto", padding:"20px 12px 48px" }}>
+          <div id="product-grid" style={{ maxWidth:1200, margin:"0 auto", padding:"20px 12px 48px" }}>
             {/* Mostrar productos agrupados por categoría o paginados */}
             {cat === "Todos" ? (
-              // Vista "Todos" con productos paginados
+              // Vista "Todos" con paginación global
               <>
-                {/* Productos con categoría - ordenados por sort_order de categoría */}
                 {(() => {
-                  const groupedProducts = {};
-                  filtered.forEach(p => {
+                  // Group paginated products by category, preserving category order on this page
+                  const grouped = {};
+                  const categoryOrderOnPage = [];
+                  
+                  paginatedData.forEach(p => {
                     if (p && typeof p === 'object' && p.category && p.category.trim() && p.category !== 'null' && p.category !== null) {
-                      const category = p.category;
-                      if (!groupedProducts[category]) {
-                        groupedProducts[category] = [];
+                      if (!grouped[p.category]) {
+                        grouped[p.category] = [];
+                        categoryOrderOnPage.push(p.category);
                       }
-                      groupedProducts[category].push(p);
+                      grouped[p.category].push(p);
                     }
                   });
 
-                  // Ordenar categorías según fullCategories (sort_order de Supabase)
-                  const categoryOrder = {};
-                  fullCategories.forEach((cat, index) => {
-                    categoryOrder[cat.name] = cat.sort_order !== undefined && cat.sort_order !== null ? cat.sort_order : index;
-                  });
-
-                  const sortedCategories = Object.keys(groupedProducts).sort((a, b) => {
-                    const orderA = categoryOrder[a] !== undefined ? categoryOrder[a] : 9999;
-                    const orderB = categoryOrder[b] !== undefined ? categoryOrder[b] : 9999;
-                    return orderA - orderB;
-                  });
-
-                  return sortedCategories.map((category) => (
+                  return categoryOrderOnPage.map((category) => (
                     <div key={category} style={{ marginBottom:32 }}>
                       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, paddingLeft:4 }}>
                         <div style={{ background:CAT_COLOR[category] || "#C41E3A", width:4, height:26, borderRadius:2 }} />
                         <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:2, color:"#111" }}>{category.toUpperCase()}</span>
                       </div>
                       <div className="product-grid">
-                        {groupedProducts[category]?.filter(p => p && typeof p === 'object' && p.id).sort((a, b) => (a.sort_order || 9999) - (b.sort_order || 9999)).map((product) => (
+                        {grouped[category]?.filter(p => p && typeof p === 'object' && p.id).map((product) => (
                           <ProductCard key={product.id} p={product} onOpen={() => { setModal(product); setQty(1); }} onAdd={() => addToCart(product, 1)} />
                         ))}
                       </div>
                     </div>
                   ));
                 })()}
-
-                {/* Productos sin categoría */}
-                {(() => {
-                  const prodsWithoutCategory = filtered.filter(p =>
-                    p && typeof p === 'object' && (
-                      !p.category ||
-                      p.category.trim() === '' ||
-                      p.category === 'null' ||
-                      p.category === null
-                    )
-                  );
-                  if (prodsWithoutCategory.length === 0) return null;
-
-                  return (
-                    <div key="sin-categoria" style={{ marginBottom:32 }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, paddingLeft:4 }}>
-                        <div style={{ background:"#6B7280", width:4, height:26, borderRadius:2 }} />
-                        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:2, color:"#111" }}>SIN CATEGORÍA</span>
-                      </div>
-                      <div className="product-grid">
-                        {prodsWithoutCategory?.filter(p => p && typeof p === 'object' && p.id).map((product) => (
-                          <ProductCard key={product.id} p={product} onOpen={() => { setModal(product); setQty(1); }} onAdd={() => addToCart(product, 1)} />
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })()}
               </>
             ) : (
-              // Vista de categoría específica con productos paginados
+              // Vista de categoría específica con paginación
               (() => {
                 if (paginatedData.length === 0) return null;
                 
@@ -3811,7 +3791,7 @@ export default function StarFamilyApp() {
                       <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:2, color:"#111" }}>{cat.toUpperCase()}</span>
                     </div>
                     <div className="product-grid">
-                      {paginatedData?.filter(p => p && typeof p === 'object' && p.id).sort((a, b) => (a.sort_order || 9999) - (b.sort_order || 9999)).map((product) => (
+                      {paginatedData?.filter(p => p && typeof p === 'object' && p.id).map((product) => (
                         <ProductCard key={product.id} p={product} onOpen={() => { setModal(product); setQty(1); }} onAdd={() => addToCart(product, 1)} />
                       ))}
                     </div>
@@ -3852,8 +3832,8 @@ export default function StarFamilyApp() {
               </div>
             )}
 
-            {/* CONTROLES DE PAGINACIÓN - Solo cuando se ve una categoría específica */}
-            {cat !== "Todos" && filtered.length > 0 && (
+            {/* CONTROLES DE PAGINACIÓN - Para todas las vistas */}
+            {filtered.length > 0 && totalPages > 1 && (
               <PaginationControls
                 currentPage={currentPage}
                 totalPages={totalPages}
@@ -4652,7 +4632,12 @@ function PaginationControls({ currentPage, totalPages, setCurrentPage, totalItem
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
       setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        const grid = document.getElementById('product-grid');
+        if (grid) {
+          grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
       }, 0);
     }
   };
@@ -4695,12 +4680,21 @@ function PaginationControls({ currentPage, totalPages, setCurrentPage, totalItem
   return (
     <div style={{ 
       display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      gap: '8px', 
-      margin: '32px 0',
-      flexWrap: 'wrap'
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '12px', 
+      margin: '32px 0'
     }}>
+      <div style={{ fontSize: '14px', color: '#6B7280', fontFamily: "'Poppins', sans-serif" }}>
+        Página {currentPage} de {totalPages} ({totalItems} productos)
+      </div>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        gap: '8px', 
+        flexWrap: 'wrap'
+      }}>
       {/* Botón Anterior */}
       <button
         onClick={() => handlePageChange(currentPage - 1)}
@@ -4769,6 +4763,7 @@ function PaginationControls({ currentPage, totalPages, setCurrentPage, totalItem
       >
         Siguiente →
       </button>
+      </div>
     </div>
   );
 }
