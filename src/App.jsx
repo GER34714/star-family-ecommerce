@@ -88,6 +88,8 @@ export default function StarFamilyApp() {
   const [modal, setModal] = useState(null);
   const [qty, setQty] = useState(1);
   const [adminTab, setAdminTab] = useState("list");
+  const categoryScrollRef = useRef(null);
+  const [isCategoryScrollPaused, setIsCategoryScrollPaused] = useState(false);
   const [form, setForm] = useState({ id:"", category:"", name:"", description:"", price:"", bulkInfo:"", image_url:"", custom_badge:"", sort_order:"" });
   const [editing, setEditing] = useState(false);
   
@@ -1068,6 +1070,31 @@ export default function StarFamilyApp() {
       }
     };
   }, [cartOpen, modal, scrollDirection, scrollThreshold, lastScrollY, showTimer]);
+
+  // Auto-scroll horizontal para categorías
+  useEffect(() => {
+    const container = categoryScrollRef.current;
+    if (!container || availableCategories.length <= 3) return;
+
+    let animationId;
+    let lastTime = 0;
+    const speed = 0.5;
+
+    const step = (timestamp) => {
+      if (!lastTime) lastTime = timestamp;
+      if (!isCategoryScrollPaused && container) {
+        container.scrollLeft += speed;
+        if (container.scrollLeft >= container.scrollWidth - container.clientWidth) {
+          container.scrollLeft = 0;
+        }
+      }
+      lastTime = timestamp;
+      animationId = requestAnimationFrame(step);
+    };
+
+    animationId = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(animationId);
+  }, [availableCategories, isCategoryScrollPaused]);
 
   // Efecto para manejar instalación PWA
   useEffect(() => {
@@ -3462,14 +3489,27 @@ export default function StarFamilyApp() {
           </div>
 
           {/* CATEGORY BAR */}
-          <div style={{ background:"white", borderBottom:"1px solid #E5E7EB", position:"sticky", top:62, zIndex:100 }}>
-            <div className="cat-scroll">
-              {availableCategories.map(c => (
-                <button key={c} onClick={() => setCat(c)} style={{ background: cat===c ? CAT_COLOR[c]||"#C41E3A" : "transparent", color: cat===c ? "white" : "#555", border: cat===c ? "none" : "1.5px solid #E5E7EB", borderRadius:20, padding:"7px 16px", cursor:"pointer", fontSize:13, fontWeight:600, whiteSpace:"nowrap", flexShrink:0, fontFamily:"'Poppins',sans-serif", transition:"all 0.18s" }}>
+          <div style={{ background:"white", borderBottom:"1px solid #E5E7EB", position:"sticky", top:62, zIndex:100, display:"flex", alignItems:"center" }}>
+            {/* Flecha izquierda */}
+            <button onClick={() => categoryScrollRef.current?.scrollBy({ left: -200, behavior: 'smooth' })} style={{ background:"white", border:"none", borderRight:"1px solid #E5E7EB", padding:"10px 8px", cursor:"pointer", fontSize:16, color:"#555", flexShrink:0 }}>‹</button>
+
+            <div
+              ref={categoryScrollRef}
+              className="cat-scroll"
+              style={{ flex:1 }}
+              onMouseEnter={() => setIsCategoryScrollPaused(true)}
+              onMouseLeave={() => setIsCategoryScrollPaused(false)}
+            >
+              {/* Duplicar chips para loop visual suave */}
+              {[...availableCategories, ...availableCategories].map((c, i) => (
+                <button key={`${c}-${i}`} onClick={() => setCat(c)} style={{ background: cat===c ? CAT_COLOR[c]||"#C41E3A" : "transparent", color: cat===c ? "white" : "#555", border: cat===c ? "none" : "1.5px solid #E5E7EB", borderRadius:20, padding:"7px 16px", cursor:"pointer", fontSize:13, fontWeight:600, whiteSpace:"nowrap", flexShrink:0, fontFamily:"'Poppins',sans-serif", transition:"all 0.18s" }}>
                   {c}
                 </button>
               ))}
             </div>
+
+            {/* Flecha derecha */}
+            <button onClick={() => categoryScrollRef.current?.scrollBy({ left: 200, behavior: 'smooth' })} style={{ background:"white", border:"none", borderLeft:"1px solid #E5E7EB", padding:"10px 8px", cursor:"pointer", fontSize:16, color:"#555", flexShrink:0 }}>›</button>
           </div>
 
           {/* SEARCH AND FILTERS BAR */}
