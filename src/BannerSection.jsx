@@ -72,6 +72,7 @@ const BannerSection = ({ banners = [], loading = false }) => {
         width: "100%",
         height: "auto",
         borderRadius: "8px",
+        overflow: "hidden",
         margin: "16px 0",
         background: "transparent"
       }}
@@ -135,7 +136,8 @@ const BannerSection = ({ banners = [], loading = false }) => {
               style={{
                 padding: isMobile ? "14px 16px 26px" : "20px",
                 background: "#111",
-                color: "white"
+                color: "white",
+                borderRadius: "0 0 8px 8px"
               }}
             >
               {currentBanner.title && (
