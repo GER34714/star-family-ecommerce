@@ -1030,52 +1030,13 @@ export default function StarFamilyApp() {
       if (cartDrawer && cartDrawer.classList.contains('open')) {
         shouldHide = true;
       }
-      
-      // 3. Si no hay prioridades, aplicar lógica de scroll
-      if (!shouldHide) {
-        // Ocultar por scroll hacia abajo después del umbral
-        if (scrollDirection === 'down' && currentScrollY > scrollThreshold) {
-          shouldHide = true;
-        }
-        
-        // NO mostrar inmediatamente al scrollear hacia arriba - esperar a que deje de scrollear
-        if (scrollDirection === 'up') {
-          // Esperar a que deje de scrollear para mostrar
-          // Esto se manejará en el debounce
-        }
-      }
-      
+
       setHideFloatingButtons(shouldHide);
       setLastScrollY(currentScrollY);
     };
     
     const debounceScrollEnd = () => {
       setIsScrolling(false);
-      
-      // Si el scroll terminó y la dirección es hacia arriba, mostrar botones con retraso
-      if (scrollDirection === 'up') {
-        const footer = document.querySelector('footer');
-        const cartDrawer = document.querySelector('.cart-drawer');
-        
-        // Verificar que no haya prioridades activas
-        let hasPriority = false;
-        if (footer) {
-          const footerRect = footer.getBoundingClientRect();
-          const windowHeight = window.innerHeight;
-          hasPriority = footerRect.top < windowHeight;
-        }
-        if (cartDrawer && cartDrawer.classList.contains('open')) {
-          hasPriority = true;
-        }
-        
-        if (!hasPriority) {
-          // Mostrar botones después de 800ms de retraso
-          const timer = setTimeout(() => {
-            setHideFloatingButtons(false);
-          }, 800);
-          setShowTimer(timer);
-        }
-      }
     };
 
     // Ocultar botones cuando se abre el carrito o modal
