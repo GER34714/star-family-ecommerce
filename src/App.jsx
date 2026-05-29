@@ -4382,6 +4382,9 @@ export default function StarFamilyApp() {
 
         {/* Créditos y copyright */}
         <div style={{ maxWidth:1200, margin:"40px auto 0", paddingTop:20, borderTop:"1px solid #374151", display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
+          <div style={{ color:"#6B7280", fontSize:12, fontFamily:"'Poppins', sans-serif" }}>
+            &copy; {new Date().getFullYear()} STAR FAMILY. Todos los derechos reservados.
+          </div>
           <div style={{ color:"#9CA3AF", fontSize:13, fontFamily:"'Poppins', sans-serif" }}>
             Creado y diseñado por <a 
               href="https://ciborg347oficial.onrender.com/" 
@@ -4393,9 +4396,6 @@ export default function StarFamilyApp() {
             >
               ciborg347
             </a>
-          </div>
-          <div style={{ color:"#6B7280", fontSize:12, fontFamily:"'Poppins', sans-serif" }}>
-            &copy; {new Date().getFullYear()} STAR FAMILY. Todos los derechos reservados.
           </div>
         </div>
       </footer>
