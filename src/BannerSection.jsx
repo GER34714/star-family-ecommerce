@@ -70,8 +70,7 @@ const BannerSection = ({ banners = [], loading = false }) => {
       style={{
         position: "relative",
         width: "100%",
-        height: isMobile ? "350px" : "400px",
-        overflow: "hidden",
+        height: "auto",
         borderRadius: "0px",
         margin: "16px 0",
         background: "transparent"
@@ -87,17 +86,15 @@ const BannerSection = ({ banners = [], loading = false }) => {
           exit={{ opacity: 0, x: -300 }}
           transition={{ duration: 0.5 }}
           style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
+            position: "relative",
             width: "100%",
-            height: "100%",
+            height: "auto",
             display: "flex",
             flexDirection: "column"
           }}
         >
           {/* Imagen del banner */}
-          <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <img
               src={currentBanner.image_url}
               alt={currentBanner.title || "Banner"}
