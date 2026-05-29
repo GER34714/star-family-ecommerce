@@ -163,91 +163,33 @@ const BannerSection = ({ banners = [], loading = false }) => {
         </motion.div>
       </AnimatePresence>
 
-      {/* Controles de navegación */}
+      {/* Indicadores (dots) */}
       {banners.length > 1 && (
-        <>
-          {/* Botones anterior/siguiente */}
-          <button
-            onClick={handlePrev}
-            style={{
-              position: "absolute",
-              left: "10px",
-              top: isMobile ? "21%" : "50%",
-              transform: "translateY(-50%)",
-              background: "rgba(0,0,0,0.5)",
-              color: "white",
-              border: "none",
-              borderRadius: "50%",
-              width: "40px",
-              height: "40px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              fontSize: "18px",
-              transition: "background 0.3s"
-            }}
-            onMouseOver={(e) => e.target.style.background = "rgba(0,0,0,0.7)"}
-            onMouseOut={(e) => e.target.style.background = "rgba(0,0,0,0.5)"}
-          >
-            ‹
-          </button>
-          
-          <button
-            onClick={handleNext}
-            style={{
-              position: "absolute",
-              right: "10px",
-              top: isMobile ? "21%" : "50%",
-              transform: "translateY(-50%)",
-              background: "rgba(0,0,0,0.5)",
-              color: "white",
-              border: "none",
-              borderRadius: "50%",
-              width: "40px",
-              height: "40px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              fontSize: "18px",
-              transition: "background 0.3s"
-            }}
-            onMouseOver={(e) => e.target.style.background = "rgba(0,0,0,0.7)"}
-            onMouseOut={(e) => e.target.style.background = "rgba(0,0,0,0.5)"}
-          >
-            ›
-          </button>
-
-          {/* Indicadores (dots) */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: "10px",
-              left: "50%",
-              transform: "translateX(-50%)",
-              display: "flex",
-              gap: "8px",
-              zIndex: 10
-            }}
-          >
-            {banners.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => handleDotClick(index)}
-                style={{
-                  width: "10px",
-                  height: "10px",
-                  borderRadius: "50%",
-                  border: "none",
-                  background: index === currentIndex ? "white" : "rgba(255,255,255,0.5)",
-                  cursor: "pointer",
-                  transition: "background 0.3s"
-                }}
-              />
-            ))}
-          </div>
-        </>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: "8px",
+            padding: "10px 0",
+            zIndex: 10
+          }}
+        >
+          {banners.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => handleDotClick(index)}
+              style={{
+                width: "10px",
+                height: "10px",
+                borderRadius: "50%",
+                border: "none",
+                background: index === currentIndex ? "#333" : "rgba(0,0,0,0.3)",
+                cursor: "pointer",
+                transition: "background 0.3s"
+              }}
+            />
+          ))}
+        </div>
       )}
     </div>
   );
