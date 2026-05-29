@@ -986,6 +986,11 @@ export default function StarFamilyApp() {
 
     console.log("🔍 Debug - final filtered result:", filtered.length);
 
+    if (cat === "Todos") {
+      // En "Todos", ordenar puramente por sort_order global (sin importar categoría)
+      return filtered.sort((a, b) => (a.sort_order || 9999) - (b.sort_order || 9999));
+    }
+
     // Sort by category order first, then by product sort_order within category
     const categoryOrder = {};
     fullCategories.forEach((c, index) => {
@@ -2301,7 +2306,8 @@ export default function StarFamilyApp() {
           emoji,
           color
         )
-      `);
+      `)
+      .order('sort_order', { ascending: true });
 
     console.log("📊 Respuesta Supabase:", { data: data?.length, error });
 
