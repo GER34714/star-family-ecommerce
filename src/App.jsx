@@ -12,8 +12,11 @@ import {
   createCategory, 
   getAvailableCategories, 
   addCategoryToSupabase,
+  updateCategoryInSupabase,
+  getFullCategories,
   deleteCategoryFromSupabase,
-  hideCategoryFromShop 
+  hideCategoryFromShop,
+  showCategoryInShop
 } from './categoryManager';
 
 // ═══════════════════════════════════════════════════════
@@ -85,11 +88,13 @@ export default function StarFamilyApp() {
   const [modal, setModal] = useState(null);
   const [qty, setQty] = useState(1);
   const [adminTab, setAdminTab] = useState("list");
-  const [form, setForm] = useState({ id:"", category:"", name:"", description:"", price:"", bulkInfo:"", image_url:"", custom_badge:"" });
+  const [form, setForm] = useState({ id:"", category:"", name:"", description:"", price:"", bulkInfo:"", image_url:"", custom_badge:"", sort_order:"" });
   const [editing, setEditing] = useState(false);
   
   // Estados para manejo mejorado de categorías
   const [availableCategories, setAvailableCategories] = useState([]);
+  const [fullCategories, setFullCategories] = useState([]);
+  const [editingCategory, setEditingCategory] = useState(null);
   const [suggestedCategory, setSuggestedCategory] = useState(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
@@ -643,12 +648,14 @@ export default function StarFamilyApp() {
     setLoadingCategories(true);
     try {
       const supabase = getSupabaseClient();
-      const categories = await getAvailableCategories(supabase);
-      setAvailableCategories(categories);
+      const cats = await getFullCategories(supabase);
+      setFullCategories(cats);
+      const names = cats.map(cat => cat.name);
+      setAvailableCategories(names);
       
       // Si no hay categoría seleccionada y hay categorías disponibles, seleccionar la primera
-      if (!form.category && categories.length > 0) {
-        setForm(prev => ({ ...prev, category: categories[0] }));
+      if (!form.category && names.length > 0) {
+        setForm(prev => ({ ...prev, category: names[0] }));
       }
     } catch (error) {
       console.error('Error cargando categorías:', error);
@@ -740,6 +747,32 @@ export default function StarFamilyApp() {
     setCategoryError('');
   };
 
+  // Actualizar orden de producto
+  const handleUpdateSortOrder = async (productId, newSortOrder) => {
+    const num = parseInt(newSortOrder, 10);
+    if (isNaN(num) || num < 0) return;
+
+    const updatedProducts = products.map(p =>
+      p.id === productId ? { ...p, sort_order: num } : p
+    );
+    setProducts(updatedProducts);
+    setStorageItem("roxy_products", updatedProducts);
+
+    try {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        const { error } = await supabase
+          .from('products')
+          .update({ sort_order: num })
+          .eq('id', productId);
+        if (error) throw error;
+      }
+    } catch (error) {
+      console.error('Error actualizando sort_order:', error);
+      showToast('⚠️ Error guardando orden en base de datos', 'error');
+    }
+  };
+
   // Ocultar categoría de la tienda (si no tiene productos)
   const handleHideCategory = async (categoryName) => {
     if (!categoryName) return;
@@ -776,37 +809,46 @@ export default function StarFamilyApp() {
   // Eliminar categoría completamente (desde admin)
   const handleDeleteCategory = async (categoryName) => {
     if (!categoryName) return;
-    
+
+    // Verificación local primero
+    const localCount = products.filter(p => p.category === categoryName).length;
+    if (localCount > 0) {
+      showToast(`❌ No se puede eliminar: la categoría tiene ${localCount} producto${localCount !== 1 ? 's' : ''} asignado${localCount !== 1 ? 's' : ''}`, 'error');
+      return;
+    }
+
     // Confirmación del usuario
     const confirmed = window.confirm(
       `¿Estás seguro que querés ELIMINAR COMPLETAMENTE la categoría "${categoryName}"?\n\n` +
       `⚠️ Esta acción eliminará la categoría permanentemente de la base de datos.`
     );
-    
+
     if (!confirmed) return;
-    
+
     try {
       const supabase = getSupabaseClient();
-      const success = await deleteCategoryFromSupabase(supabase, categoryName);
-      
-      if (success) {
+      const result = await deleteCategoryFromSupabase(supabase, categoryName);
+
+      if (result && result.success) {
         // Recargar categorías para reflejar el cambio
         await loadAvailableCategories();
-        
+
         // Si la categoría estaba seleccionada en la tienda, cambiar a "Todos"
         if (cat === categoryName) {
           setCat('Todos');
         }
-        
+
         // Si la categoría estaba seleccionada en admin, limpiar selección
         if (form.category === categoryName) {
           setForm(prev => ({ ...prev, category: '' }));
           setCategoryError('Por favor, seleccione una categoría');
         }
-        
+
         showToast(`🗑️ Categoría "${categoryName}" eliminada permanentemente`, 'success');
-      } else {
+      } else if (result && result.hasProducts) {
         showToast('⚠️ No se puede eliminar la categoría: está siendo usada por productos', 'error');
+      } else {
+        showToast('⚠️ No se pudo eliminar la categoría', 'error');
       }
     } catch (error) {
       console.error('Error eliminando categoría:', error);
@@ -910,7 +952,7 @@ export default function StarFamilyApp() {
     }
 
     console.log("🔍 Debug - final filtered result:", filtered.length);
-    return filtered;
+    return filtered.sort((a, b) => (a.sort_order || 9999) - (b.sort_order || 9999));
   }, [products, cat, searchTerm, priceRange]);
 
   const totalPages = useMemo(() => Math.ceil(filtered.length / itemsPerPage), [filtered.length, itemsPerPage]);
@@ -1768,6 +1810,7 @@ export default function StarFamilyApp() {
         bulto: product.bulkInfo || '',
         image_url: product.image_url || '',
         custom_badge: product.custom_badge || '',
+        sort_order: parseInt(product.sort_order, 10) || 0,
         active: true,
         suspended: false,
       };
@@ -2230,6 +2273,7 @@ export default function StarFamilyApp() {
           image_url: p.imagen || p.image_url || "",
           category: p.categories?.name || p.categoria || "Frescos",
           custom_badge: p.custom_badge || "",
+          sort_order: p.sort_order || 0,
           active: p.active !== undefined ? p.active : true,
           suspended: p.suspended || false,
           status: p.status || 'published',
@@ -2829,7 +2873,7 @@ export default function StarFamilyApp() {
     
     // Resetear formulario con primera categoría disponible o vacío
     const defaultCategory = availableCategories.length > 0 ? availableCategories[0] : "";
-    setForm({ id:"", category: defaultCategory, name:"", description:"", price:"", bulkInfo:"", image_url:"", custom_badge:"" });
+    setForm({ id:"", category: defaultCategory, name:"", description:"", price:"", bulkInfo:"", image_url:"", custom_badge:"", sort_order:"" });
     
     // Limpiar estados de categoría
     setSuggestedCategory(null);
@@ -2844,7 +2888,7 @@ export default function StarFamilyApp() {
   };
 
   const startEdit = (p) => { 
-    setForm({...p, price: p.price.toString()}); 
+    setForm({...p, price: p.price.toString(), sort_order: String(p.sort_order || 0)}); 
     setEditing(true); 
     setAdminTab("add");
     
@@ -3639,7 +3683,7 @@ export default function StarFamilyApp() {
                         <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:2, color:"#111" }}>{category.toUpperCase()}</span>
                       </div>
                       <div className="product-grid">
-                        {products?.filter(p => p && typeof p === 'object' && p.id).map((product) => (
+                        {products?.filter(p => p && typeof p === 'object' && p.id).sort((a, b) => (a.sort_order || 9999) - (b.sort_order || 9999)).map((product) => (
                           <ProductCard key={product.id} p={product} onOpen={() => { setModal(product); setQty(1); }} onAdd={() => addToCart(product, 1)} />
                         ))}
                       </div>
@@ -3686,7 +3730,7 @@ export default function StarFamilyApp() {
                       <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:2, color:"#111" }}>{cat.toUpperCase()}</span>
                     </div>
                     <div className="product-grid">
-                      {paginatedData?.filter(p => p && typeof p === 'object' && p.id).map((product) => (
+                      {paginatedData?.filter(p => p && typeof p === 'object' && p.id).sort((a, b) => (a.sort_order || 9999) - (b.sort_order || 9999)).map((product) => (
                         <ProductCard key={product.id} p={product} onOpen={() => { setModal(product); setQty(1); }} onAdd={() => addToCart(product, 1)} />
                       ))}
                     </div>
@@ -4090,6 +4134,12 @@ export default function StarFamilyApp() {
             setTempShippingInfo={setTempShippingInfo}
             hasUnsavedChanges={hasUnsavedChanges}
             setHasUnsavedChanges={setHasUnsavedChanges}
+            fullCategories={fullCategories}
+            editingCategory={editingCategory}
+            setEditingCategory={setEditingCategory}
+            loadAvailableCategories={loadAvailableCategories}
+            showToast={showToast}
+            onUpdateSortOrder={handleUpdateSortOrder}
                       />
       )}
 
@@ -6291,7 +6341,7 @@ function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint
 // ADMIN PANEL
 // ═══════════════════════════════════════════════════════
 
-function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, onMigrateImages, onSyncProducts, restorePoints, onCreateRestorePoint, onRestoreFromPoint, onDeleteRestorePoint, loadingRestorePoints, restorePointsError, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview, loadingPriceHistory, priceHistoryError, onToggleSuspension, onToggleActivation, adminCurrentPage, adminTotalPages, adminProductsPerPage, adminNextPage, adminPrevPage, adminGoToPage, totalFilteredProducts, paymentSettings, setPaymentSettings, loadingPaymentSettings, setLoadingPaymentSettings, banners, setBanners, loadingBanners, bannerForm, setBannerForm, editingBanner, setEditingBanner, bannerImagePreview, setBannerImagePreview, uploadingBannerImage, onBannerSubmit, onBannerImageSelect, onClearBannerImage, onDeleteBanner, onEditBanner, kitInfo, setKitInfo, shippingInfo, setShippingInfo, tempKitInfo, setTempKitInfo, tempShippingInfo, setTempShippingInfo, hasUnsavedChanges, setHasUnsavedChanges }) {
+function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, loadingPriceHistory, priceHistoryError, onMigrateImages, restorePoints, onCreateRestorePoint, onRestoreFromPoint, onDeleteRestorePoint, loadingRestorePoints, restorePointsError, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview, onToggleSuspension, onToggleActivation, adminCurrentPage, adminTotalPages, adminProductsPerPage, adminNextPage, adminPrevPage, adminGoToPage, totalFilteredProducts, paymentSettings, setPaymentSettings, loadingPaymentSettings, setLoadingPaymentSettings, banners, setBanners, loadingBanners, bannerForm, setBannerForm, editingBanner, setEditingBanner, bannerImagePreview, setBannerImagePreview, uploadingBannerImage, onBannerSubmit, onBannerImageSelect, onClearBannerImage, onDeleteBanner, onEditBanner, kitInfo, setKitInfo, shippingInfo, setShippingInfo, tempKitInfo, setTempKitInfo, tempShippingInfo, setTempShippingInfo, hasUnsavedChanges, setHasUnsavedChanges, fullCategories, editingCategory, setEditingCategory, loadAvailableCategories, showToast, onUpdateSortOrder }) {
   const supabase = getSupabaseClient();
   const isSmallScreen = typeof window !== "undefined" && window.innerWidth <= 640;
   
@@ -6527,7 +6577,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
       {/* TABS */}
       <div style={{ display:"grid", gap:12, marginBottom:24 }}>
         {[
-          ["Catálogo", [["list","📋 Productos"], ["add", editing?"✏️ Editar":"➕ Agregar / Editar"]]],
+          ["Catálogo", [["list","📋 Productos"], ["add", editing?"✏️ Editar":"➕ Agregar / Editar"], ["categories", "📁 Categorías"]]],
           ["Comercial", [["payment","💳 Pagos"], ["prices","💰 Precios"]]],
           ["Contenido y envíos", [["banners","🎆 Banners"], ["kit","🔥 Kit y Envíos"]]],
           ["Gestión", [["excel","📊 Excel"], ["history","📜 Historial"], ["restore","🔄 Restauración"]]],
@@ -6775,7 +6825,36 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize:12, color:"#9CA3AF", marginTop:1 }}>{p?.category} · <strong style={{ color:"#C41E3A" }}>{fmt(p?.price || 0)}</strong></div>
+                  <div style={{ fontSize:12, color:"#9CA3AF", marginTop:1, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                    {p?.category} · <strong style={{ color:"#C41E3A" }}>{fmt(p?.price || 0)}</strong>
+                    <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}>
+                      <span style={{ fontSize:10, color:"#9CA3AF" }}>Orden:</span>
+                      <input
+                        type="number"
+                        defaultValue={p?.sort_order || 0}
+                        onBlur={e => {
+                          const val = e.target.value;
+                          if (val !== String(p?.sort_order || 0)) {
+                            onUpdateSortOrder(p.id, val);
+                          }
+                        }}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.target.blur();
+                          }
+                        }}
+                        style={{
+                          width: 48,
+                          padding: "2px 4px",
+                          borderRadius: 4,
+                          border: "1px solid #E5E7EB",
+                          fontSize: 11,
+                          fontFamily: "'Poppins',sans-serif",
+                          textAlign: "center"
+                        }}
+                      />
+                    </span>
+                  </div>
                 </div>
                 <div style={{ display:"flex", gap:6, flexShrink:0 }}>
                   {/* Botón Activar/Desactivar */}
@@ -7149,6 +7228,10 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
               <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>PRECIO *</label>
               <input type="number" value={form.price} onChange={e => setForm({...form,price:e.target.value})} style={input} placeholder="19725" />
             </div>
+            <div>
+              <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>ORDEN (1=PRIMERO)</label>
+              <input type="number" value={form.sort_order} onChange={e => setForm({...form,sort_order:e.target.value})} style={input} placeholder="0" />
+            </div>
             <div style={{ gridColumn:"1/-1" }}>
               <label style={{ fontSize:12, fontWeight:700, color:"#6B7280", letterSpacing:0.5 }}>INFO DE BULTO / PRESENTACIÓN</label>
               <input value={form.bulkInfo} onChange={e => setForm({...form,bulkInfo:e.target.value})} style={input} placeholder="Ej: Bulto x 12 paquetes" />
@@ -7300,6 +7383,127 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
           </div>
           
                   </div>
+      )}
+
+      {/* TAB: CATEGORIES */}
+      {adminTab === "categories" && (
+        <div style={{ background:"white", borderRadius:16, padding:24 }}>
+          <h3 style={{ margin:"0 0 6px", fontWeight:800 }}>📁 Administración de Categorías</h3>
+          <p style={{ color:"#6B7280", fontSize:14, marginBottom:20 }}>Gestión completa de categorías: nombres, emojis y colores.</p>
+          
+          <div style={{ marginBottom:24, padding:16, background:"#F9FAFB", borderRadius:12, border:"1px solid #E5E7EB" }}>
+            <div style={{ fontWeight:700, color:"#374151", marginBottom:12, fontSize:14 }}>
+              {editingCategory ? "✏️ Editar Categoría" : "➕ Crear nueva categoría"}
+            </div>
+            <div style={{ display:"grid", gap:12, gridTemplateColumns:"1fr 1fr 1fr auto" }}>
+              <input 
+                type="text" 
+                placeholder="Nombre" 
+                id="adminCatName"
+                defaultValue={editingCategory ? editingCategory.name : ""}
+                key={editingCategory ? `edit-${editingCategory.id}` : "create"}
+                style={{ padding:"10px", borderRadius:8, border:"1px solid #E5E7EB", fontSize:14 }}
+              />
+              <input 
+                type="text" 
+                placeholder="Emoji" 
+                id="adminCatEmoji"
+                defaultValue={editingCategory ? editingCategory.emoji : "📦"}
+                style={{ padding:"10px", borderRadius:8, border:"1px solid #E5E7EB", fontSize:14 }}
+              />
+              <input 
+                type="color" 
+                id="adminCatColor"
+                defaultValue={editingCategory ? editingCategory.color : "#C41E3A"}
+                style={{ padding:"2px", borderRadius:8, border:"1px solid #E5E7EB", width:"100%", height:"40px" }}
+              />
+              <div style={{ display: "flex", gap: 8 }}>
+                <button 
+                  onClick={async () => {
+                    const name = document.getElementById('adminCatName').value.trim();
+                    const emoji = document.getElementById('adminCatEmoji').value.trim();
+                    const color = document.getElementById('adminCatColor').value;
+                    if (!name) return alert('El nombre es requerido');
+                    
+                    const supabase = getSupabaseClient();
+                    try {
+                      if (editingCategory) {
+                        await updateCategoryInSupabase(supabase, editingCategory.id, { name, emoji, color });
+                        showToast('Categoría actualizada');
+                      } else {
+                        await addCategoryToSupabase(supabase, name, emoji, color);
+                        showToast('Categoría creada');
+                      }
+                      await loadAvailableCategories();
+                      setEditingCategory(null);
+                      document.getElementById('adminCatName').value = '';
+                    } catch (err) {
+                      showToast('Error: ' + err.message, 'error');
+                    }
+                  }}
+                  style={{ padding:"10px 20px", background:"#C41E3A", color:"white", border:"none", borderRadius:8, cursor:"pointer", fontWeight:600 }}
+                >
+                  {editingCategory ? "Guardar" : "Agregar"}
+                </button>
+                {editingCategory && (
+                  <button 
+                    onClick={() => setEditingCategory(null)}
+                    style={{ padding:"10px 15px", background:"#E5E7EB", color:"#374151", border:"none", borderRadius:8, cursor:"pointer" }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display:"grid", gap:8 }}>
+            {fullCategories.map(catObj => {
+              const productCount = products.filter(p => p.category === catObj.name).length;
+              const isVisible = catObj.active !== false;
+              return (
+                <div key={catObj.id} style={{ display:"flex", flexWrap:"wrap", gap:"8px", alignItems:"center", padding:"12px 16px", background:"white", border:"1px solid #E5E7EB", borderRadius:12 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:12, flex:1, minWidth:150 }}>
+                    <div style={{ width:36, height:36, borderRadius:8, background:`${catObj.color}15`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>
+                      {catObj.emoji || '📦'}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight:700, color:"#111" }}>{catObj.name}</div>
+                      <div style={{ fontSize:11, color:"#9CA3AF", display:"flex", alignItems:"center", gap:8, marginTop:2 }}>
+                        <span>{productCount} producto{productCount !== 1 ? 's' : ''}</span>
+                        <span style={{ padding:"1px 6px", borderRadius:4, background: isVisible ? "#DCFCE7" : "#FEE2E2", color: isVisible ? "#166534" : "#991B1B", fontWeight:600, fontSize:10 }}>
+                          {isVisible ? "👁️ Visible" : "🚫 Oculta"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:"6px" }}>
+                    <button
+                      onClick={() => setEditingCategory(catObj)}
+                      style={{ padding:"6px 10px", background:"#EFF6FF", color:"#1E40AF", border:"none", borderRadius:6, cursor:"pointer", fontSize:12, fontWeight:600, minWidth:80 }}
+                    >
+                      ✏️ Editar
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (productCount > 0) {
+                          showToast(`❌ No se puede eliminar: la categoría tiene ${productCount} producto${productCount !== 1 ? 's' : ''} asignado${productCount !== 1 ? 's' : ''}`, 'error');
+                          return;
+                        }
+                        if (window.confirm(`¿Estás seguro que querés eliminar la categoría "${catObj.name}"?\n\nEsta acción no se puede deshacer.`)) {
+                          handleDeleteCategory(catObj.name);
+                        }
+                      }}
+                      style={{ padding:"6px 10px", background:"#FEE2E2", color:"#991B1B", border:"none", borderRadius:6, cursor:"pointer", fontSize:12, fontWeight:600, minWidth:80 }}
+                    >
+                      🗑️ Eliminar
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* TAB: BANNERS */}
@@ -7935,7 +8139,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                 }}>
                   <span style={{
                     position:"absolute",
-                    content:"\"",
+                    content:"✓",
                     height:18,
                     width:18,
                     left: paymentSettings?.mp_enabled === true ? 26 : 3,
@@ -8026,7 +8230,7 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                 }}>
                   <span style={{
                     position:"absolute",
-                    content:"\"",
+                    content:"✓",
                     height:18,
                     width:18,
                     left: paymentSettings?.transfer_enabled === true ? 26 : 3,

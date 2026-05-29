@@ -121,7 +121,7 @@ export const getAvailableCategories = async (supabase) => {
 };
 
 // Función para agregar nueva categoría a Supabase
-export const addCategoryToSupabase = async (supabase, categoryName) => {
+export const addCategoryToSupabase = async (supabase, categoryName, emoji = '📦', color = '#C41E3A') => {
   if (!supabase || !categoryName) return null;
   
   try {
@@ -144,8 +144,8 @@ export const addCategoryToSupabase = async (supabase, categoryName) => {
       .from('categories')
       .insert({
         name: normalizedCategory,
-        emoji: '📦', // Emoji por defecto
-        color: '#C41E3A' // Color por defecto
+        emoji: emoji,
+        color: color
       })
       .select()
       .single();
@@ -157,6 +157,50 @@ export const addCategoryToSupabase = async (supabase, categoryName) => {
   } catch (error) {
     console.error('Error creando categoría:', error);
     return null;
+  }
+};
+
+// Función para actualizar una categoría existente en Supabase
+export const updateCategoryInSupabase = async (supabase, categoryId, updates) => {
+  if (!supabase || !categoryId) return null;
+  
+  try {
+    const { data, error } = await supabase
+      .from('categories')
+      .update({
+        name: updates.name ? toTitleCase(updates.name.trim()) : undefined,
+        emoji: updates.emoji,
+        color: updates.color,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', categoryId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error actualizando categoría:', error);
+    return null;
+  }
+};
+
+// Función para obtener todas las categorías completas de Supabase
+export const getFullCategories = async (supabase) => {
+  try {
+    if (!supabase) return [];
+    
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .order('name');
+    
+    if (error) throw error;
+    
+    return data;
+  } catch (error) {
+    console.error('Error cargando categorías completas:', error);
+    return [];
   }
 };
 
@@ -192,6 +236,40 @@ export const hideCategoryFromShop = async (supabase, categoryName) => {
     return true;
   } catch (error) {
     console.error('Error ocultando categoría:', error);
+    return false;
+  }
+};
+
+// Función para mostrar categoría en la tienda (reactivar)
+export const showCategoryInShop = async (supabase, categoryName) => {
+  if (!supabase || !categoryName) return false;
+
+  try {
+    const normalizedCategory = toTitleCase(categoryName.trim());
+    console.log('👁️ Mostrando categoría en la tienda:', normalizedCategory);
+
+    const { data: categoryData, error: categoryError } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('name', normalizedCategory)
+      .single();
+
+    if (categoryError) {
+      console.warn('⚠️ Categoría no encontrada:', normalizedCategory);
+      return false;
+    }
+
+    const { error: updateError } = await supabase
+      .from('categories')
+      .update({ active: true })
+      .eq('id', categoryData.id);
+
+    if (updateError) throw updateError;
+
+    console.log('✅ Categoría visible en la tienda:', normalizedCategory);
+    return true;
+  } catch (error) {
+    console.error('Error mostrando categoría:', error);
     return false;
   }
 };
@@ -233,60 +311,25 @@ export const deleteCategoryFromSupabase = async (supabase, categoryName) => {
     });
     
     if (checkError) throw checkError;
-    
+
     if (productsWithCategory && productsWithCategory.length > 0) {
-      console.log('🔄 Actualizando productos para quitarles la categoría:', productsWithCategory.length, 'productos afectados');
-      
-      // Actualizar productos por category_id (relación)
-      const { error: updateErrorById } = await supabase
-        .from('products')
-        .update({ 
-          category_id: null 
-        })
-        .eq('category_id', categoryData.id);
-      
-      if (updateErrorById) {
-        console.error('❌ Error actualizando productos por category_id:', updateErrorById);
-      } else {
-        console.log('✅ Productos actualizados por category_id correctamente');
-      }
-      
-      // También actualizar productos por nombre de categoría (para productos nuevos)
-      const { error: updateErrorByName } = await supabase
-        .from('products')
-        .update({ 
-          category: '' 
-        })
-        .eq('category', normalizedCategory);
-      
-      if (updateErrorByName) {
-        console.error('❌ Error actualizando productos por nombre:', updateErrorByName);
-      } else {
-        console.log('✅ Productos actualizados por nombre correctamente');
-      }
-      
-      // Si ambos actualizaciones fallaron, lanzar error
-      if (updateErrorById && updateErrorByName) {
-        console.error('❌ Ambas actualizaciones fallaron');
-        throw updateErrorById;
-      }
-      
-      console.log('✅ Productos actualizados correctamente, ahora sin categoría');
+      console.warn('� No se puede eliminar la categoría porque tiene productos asignados:', productsWithCategory.length);
+      return { success: false, hasProducts: true };
     }
-    
+
     // Eliminar categoría
     console.log('🗑️ Ejecutando eliminación de categoría:', normalizedCategory);
     const { error: deleteError } = await supabase
       .from('categories')
       .delete()
       .eq('name', normalizedCategory);
-    
+
     console.log('📋 Resultado de eliminación:', { error: deleteError });
-    
+
     if (deleteError) throw deleteError;
-    
+
     console.log('✅ Categoría eliminada exitosamente:', normalizedCategory);
-    return true;
+    return { success: true, hasProducts: false };
   } catch (error) {
     console.error('Error eliminando categoría:', error);
     return false;
