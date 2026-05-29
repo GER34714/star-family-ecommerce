@@ -9855,6 +9855,35 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                 alt="QR de la tienda"
                 style={{ width:220, height:220, borderRadius:12, border:"1px solid #E5E7EB" }}
               />
+              <div style={{ marginTop:12 }}>
+                <button
+                  onClick={async () => {
+                    const imgUrl = "https://bedccnjylrnkacaxtusv.supabase.co/storage/v1/object/public/imagenes/qr-code.png";
+                    try {
+                      const response = await fetch(imgUrl);
+                      const blob = await response.blob();
+                      const file = new File([blob], "qr-star-family.png", { type: "image/png" });
+                      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file], title: "QR Star Family" });
+                      } else {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = "qr-star-family.png";
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                      }
+                    } catch (err) {
+                      console.error(err);
+                    }
+                  }}
+                  style={{ padding:"8px 16px", background:"#F9FAFB", color:"#374151", border:"1px solid #E5E7EB", borderRadius:8, cursor:"pointer", fontWeight:600, fontSize:13, fontFamily:"'Poppins',sans-serif" }}
+                >
+                  {navigator.canShare && navigator.canShare({ files: [new File([],"",{type:"image/png"})] }) ? "📤 Compartir QR" : "💾 Guardar QR"}
+                </button>
+              </div>
             </div>
 
             {/* Link + Buttons */}
