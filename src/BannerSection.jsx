@@ -102,9 +102,11 @@ const BannerSection = ({ banners = [], loading = false }) => {
               src={currentBanner.image_url}
               alt={currentBanner.title || "Banner"}
               style={{
+                maxWidth: 900,
                 width: "100%",
-                height: isMobile ? "100%" : "auto",
-                margin: isMobile ? undefined : "0 auto",
+                height: "auto",
+                display: "block",
+                margin: "0 auto",
                 objectFit: "contain",
                 objectPosition: "center",
                 background: "transparent"
