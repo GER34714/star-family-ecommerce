@@ -356,8 +356,8 @@ export default function StarFamilyApp() {
         return false;
       }
       
-      // Filtro por categoría
-      if (filters.category && product.category !== filters.category) {
+      // Filtro por categoría - manejar categorías null
+      if (filters.category && (!product.category || product.category !== filters.category)) {
         return false;
       }
       
@@ -889,12 +889,12 @@ export default function StarFamilyApp() {
     );
     console.log("🔍 Debug - productos sin categoría (excluidos de tienda):", productosSinCategoria.length);
 
-    // Aplicar filtros de búsqueda
+    // Aplicar filtros de búsqueda - manejar categoría null
     if (searchTerm) {
       filtered = filtered.filter(p => 
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.category?.toLowerCase().includes(searchTerm.toLowerCase())
+        (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (p.category && p.category.toLowerCase().includes(searchTerm.toLowerCase()))
       );
       console.log("🔍 Debug - filtered after search:", filtered.length);
     }
@@ -2537,8 +2537,8 @@ export default function StarFamilyApp() {
     
     let updatedCount = 0;
     const updatedProducts = products.map(p => {
-      // Si hay categorías seleccionadas, solo afectar a esas
-      if (selectedCategories.length > 0 && !selectedCategories.includes(p.category)) {
+      // Si hay categorías seleccionadas, solo afectar a esas - manejar null
+      if (selectedCategories.length > 0 && (!p.category || !selectedCategories.includes(p.category))) {
         return p;
       }
       
@@ -2610,8 +2610,8 @@ export default function StarFamilyApp() {
 
   const previewBulkPriceChanges = (adjustmentType, value, selectedCategories = []) => {
     return products.map(p => {
-      // Si hay categorías seleccionadas, solo afectar a esas
-      if (selectedCategories.length > 0 && !selectedCategories.includes(p.category)) {
+      // Si hay categorías seleccionadas, solo afectar a esas - manejar null
+      if (selectedCategories.length > 0 && (!p.category || !selectedCategories.includes(p.category))) {
         return { ...p, newPrice: p.price, changed: false };
       }
       
