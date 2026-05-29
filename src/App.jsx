@@ -89,8 +89,6 @@ export default function StarFamilyApp() {
   const [qty, setQty] = useState(1);
   const [adminTab, setAdminTab] = useState("list");
   const categoryScrollRef = useRef(null);
-  const [isCategoryScrollPaused, setIsCategoryScrollPaused] = useState(false);
-  const isCategoryScrollPausedRef = useRef(false);
   const [form, setForm] = useState({ id:"", category:"", name:"", description:"", price:"", bulkInfo:"", image_url:"", custom_badge:"", sort_order:"" });
   const [editing, setEditing] = useState(false);
   
@@ -1175,72 +1173,6 @@ export default function StarFamilyApp() {
       }
     };
   }, [cartOpen, modal, scrollDirection, scrollThreshold, lastScrollY, showTimer]);
-
-  // Auto-scroll horizontal para categorías
-  useEffect(() => {
-    const container = categoryScrollRef.current;
-    if (!container || availableCategories.length <= 3) return;
-
-    let animationId;
-    let lastTime = 0;
-    const speed = 0.5;
-
-    const step = (timestamp) => {
-      if (!lastTime) lastTime = timestamp;
-      if (!isCategoryScrollPaused && container) {
-        container.scrollLeft += speed;
-        if (container.scrollLeft >= container.scrollWidth - container.clientWidth) {
-          container.scrollLeft = 0;
-        }
-      }
-      lastTime = timestamp;
-      animationId = requestAnimationFrame(step);
-    };
-
-    animationId = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(animationId);
-  }, [availableCategories, isCategoryScrollPaused]);
-
-  // Sincronizar ref de pausa
-  useEffect(() => {
-    isCategoryScrollPausedRef.current = isCategoryScrollPaused;
-  }, [isCategoryScrollPaused]);
-
-  // Color viaja con el scroll: selecciona la categoría más a la izquierda visible
-  useEffect(() => {
-    const container = categoryScrollRef.current;
-    if (!container) return;
-
-    let rafId;
-    const onScroll = () => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        if (!container || isCategoryScrollPausedRef.current) return;
-        const buttons = container.querySelectorAll('button');
-        const containerRect = container.getBoundingClientRect();
-        let leftmostCat = null;
-        let minLeft = Infinity;
-
-        buttons.forEach((btn) => {
-          const rect = btn.getBoundingClientRect();
-          if (rect.left >= containerRect.left && rect.left < minLeft) {
-            minLeft = rect.left;
-            leftmostCat = btn.textContent.trim();
-          }
-        });
-
-        if (leftmostCat) {
-          setCat(leftmostCat);
-        }
-      });
-    };
-
-    container.addEventListener('scroll', onScroll);
-    return () => {
-      container.removeEventListener('scroll', onScroll);
-      cancelAnimationFrame(rafId);
-    };
-  }, []);
 
   // Efecto para manejar instalación PWA
   useEffect(() => {
@@ -3647,11 +3579,8 @@ export default function StarFamilyApp() {
               ref={categoryScrollRef}
               className="cat-scroll"
               style={{ flex:1 }}
-              onMouseEnter={() => setIsCategoryScrollPaused(true)}
-              onMouseLeave={() => setIsCategoryScrollPaused(false)}
             >
-              {/* Todos + Duplicar chips para loop visual suave */}
-              {["Todos", ...availableCategories, ...availableCategories].map((c, i) => (
+              {["Todos", ...availableCategories].map((c, i) => (
                 <button key={`${c}-${i}`} onClick={() => setCat(c)} style={{ background: cat===c ? (CAT_COLOR[c] || "#C41E3A") : "transparent", color: cat===c ? "white" : "#555", border: cat===c ? "none" : "1.5px solid #E5E7EB", borderRadius:20, padding:"7px 16px", cursor:"pointer", fontSize:13, fontWeight:600, whiteSpace:"nowrap", flexShrink:0, fontFamily:"'Poppins',sans-serif", transition:"all 0.18s" }}>
                   {c}
                 </button>
