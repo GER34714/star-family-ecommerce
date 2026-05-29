@@ -82,7 +82,7 @@ export default function StarFamilyApp() {
   // FLUJO DE DATOS: Inicialización segura con valores por defecto
   const [view, setView] = useState("shop");
   const [products, setProducts] = useState([]);
-  const [cat, setCat] = useState("Todos");
+  const [cat, setCat] = useState("");
   const [cart, setCart] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [modal, setModal] = useState(null);
@@ -388,7 +388,28 @@ export default function StarFamilyApp() {
   useEffect(() => {
     loadAvailableCategories();
     loadPaymentSettingsSafe(); // Cargar solo si está vacío
+
+    // Cargar kitInfo y shippingInfo desde localStorage
+    const savedKitInfo = getStorageItem('starfamily_kit_info');
+    const savedShippingInfo = getStorageItem('starfamily_shipping_info');
+    if (savedKitInfo) {
+      setKitInfo(savedKitInfo);
+      setTempKitInfo(savedKitInfo);
+    }
+    if (savedShippingInfo) {
+      setShippingInfo(savedShippingInfo);
+      setTempShippingInfo(savedShippingInfo);
+    }
   }, []);
+
+  // Callback para aplicar cambios de kit y shipping desde AdminPanel
+  const handleApplyKitShippingChanges = useCallback(() => {
+    setKitInfo(tempKitInfo);
+    setShippingInfo(tempShippingInfo);
+    setStorageItem('starfamily_kit_info', tempKitInfo);
+    setStorageItem('starfamily_shipping_info', tempShippingInfo);
+    setHasUnsavedChanges(false);
+  }, [tempKitInfo, tempShippingInfo]);
 
   // Efecto para actualizar productos filtrados
   useEffect(() => {
@@ -649,13 +670,18 @@ export default function StarFamilyApp() {
     try {
       const supabase = getSupabaseClient();
       const cats = await getFullCategories(supabase);
-      setFullCategories(cats);
-      const names = cats.map(cat => cat.name);
+      const sortedCats = cats.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+      setFullCategories(sortedCats);
+      const names = sortedCats.map(cat => cat.name);
       setAvailableCategories(names);
       
-      // Si no hay categoría seleccionada y hay categorías disponibles, seleccionar la primera
-      if (!form.category && names.length > 0) {
+      // Si no hay categoría seleccionada (o es "Todos"), seleccionar la primera
+      if ((!form.category || cat === "Todos") && names.length > 0) {
         setForm(prev => ({ ...prev, category: names[0] }));
+      }
+      // Auto-seleccionar la primera categoría en la tienda si no hay ninguna
+      if ((!cat || cat === "Todos") && names.length > 0) {
+        setCat(names[0]);
       }
     } catch (error) {
       console.error('Error cargando categorías:', error);
@@ -2201,9 +2227,9 @@ export default function StarFamilyApp() {
   
   
   // Verificar si la categoría seleccionada aún existe en availableCategories
-  if (cat !== "Todos" && !availableCategories.includes(cat)) {
-    console.log('⚠️ Categoría seleccionada ya no existe, cambiando a "Todos":', cat);
-    setCat("Todos");
+  if (availableCategories.length > 0 && (!cat || !availableCategories.includes(cat))) {
+    console.log('⚠️ Categoría inválida o vacía, cambiando a primera disponible:', availableCategories[0]);
+    setCat(availableCategories[0]);
   }
 
   const loadProductsFromSupabase = async () => {
@@ -3477,7 +3503,7 @@ export default function StarFamilyApp() {
           {/* CATEGORY BAR */}
           <div style={{ background:"white", borderBottom:"1px solid #E5E7EB", position:"sticky", top:62, zIndex:100 }}>
             <div className="cat-scroll">
-              {["Todos", ...availableCategories].map(c => (
+              {availableCategories.map(c => (
                 <button key={c} onClick={() => setCat(c)} style={{ background: cat===c ? CAT_COLOR[c]||"#C41E3A" : "transparent", color: cat===c ? "white" : "#555", border: cat===c ? "none" : "1.5px solid #E5E7EB", borderRadius:20, padding:"7px 16px", cursor:"pointer", fontSize:13, fontWeight:600, whiteSpace:"nowrap", flexShrink:0, fontFamily:"'Poppins',sans-serif", transition:"all 0.18s" }}>
                   {c}
                 </button>
@@ -3663,10 +3689,10 @@ export default function StarFamilyApp() {
             {cat === "Todos" ? (
               // Vista "Todos" con productos paginados
               <>
-                {/* Productos con categoría */}
+                {/* Productos con categoría - ordenados por sort_order de categoría */}
                 {(() => {
                   const groupedProducts = {};
-                  paginatedData.forEach(p => {
+                  filtered.forEach(p => {
                     if (p && typeof p === 'object' && p.category && p.category.trim() && p.category !== 'null' && p.category !== null) {
                       const category = p.category;
                       if (!groupedProducts[category]) {
@@ -3676,14 +3702,26 @@ export default function StarFamilyApp() {
                     }
                   });
 
-                  return Object.entries(groupedProducts).map(([category, products]) => (
+                  // Ordenar categorías según fullCategories (sort_order de Supabase)
+                  const categoryOrder = {};
+                  fullCategories.forEach((cat, index) => {
+                    categoryOrder[cat.name] = cat.sort_order !== undefined && cat.sort_order !== null ? cat.sort_order : index;
+                  });
+
+                  const sortedCategories = Object.keys(groupedProducts).sort((a, b) => {
+                    const orderA = categoryOrder[a] !== undefined ? categoryOrder[a] : 9999;
+                    const orderB = categoryOrder[b] !== undefined ? categoryOrder[b] : 9999;
+                    return orderA - orderB;
+                  });
+
+                  return sortedCategories.map((category) => (
                     <div key={category} style={{ marginBottom:32 }}>
                       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, paddingLeft:4 }}>
                         <div style={{ background:CAT_COLOR[category] || "#C41E3A", width:4, height:26, borderRadius:2 }} />
                         <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:2, color:"#111" }}>{category.toUpperCase()}</span>
                       </div>
                       <div className="product-grid">
-                        {products?.filter(p => p && typeof p === 'object' && p.id).sort((a, b) => (a.sort_order || 9999) - (b.sort_order || 9999)).map((product) => (
+                        {groupedProducts[category]?.filter(p => p && typeof p === 'object' && p.id).sort((a, b) => (a.sort_order || 9999) - (b.sort_order || 9999)).map((product) => (
                           <ProductCard key={product.id} p={product} onOpen={() => { setModal(product); setQty(1); }} onAdd={() => addToCart(product, 1)} />
                         ))}
                       </div>
@@ -3693,16 +3731,16 @@ export default function StarFamilyApp() {
 
                 {/* Productos sin categoría */}
                 {(() => {
-                  const prodsWithoutCategory = paginatedData.filter(p => 
+                  const prodsWithoutCategory = filtered.filter(p =>
                     p && typeof p === 'object' && (
-                      !p.category || 
-                      p.category.trim() === '' || 
+                      !p.category ||
+                      p.category.trim() === '' ||
                       p.category === 'null' ||
                       p.category === null
                     )
                   );
                   if (prodsWithoutCategory.length === 0) return null;
-                  
+
                   return (
                     <div key="sin-categoria" style={{ marginBottom:32 }}>
                       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, paddingLeft:4 }}>
@@ -3771,9 +3809,9 @@ export default function StarFamilyApp() {
               </div>
             )}
 
-            {/* CONTROLES DE PAGINACIÓN */}
-            {filtered.length > 0 && (
-              <PaginationControls 
+            {/* CONTROLES DE PAGINACIÓN - Solo cuando se ve una categoría específica */}
+            {cat !== "Todos" && filtered.length > 0 && (
+              <PaginationControls
                 currentPage={currentPage}
                 totalPages={totalPages}
                 setCurrentPage={setCurrentPage}
@@ -4134,6 +4172,7 @@ export default function StarFamilyApp() {
             setTempShippingInfo={setTempShippingInfo}
             hasUnsavedChanges={hasUnsavedChanges}
             setHasUnsavedChanges={setHasUnsavedChanges}
+            onApplyKitShippingChanges={handleApplyKitShippingChanges}
             fullCategories={fullCategories}
             editingCategory={editingCategory}
             setEditingCategory={setEditingCategory}
@@ -4176,7 +4215,7 @@ export default function StarFamilyApp() {
           <div>
             <h3 style={{ color:"white", fontSize:16, fontWeight:700, marginBottom:16, fontFamily:"'Poppins', sans-serif" }}>Navegación</h3>
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              {["Todos", ...availableCategories].map(c => (
+              {availableCategories.map(c => (
                 <button
                   key={c}
                   onClick={() => { setView("shop"); setCat(c); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
@@ -4569,7 +4608,9 @@ function PaginationControls({ currentPage, totalPages, setCurrentPage, totalItem
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 0);
     }
   };
   
@@ -6341,7 +6382,7 @@ function RestorePoints({ restorePoints, onCreateRestorePoint, onRestoreFromPoint
 // ADMIN PANEL
 // ═══════════════════════════════════════════════════════
 
-function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, loadingPriceHistory, priceHistoryError, onMigrateImages, restorePoints, onCreateRestorePoint, onRestoreFromPoint, onDeleteRestorePoint, loadingRestorePoints, restorePointsError, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview, onToggleSuspension, onToggleActivation, adminCurrentPage, adminTotalPages, adminProductsPerPage, adminNextPage, adminPrevPage, adminGoToPage, totalFilteredProducts, paymentSettings, setPaymentSettings, loadingPaymentSettings, setLoadingPaymentSettings, banners, setBanners, loadingBanners, bannerForm, setBannerForm, editingBanner, setEditingBanner, bannerImagePreview, setBannerImagePreview, uploadingBannerImage, onBannerSubmit, onBannerImageSelect, onClearBannerImage, onDeleteBanner, onEditBanner, kitInfo, setKitInfo, shippingInfo, setShippingInfo, tempKitInfo, setTempKitInfo, tempShippingInfo, setTempShippingInfo, hasUnsavedChanges, setHasUnsavedChanges, fullCategories, editingCategory, setEditingCategory, loadAvailableCategories, showToast, onUpdateSortOrder }) {
+function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, editing, setEditing, adminTab, setAdminTab, onSubmit, onEdit, onDelete, onExcel, fileRef, availableCategories, suggestedCategory, newCategoryName, showNewCategoryInput, categoryError, loadingCategories, handleCategoryChange, handleAddNewCategory, cancelNewCategory, setNewCategoryName, setShowNewCategoryInput, handleProductNameChange, handleDeleteCategory, supaUrl, supaKey, setSupaUrl, setSupaKey, onSync, syncing, onSaveSupa, onReset, onImageSelect, onClearImage, imagePreview, uploadingImage, onMigrate, onUpdateSinglePrice, onUpdateBulkPrices, onPreviewBulkPriceChanges, priceHistory, loadingPriceHistory, priceHistoryError, onMigrateImages, restorePoints, onCreateRestorePoint, onRestoreFromPoint, onDeleteRestorePoint, loadingRestorePoints, restorePointsError, user, isMaster, onLogin, onLogout, email, password, setEmail, setPassword, authLoading, saveImagePreview, onToggleSuspension, onToggleActivation, adminCurrentPage, adminTotalPages, adminProductsPerPage, adminNextPage, adminPrevPage, adminGoToPage, totalFilteredProducts, paymentSettings, setPaymentSettings, loadingPaymentSettings, setLoadingPaymentSettings, banners, setBanners, loadingBanners, bannerForm, setBannerForm, editingBanner, setEditingBanner, bannerImagePreview, setBannerImagePreview, uploadingBannerImage, onBannerSubmit, onBannerImageSelect, onClearBannerImage, onDeleteBanner, onEditBanner, kitInfo, setKitInfo, shippingInfo, setShippingInfo, tempKitInfo, setTempKitInfo, tempShippingInfo, setTempShippingInfo, hasUnsavedChanges, setHasUnsavedChanges, onApplyKitShippingChanges, fullCategories, editingCategory, setEditingCategory, loadAvailableCategories, showToast, onUpdateSortOrder }) {
   const supabase = getSupabaseClient();
   const isSmallScreen = typeof window !== "undefined" && window.innerWidth <= 640;
   
@@ -7477,6 +7518,29 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                       </div>
                     </div>
                   </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <span style={{ fontSize:11, color:"#6B7280", fontWeight:600 }}>Orden:</span>
+                    <input
+                      type="number"
+                      defaultValue={catObj.sort_order || 0}
+                      onBlur={async (e) => {
+                        const val = parseInt(e.target.value, 10) || 0;
+                        if (val === (catObj.sort_order || 0)) return;
+                        const supabase = getSupabaseClient();
+                        try {
+                          await updateCategoryInSupabase(supabase, catObj.id, { sort_order: val });
+                          await loadAvailableCategories();
+                          showToast('Orden actualizado');
+                        } catch (err) {
+                          showToast('Error: ' + err.message, 'error');
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') e.target.blur();
+                      }}
+                      style={{ width:50, padding:"4px 6px", borderRadius:6, border:"1px solid #E5E7EB", fontSize:13, fontWeight:600, textAlign:"center" }}
+                    />
+                  </div>
                   <div style={{ display:"flex", flexWrap:"wrap", gap:"6px" }}>
                     <button
                       onClick={() => setEditingCategory(catObj)}
@@ -8431,20 +8495,16 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                 >
                   🔄 Descartar
                 </button>
-                <button 
-                  onClick={() => {
-                    setKitInfo(tempKitInfo);
-                    setShippingInfo(tempShippingInfo);
-                    setHasUnsavedChanges(false);
-                  }}
-                  style={{ 
-                    padding:"12px 8px", 
-                    background:"white", 
-                    color:"#D97706", 
-                    border:"none", 
-                    borderRadius:8, 
-                    fontSize:13, 
-                    cursor:"pointer", 
+                <button
+                  onClick={onApplyKitShippingChanges}
+                  style={{
+                    padding:"12px 8px",
+                    background:"white",
+                    color:"#D97706",
+                    border:"none",
+                    borderRadius:8,
+                    fontSize:13,
+                    cursor:"pointer",
                     fontWeight:700,
                     transition:"all 0.2s"
                   }}

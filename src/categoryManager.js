@@ -105,7 +105,7 @@ export const getAvailableCategories = async (supabase) => {
     const { data, error } = await supabase
       .from('categories')
       .select('name')
-      .order('name');
+      .order('sort_order', { ascending: true });
     
     if (error) throw error;
     
@@ -145,7 +145,8 @@ export const addCategoryToSupabase = async (supabase, categoryName, emoji = 'ðŸ“
       .insert({
         name: normalizedCategory,
         emoji: emoji,
-        color: color
+        color: color,
+        sort_order: 0
       })
       .select()
       .single();
@@ -171,6 +172,7 @@ export const updateCategoryInSupabase = async (supabase, categoryId, updates) =>
         name: updates.name ? toTitleCase(updates.name.trim()) : undefined,
         emoji: updates.emoji,
         color: updates.color,
+        sort_order: updates.sort_order,
         updated_at: new Date().toISOString()
       })
       .eq('id', categoryId)
@@ -193,7 +195,7 @@ export const getFullCategories = async (supabase) => {
     const { data, error } = await supabase
       .from('categories')
       .select('*')
-      .order('name');
+      .order('sort_order', { ascending: true });
     
     if (error) throw error;
     
