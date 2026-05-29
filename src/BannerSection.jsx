@@ -103,9 +103,8 @@ const BannerSection = ({ banners = [], loading = false }) => {
               alt={currentBanner.title || "Banner"}
               style={{
                 width: "100%",
-                maxWidth: isMobile ? undefined : "800px",
                 height: isMobile ? "100%" : "auto",
-                maxHeight: isMobile ? undefined : "180px",
+                maxHeight: isMobile ? undefined : "260px",
                 margin: isMobile ? undefined : "0 auto",
                 objectFit: "contain",
                 objectPosition: "center",
