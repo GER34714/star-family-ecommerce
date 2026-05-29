@@ -71,7 +71,7 @@ const BannerSection = ({ banners = [], loading = false }) => {
         position: "relative",
         width: "100%",
         height: "auto",
-        borderRadius: "8px",
+        borderRadius: "12px",
         overflow: "hidden",
         margin: "16px 0",
         background: "transparent"
@@ -95,7 +95,7 @@ const BannerSection = ({ banners = [], loading = false }) => {
           }}
         >
           {/* Imagen del banner */}
-          <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", borderRadius: "12px" }}>
             <img
               src={currentBanner.image_url}
               alt={currentBanner.title || "Banner"}
@@ -105,6 +105,7 @@ const BannerSection = ({ banners = [], loading = false }) => {
                 height: "auto",
                 display: "block",
                 margin: "0 auto",
+                borderRadius: "12px",
                 objectFit: "contain",
                 objectPosition: "center",
                 background: "transparent"
@@ -137,7 +138,7 @@ const BannerSection = ({ banners = [], loading = false }) => {
                 padding: isMobile ? "14px 16px 26px" : "20px",
                 background: "#111",
                 color: "white",
-                borderRadius: "0 0 8px 8px"
+                borderRadius: "0 0 12px 12px"
               }}
             >
               {currentBanner.title && (
