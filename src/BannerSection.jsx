@@ -106,7 +106,7 @@ const BannerSection = ({ banners = [], loading = false }) => {
                 display: "block",
                 margin: "0 auto",
                 borderRadius: "12px",
-                objectFit: "cover",
+                objectFit: "contain",
                 objectPosition: "center",
                 background: "transparent"
               }}
