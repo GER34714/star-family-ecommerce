@@ -101,7 +101,7 @@ const BannerSection = ({ banners = [], loading = false }) => {
             style={{
               width: "100%",
               height: isMobile ? "70%" : "100%",
-              objectFit: "cover",
+              objectFit: "contain",
               objectPosition: isMobile ? "top center" : "center",
               background: "transparent"
             }}
