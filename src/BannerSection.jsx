@@ -91,33 +91,50 @@ const BannerSection = ({ banners = [], loading = false }) => {
             top: 0,
             left: 0,
             width: "100%",
-            height: "100%"
+            height: "100%",
+            display: "flex",
+            flexDirection: "column"
           }}
         >
           {/* Imagen del banner */}
-          <img
-            src={currentBanner.image_url}
-            alt={currentBanner.title || "Banner"}
-            style={{
-              width: "100%",
-              height: isMobile ? "70%" : "100%",
-              objectFit: "contain",
-              objectPosition: isMobile ? "top center" : "center",
-              background: "transparent"
-            }}
-          />
-          
-          {/* Overlay con texto */}
+          <div style={{ flex: 1, position: "relative" }}>
+            <img
+              src={currentBanner.image_url}
+              alt={currentBanner.title || "Banner"}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                objectPosition: "center",
+                background: "transparent"
+              }}
+            />
+            {/* Link overlay si tiene enlace */}
+            {currentBanner.link && (
+              <a
+                href={currentBanner.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  display: "block",
+                  textDecoration: "none"
+                }}
+                aria-label={`Ir a ${currentBanner.title || "enlace del banner"}`}
+              />
+            )}
+          </div>
+
+          {/* Texto debajo de la imagen */}
           {(currentBanner.title || currentBanner.description) && (
             <div
               style={{
-                position: "absolute",
-                bottom: 0,
-                left: 0,
-                right: 0,
-                minHeight: isMobile ? "30%" : "auto",
-                background: isMobile ? "linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.75))" : "linear-gradient(to top, rgba(0,0,0,0.8), transparent)",
                 padding: isMobile ? "14px 16px 26px" : "20px",
+                background: "#111",
                 color: "white"
               }}
             >
@@ -125,8 +142,7 @@ const BannerSection = ({ banners = [], loading = false }) => {
                 <h2 style={{
                   margin: isMobile ? "0 0 6px 0" : "0 0 8px 0",
                   fontSize: isMobile ? "20px" : "24px",
-                  fontWeight: "bold",
-                  textShadow: "2px 2px 4px rgba(0,0,0,0.8)"
+                  fontWeight: "bold"
                 }}>
                   {currentBanner.title}
                 </h2>
@@ -134,32 +150,12 @@ const BannerSection = ({ banners = [], loading = false }) => {
               {currentBanner.description && (
                 <p style={{
                   margin: 0,
-                  fontSize: isMobile ? "14px" : "16px",
-                  textShadow: "1px 1px 2px rgba(0,0,0,0.8)"
+                  fontSize: isMobile ? "14px" : "16px"
                 }}>
                   {currentBanner.description}
                 </p>
               )}
             </div>
-          )}
-
-          {/* Link overlay si tiene enlace */}
-          {currentBanner.link && (
-            <a
-              href={currentBanner.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                display: "block",
-                textDecoration: "none"
-              }}
-              aria-label={`Ir a ${currentBanner.title || "enlace del banner"}`}
-            />
           )}
         </motion.div>
       </AnimatePresence>
