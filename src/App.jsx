@@ -7436,18 +7436,18 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
             <div style={{ fontWeight:700, color:"#374151", marginBottom:12, fontSize:14 }}>
               {editingCategory ? "✏️ Editar Categoría" : "➕ Crear nueva categoría"}
             </div>
-            <div style={{ display:"grid", gap:12, gridTemplateColumns:"1fr 1fr 1fr auto" }}>
-              <input 
-                type="text" 
-                placeholder="Nombre" 
+            <div style={editingCategory ? { display:"flex", flexDirection:"column", gap:"8px" } : { display:"grid", gap:12, gridTemplateColumns:"1fr 1fr 1fr auto" }}>
+              <input
+                type="text"
+                placeholder="Nombre"
                 id="adminCatName"
                 defaultValue={editingCategory ? editingCategory.name : ""}
                 key={editingCategory ? `edit-${editingCategory.id}` : "create"}
                 style={{ padding:"10px", borderRadius:8, border:"1px solid #E5E7EB", fontSize:14 }}
               />
-              <input 
-                type="text" 
-                placeholder="Emoji" 
+              <input
+                type="text"
+                placeholder="Emoji"
                 id="adminCatEmoji"
                 defaultValue={editingCategory ? editingCategory.emoji : "📦"}
                 style={{ padding:"10px", borderRadius:8, border:"1px solid #E5E7EB", fontSize:14 }}
@@ -7501,7 +7501,6 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
           <div style={{ display:"grid", gap:8 }}>
             {fullCategories.map(catObj => {
               const productCount = products.filter(p => p.category === catObj.name).length;
-              const isVisible = catObj.active !== false;
               return (
                 <div key={catObj.id} style={{ display:"flex", flexWrap:"wrap", gap:"8px", alignItems:"center", padding:"12px 16px", background:"white", border:"1px solid #E5E7EB", borderRadius:12 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:12, flex:1, minWidth:150 }}>
@@ -7512,9 +7511,6 @@ function AdminPanel({ products, filteredProducts, adminFilters, form, setForm, e
                       <div style={{ fontWeight:700, color:"#111" }}>{catObj.name}</div>
                       <div style={{ fontSize:11, color:"#9CA3AF", display:"flex", alignItems:"center", gap:8, marginTop:2 }}>
                         <span>{productCount} producto{productCount !== 1 ? 's' : ''}</span>
-                        <span style={{ padding:"1px 6px", borderRadius:4, background: isVisible ? "#DCFCE7" : "#FEE2E2", color: isVisible ? "#166534" : "#991B1B", fontWeight:600, fontSize:10 }}>
-                          {isVisible ? "👁️ Visible" : "🚫 Oculta"}
-                        </span>
                       </div>
                     </div>
                   </div>
