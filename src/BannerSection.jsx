@@ -71,7 +71,7 @@ const BannerSection = ({ banners = [], loading = false }) => {
         position: "relative",
         width: "100%",
         height: "auto",
-        borderRadius: "0px",
+        borderRadius: "8px",
         margin: "16px 0",
         background: "transparent"
       }}
