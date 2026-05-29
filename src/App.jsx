@@ -3457,7 +3457,7 @@ export default function StarFamilyApp() {
           </div>
 
           {/* BANNERS */}
-          <div style={{ maxWidth:600, width:"100%", display:"block", margin:"0 auto", padding:"0 16px" }}>
+          <div style={{ maxWidth:1000, width:"100%", display:"block", margin:"0 auto", padding:"0 16px" }}>
             <BannerSection banners={banners} loading={loadingBanners} />
           </div>
 

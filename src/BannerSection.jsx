@@ -70,7 +70,7 @@ const BannerSection = ({ banners = [], loading = false }) => {
       style={{
         position: "relative",
         width: "100%",
-        height: isMobile ? "350px" : "300px",
+        height: isMobile ? "350px" : "400px",
         overflow: "hidden",
         borderRadius: "0px",
         margin: "16px 0",
@@ -104,7 +104,6 @@ const BannerSection = ({ banners = [], loading = false }) => {
               style={{
                 width: "100%",
                 height: isMobile ? "100%" : "auto",
-                maxHeight: isMobile ? undefined : "260px",
                 margin: isMobile ? undefined : "0 auto",
                 objectFit: "contain",
                 objectPosition: "center",
