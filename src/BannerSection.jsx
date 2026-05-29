@@ -70,11 +70,11 @@ const BannerSection = ({ banners = [], loading = false }) => {
       style={{
         position: "relative",
         width: "100%",
-        height: "auto",
+        aspectRatio: "16 / 9",
         borderRadius: "12px",
         overflow: "hidden",
         margin: "16px 0",
-        background: "transparent"
+        background: "#f5f5f5"
       }}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
@@ -89,20 +89,20 @@ const BannerSection = ({ banners = [], loading = false }) => {
           style={{
             position: "relative",
             width: "100%",
-            height: "auto",
+            height: "100%",
             display: "flex",
             flexDirection: "column"
           }}
         >
           {/* Imagen del banner */}
-          <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", borderRadius: "12px" }}>
+          <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", borderRadius: "12px" }}>
             <img
               src={currentBanner.image_url}
               alt={currentBanner.title || "Banner"}
               style={{
                 maxWidth: 900,
                 width: "100%",
-                height: "auto",
+                height: "100%",
                 display: "block",
                 margin: "0 auto",
                 borderRadius: "12px",
