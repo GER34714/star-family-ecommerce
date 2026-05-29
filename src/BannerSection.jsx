@@ -91,7 +91,9 @@ const BannerSection = ({ banners = [], loading = false }) => {
             width: "100%",
             height: "100%",
             display: "flex",
-            flexDirection: "column"
+            flexDirection: "column",
+            borderRadius: "12px",
+            overflow: "hidden"
           }}
         >
           {/* Imagen del banner */}
