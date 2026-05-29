@@ -131,6 +131,35 @@ const BannerSection = ({ banners = [], loading = false }) => {
             )}
           </div>
 
+          {/* Texto debajo de la imagen */}
+          {(currentBanner.title || currentBanner.description) && (
+            <div
+              style={{
+                padding: isMobile ? "14px 16px 26px" : "20px",
+                background: "transparent",
+                color: "#333"
+              }}
+            >
+              {currentBanner.title && (
+                <h2 style={{
+                  margin: isMobile ? "0 0 6px 0" : "0 0 8px 0",
+                  fontSize: isMobile ? "20px" : "24px",
+                  fontWeight: "bold"
+                }}>
+                  {currentBanner.title}
+                </h2>
+              )}
+              {currentBanner.description && (
+                <p style={{
+                  margin: 0,
+                  fontSize: isMobile ? "14px" : "16px"
+                }}>
+                  {currentBanner.description}
+                </p>
+              )}
+            </div>
+          )}
+
         </motion.div>
       </AnimatePresence>
 
